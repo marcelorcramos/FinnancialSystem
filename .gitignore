@@ -216,3 +216,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Frontend
+node_modules/
+*.local
+
+# macOS
+.DS_Store
+
+# Uploads (comprovativos)
+Backend/uploads/*
+!Backend/uploads/.gitkeep
