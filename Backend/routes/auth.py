@@ -2,10 +2,10 @@ from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from app.api.deps import DbSession
-from app.core.security import create_access_token, hash_password, verify_password
-from app.models.user import User
-from app.schemas.user import LoginRequest, Token, UserCreate, UserRead
+from core.deps import DbSession
+from core.security import create_access_token, hash_password, verify_password
+from models.user import User
+from schemas.user import LoginRequest, Token, UserCreate, UserRead
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -24,7 +24,7 @@ def register(data: UserCreate, db: DbSession):
     db.add(user)
     try:
         db.commit()
-    except IntegrityError:  # dois registos em simultâneo com o mesmo email
+    except IntegrityError:
         db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, "Este email já está registado")
     db.refresh(user)

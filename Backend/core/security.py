@@ -4,7 +4,7 @@ import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerifyMismatchError
 
-from app.core.config import settings
+from core.config import settings
 
 ALGORITHM = "HS256"
 _hasher = PasswordHasher()

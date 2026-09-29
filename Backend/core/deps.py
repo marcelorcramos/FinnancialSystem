@@ -1,12 +1,13 @@
+import uuid
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from app.core.security import decode_access_token
-from app.db.session import SessionLocal
-from app.models.user import User
+from core.database import SessionLocal
+from core.security import decode_access_token
+from models.user import User
 
 bearer_scheme = HTTPBearer()
 
