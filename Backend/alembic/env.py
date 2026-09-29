@@ -7,9 +7,6 @@ from app.core.config import settings
 from app.db.base import Base
 from app.models import user
 
-# Importar os models para o Alembic os detetar
-# (descomenta à medida que fores preenchendo cada model)
-# from app.models import user, label, month, entry, attachment, limit, goal, investment  # noqa: F401
 
 config = context.config
 

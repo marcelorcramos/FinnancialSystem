@@ -22,4 +22,15 @@ class UserRead(UserBase):
     timezone: str
     language: str
 
-    
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str 
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        return value.lower().strip()
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
