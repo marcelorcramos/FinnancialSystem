@@ -1,5 +1,3 @@
-import uuid
-
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
@@ -17,7 +15,7 @@ class UserCreate(BaseModel):
 class UserRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: uuid.UUID
+    id: int
     email: EmailStr
     name: str
     currency: str

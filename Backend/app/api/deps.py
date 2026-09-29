@@ -1,4 +1,3 @@
-import uuid
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
@@ -36,7 +35,7 @@ def get_current_user(
     if user_id is None:
         raise unauthorized
     try:
-        user = db.get(User, uuid.UUID(user_id))
+        user = db.get(User, int(user_id))
     except ValueError:
         raise unauthorized
     if user is None or not user.is_active:
