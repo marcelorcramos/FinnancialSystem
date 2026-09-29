@@ -36,3 +36,12 @@ class LoginRequest(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class UserUpdate(BaseModel):
+    password: str | None = Field(default=None, min_length=8, max_length=128)
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    currency: str | None = Field(default=None, min_length=3, max_length=3)
+    timezone: str | None = Field(default=None, min_length=1, max_length=50)
+    language: str | None = Field(default=None, min_length=2, max_length=5)
+
