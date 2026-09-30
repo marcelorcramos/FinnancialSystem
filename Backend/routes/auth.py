@@ -14,7 +14,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def register(data: UserCreate, db: DbSession):
     exists = db.scalar(select(User).where(User.email == data.email))
     if exists:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Este email já está registado")
+        raise HTTPException(status.HTTP_409_CONFLICT, "This email is already registered")
 
     user = User(
         email=data.email,
@@ -26,7 +26,7 @@ def register(data: UserCreate, db: DbSession):
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status.HTTP_409_CONFLICT, "Este email já está registado")
+        raise HTTPException(status.HTTP_409_CONFLICT, "This email is already registered")
     db.refresh(user)
     return user
 
@@ -36,7 +36,7 @@ def login(data: LoginRequest, db: DbSession):
     user = db.scalar(select(User).where(User.email == data.email))
     if user is None or not verify_password(data.password, user.password_hash):
         raise HTTPException(
-            status.HTTP_401_UNAUTHORIZED, "Email ou password incorretos"
+            status.HTTP_401_UNAUTHORIZED, "Email or password incorrect"
         )
     if not user.is_active:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Conta desativada")

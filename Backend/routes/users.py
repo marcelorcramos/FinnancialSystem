@@ -27,7 +27,7 @@ def list_users(
 def update_user(user_id: int, data: UserUpdate, db: DbSession):
     user = db.get(User, user_id)
     if user is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Utilizador não encontrado")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
 
     updates = data.model_dump(exclude_unset=True)
     for field, value in updates.items():
