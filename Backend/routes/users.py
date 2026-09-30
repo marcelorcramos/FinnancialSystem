@@ -13,6 +13,28 @@ def read_me(current_user: CurrentUser):
     return current_user
 
 
+@router.get("/search", response_model=UserRead)
+def search_user(
+    db: DbSession,
+    user_id: int | None = Query(default=None),
+    email: str | None = Query(default=None),
+):
+    if user_id is None and email is None:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "At least one search parameter is required"
+        )
+
+    if user_id is not None:
+        user = db.get(User, user_id)
+    else:
+        user = db.scalar(select(User).where(User.email == email.lower().strip()))
+
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+
+    return user
+
+
 @router.get("", response_model=list[UserRead])
 def list_users(
     db: DbSession,
