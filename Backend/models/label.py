@@ -10,7 +10,7 @@ class Label(Base):
     __tablename__ = "labels"
 
     id: Mapped[int] = mapped_column (primary_key=True, autoincrement=True)
-    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), ondelete="CASCADE", nullable=True, index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     name: Mapped[str] = mapped_column(String(50))
     color: Mapped[str] = mapped_column(String(7))
     icon: Mapped[str] = mapped_column(String(50))
