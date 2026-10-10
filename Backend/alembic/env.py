@@ -3,9 +3,10 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import create_engine, pool
 
+from models import entry, label, month, user
+
 from app.core.config import settings
 from core.database import Base
-from models import user 
 
 
 config = context.config
