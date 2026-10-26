@@ -12,7 +12,8 @@ from app.schemas.month import (
     MonthRead,
     MonthUpdate,
 )
-from app.services import incomes, months
+from app.schemas.summary import MonthSummary
+from app.services import incomes, months, summary
 
 router = APIRouter(tags=["months"])
 
@@ -33,6 +34,14 @@ async def create_month(data: MonthCreate, user: CurrentUser, session: SessionDep
 @router.get("/months/{month_id}")
 async def get_month(month_id: uuid.UUID, user: CurrentUser, session: SessionDep) -> MonthRead:
     return MonthRead.model_validate(await months.get(session, user, month_id))
+
+
+@router.get("/months/{month_id}/summary")
+async def month_summary(
+    month_id: uuid.UUID, user: CurrentUser, session: SessionDep
+) -> MonthSummary:
+    """Totals per label ("base + adjustments") and per kind, income and unallocated."""
+    return await summary.month_summary(session, user, month_id)
 
 
 @router.patch("/months/{month_id}")
