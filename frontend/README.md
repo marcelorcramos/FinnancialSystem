@@ -1,59 +1,34 @@
-# FinnancialFrontend
+# FinnancialSystem — frontend
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.3.
+Angular 22 (standalone, Signals, zoneless, novo control flow), Angular Material M3,
+Transloco (PT/EN) e ECharts via ngx-echarts. Ver `../docs/ARCHITECTURE.md` e `../docs/DECISIONS.md`.
 
-## Development server
+## Requisitos
 
-To start a local development server, run:
+Node `^22.22.3 || ^24.15.0` (ver `.nvmrc`).
 
-```bash
-ng serve
+## Comandos
+
+| Comando | O quê |
+|---|---|
+| `npm start` | Dev server em http://localhost:4200, com proxy de `/api` para http://localhost:8000 (`proxy.conf.json`) |
+| `npm run lint` | ESLint (angular-eslint) |
+| `npm test` / `npm run test:ci` | Testes unitários (Vitest), em watch / uma vez |
+| `npm run build` | Build de produção em `dist/` |
+| `docker build -t finnancial-frontend .` | Imagem nginx; `API_UPSTREAM` (padrão `http://api:8000`) define para onde vai `/api` |
+
+## Estrutura
+
+```
+src/app/
+├── core/       # auth (API, store, interceptor, guards), i18n, tema, layout
+├── shared/     # design tokens, MoneyAmount, utilitários de formulários e layout
+└── features/   # auth (login, registo), home
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- **Design tokens** em `shared/design-tokens/_tokens.scss`: `--kind-expense`, `--kind-saving`,
+  `--kind-investment` (versões `-light`/`-dark`, escolhidas por `light-dark()` conforme o tema).
+- **Valores monetários** chegam como strings decimais e são formatados sem passar por `float`
+  (`shared/money/format-money.ts`).
+- **Sessão**: o access token fica só em memória; ao recarregar, a sessão é retomada pelo cookie
+  `refresh_token` (HttpOnly). O interceptor faz refresh uma vez em 401 e repete o pedido.
