@@ -1,0 +1,75 @@
+name: finnancial
+
+x-healthcheck: &healthcheck
+  interval: 5s
+  timeout: 5s
+  retries: 20
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: finance
+      POSTGRES_PASSWORD: finance_dev
+      POSTGRES_DB: finance
+    ports: ["5544:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "pg_isready -U finance -d finance"]
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "redis-cli", "ping"]
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    environment:
+      RABBITMQ_DEFAULT_USER: finance
+      RABBITMQ_DEFAULT_PASS: finance_dev
+    ports: ["5672:5672", "15672:15672"]
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+
+  # S3 compatível (substitui o MinIO, cujas imagens deixaram de ser públicas). S3 em :8333.
+  s3:
+    image: chrislusf/seaweedfs:4.50
+    command: server -dir=/data -s3 -s3.port=8333
+    ports: ["8333:8333", "9333:9333"]
+    volumes: [s3data:/data]
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9333/cluster/status"]
+
+  mailpit:
+    image: axllent/mailpit:v1.32.0
+    ports: ["1025:1025", "8025:8025"]
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "/mailpit", "readyz"]
+
+  api:
+    build: ../backend
+    environment:
+      ENVIRONMENT: dev
+      DATABASE_URL: postgresql+asyncpg://finance:finance_dev@postgres:5432/finance
+      REDIS_URL: redis://redis:6379/0
+      RABBITMQ_URL: amqp://finance:finance_dev@rabbitmq:5672/
+      SECRET_KEY: dev-secret-key-change-me-0123456789abcdef
+      CORS_ORIGINS: http://localhost:4200
+    ports: ["8000:8000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+
+volumes:
+  pgdata:
+  s3data:

@@ -36,6 +36,7 @@ Decisões tomadas sobre o que o `docs/ARCHITECTURE.md` deixa em aberto ou que o 
 - SQLAlchemy 2.0 async com `asyncpg`.
 - Testes de integração com testcontainers (PostgreSQL real); precisam do Docker a correr.
 - Frontend: Angular (última versão estável), standalone components, Signals, zoneless, novo control flow, Angular Material (M3) com design tokens em variáveis CSS, ECharts via ngx-echarts.
+- Armazenamento de ficheiros em dev: SeaweedFS (S3 compatível) em vez de MinIO, porque as imagens Docker do MinIO deixaram de ser públicas. O código fala S3, por isso produção continua em Azure Blob (via gateway S3 ou SDK próprio, a decidir na Fase 9).
 - CI separado por área: `.github/workflows/backend.yml` e `frontend.yml`.
 
 ## Contrato da API de autenticação
