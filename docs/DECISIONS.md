@@ -30,6 +30,8 @@ Everything in the repository is in **English**: code, identifiers, comments, doc
 | Add money | Money that arrives mid-month (e.g. +€50 to Investments) is an `addition`: it adds to the label and to the month's income. |
 | Negative unallocated | Allowed; the UI only warns. |
 | Report filters | Two independent, optional filters: **category** (one or more labels, or a kind) and **time**. Time is one month, a "semester" = the last 6 months up to the reference month (rolling window, not Jan–Jun/Jul–Dec), or a calendar year ("how much did I invest this year?"). No time filter = since the first record. No category filter = all labels together. |
+| Multi-category filter | The category filter accepts several labels and/or kinds in one query (e.g. Food + Investments over the last 6 months), returning the combined total and the per-label split. |
+| Charts | **Donut** (pie with an empty center) for the overview: share (%) of money per kind (expense / saving / investment) and per label, for the selected period and categories. **Line chart** for the evolution of one label across months (e.g. Food €200 three months ago vs €250 now). Both read from the Phase 3 report endpoints. |
 
 ### Default labels
 
