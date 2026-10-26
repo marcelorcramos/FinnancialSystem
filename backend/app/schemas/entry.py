@@ -46,3 +46,33 @@ class EntryRead(BaseModel):
 
 class AdditionRead(EntryRead):
     source: str
+
+
+class TransferCreate(BaseModel):
+    """Move money from one label to another. Stored as two linked entries (the "legs")."""
+
+    from_label_id: uuid.UUID
+    to_label_id: uuid.UUID
+    amount: PositiveMoney
+    occurred_on: date
+    note: Note | None = None
+
+
+class TransferUpdate(BaseModel):
+    from_label_id: uuid.UUID | None = None
+    to_label_id: uuid.UUID | None = None
+    amount: PositiveMoney | None = None
+    occurred_on: date | None = None
+    note: Note | None = None
+
+
+class TransferRead(BaseModel):
+    transfer_id: uuid.UUID
+    month_id: uuid.UUID
+    from_label_id: uuid.UUID
+    to_label_id: uuid.UUID
+    amount: Decimal
+    occurred_on: date
+    note: str | None
+    out_entry_id: uuid.UUID
+    in_entry_id: uuid.UUID

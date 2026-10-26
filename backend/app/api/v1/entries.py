@@ -3,7 +3,15 @@ import uuid
 from fastapi import APIRouter, Response, status
 
 from app.api.deps import CurrentUser, SessionDep
-from app.schemas.entry import AdditionCreate, AdditionRead, AllocationSet, EntryRead
+from app.schemas.entry import (
+    AdditionCreate,
+    AdditionRead,
+    AllocationSet,
+    EntryRead,
+    TransferCreate,
+    TransferRead,
+    TransferUpdate,
+)
 from app.services import entries
 
 router = APIRouter(tags=["entries"])
@@ -42,3 +50,17 @@ async def add_money(
     return AdditionRead.model_validate(
         {**EntryRead.model_validate(entry).model_dump(), "source": income.source}
     )
+
+
+@router.post("/months/{month_id}/transfers", status_code=status.HTTP_201_CREATED)
+async def create_transfer(
+    month_id: uuid.UUID, data: TransferCreate, user: CurrentUser, session: SessionDep
+) -> TransferRead:
+    return await entries.create_transfer(session, user, month_id, data)
+
+
+@router.patch("/transfers/{transfer_id}")
+async def update_transfer(
+    transfer_id: uuid.UUID, data: TransferUpdate, user: CurrentUser, session: SessionDep
+) -> TransferRead:
+    return await entries.update_transfer(session, user, transfer_id, data)

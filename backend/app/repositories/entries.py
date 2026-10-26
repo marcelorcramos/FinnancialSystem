@@ -29,6 +29,18 @@ async def transfer_legs(session: AsyncSession, transfer_id: uuid.UUID) -> list[E
     return list(await session.scalars(stmt.with_for_update()))
 
 
+async def active_transfer_legs(
+    session: AsyncSession, user_id: uuid.UUID, transfer_id: uuid.UUID
+) -> dict[MovementType, Entry]:
+    """The active legs of a user's transfer, keyed by movement type."""
+    stmt = select(Entry).where(
+        Entry.transfer_id == transfer_id,
+        Entry.user_id == user_id,
+        Entry.deleted_at.is_(None),
+    )
+    return {leg.movement_type: leg for leg in await session.scalars(stmt.with_for_update())}
+
+
 async def closed_months_with_label_entries(
     session: AsyncSession, label_id: uuid.UUID
 ) -> list[Month]:
