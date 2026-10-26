@@ -62,7 +62,28 @@ Icon names are Material Symbols for now; they will change with the frontend rede
 
 ## Frontend: visual identity (2026-10-26)
 
-The current look (Angular Material, Roboto, Material Symbols) feels like Google/Gmail and **will be redesigned**. Requirements: a FinnancialSystem identity of its own, without copying templates, layouts or the look of other products, and without Google Fonts. The visual direction will be agreed before building the screens.
+The current look (Angular Material, Roboto, Material Symbols) feels like Google/Gmail and **will be redesigned**. Requirements: a FinnancialSystem identity of its own, without copying templates, layouts or the look of other products, and without Google Fonts.
+
+**Chosen direction: "Vault"** (out of three proposals). Mockups of every screen live in the design canvas https://claude.ai/artifact/MpLuzgGrY9DWYLY2RUdSbp.
+
+| Topic | Decision |
+|---|---|
+| Mood | Dark-first and precise, like a control panel for your money. Light theme and "system" are options. |
+| Colors | Ground `#111417`, panels `#1A1F24`, borders `#2A3138`, text `#E6EAEE` / `#B9C1C9`, one accent "signal" lime `#D4F06A`. Kinds: expense `#FF8A73`, saving `#5FD39A`, investment `#7AB3FF`. |
+| Type | System fonts only: system sans for words, system monospace for money and dates. No web fonts. |
+| Shapes | 4–6px corners, thin borders, no glows or heavy shadows; touch targets ≥ 44px. |
+| Components | Angular Material is removed; own components built on Angular CDK (focus, overlays, a11y), no Material look. |
+| Language | The UI is **English only**; the PT translations go away. |
+| Motion | Subtle transitions (hover on rows, donut slices grow, chart points enlarge); all off with "Reduce motion". |
+| Accessibility | Color is never the only signal (text, icons, optional chart patterns); text size, high contrast and reduce-motion preferences. |
+
+Screens agreed in the mockups:
+
+- **Month**: income, spent, saved, invested and unallocated totals; a thick donut by kind with hover details; labels list ("base + adjustments"); a large evolution chart with a **category** and a **period** selector (last month by day, last 6 / 12 months, all time); recent entries.
+- **Sign in / create account** with live password rules; **Account** (name, email, EUR, time zone, password, sign out other devices); **Preferences & accessibility**.
+- **Labels** grouped by kind, archive, and delete with reassignment of entries; **Create label** with the kind question, the 8 suggested colors plus a `#RRGGBB` field, and icons.
+- **Add money**: from outside the app (raises income) or from another label (a transfer), showing the effect before confirming.
+- **New month** copying from the previous month, with **Review amounts**: every label shows its previous-month value and the new value, editable with −/+ (€10), typed, removed or reset; the salary is editable too. The month is created with the reviewed values (no backend change: create the month, then set each allocation).
 
 ## Structure and tooling
 
@@ -71,7 +92,7 @@ The current look (Angular Material, Roboto, Material Symbols) feels like Google/
 - Python dependencies in `requirements.txt` (runtime) and `requirements-dev.txt` (tests and lint). `pyproject.toml` only holds Ruff, mypy and pytest configuration.
 - SQLAlchemy 2.0 async with `asyncpg`.
 - Integration tests with testcontainers (real PostgreSQL); Docker must be running.
-- Frontend: Angular (latest stable), standalone components, Signals, zoneless, new control flow, ECharts via ngx-echarts.
+- Frontend: Angular (latest stable), standalone components, Signals, zoneless, new control flow, own components on Angular CDK (no Angular Material), ECharts via ngx-echarts.
 - Dev file storage: SeaweedFS (S3-compatible) instead of MinIO, because MinIO Docker images are no longer public. The code speaks S3, so production can still use Azure Blob (through an S3 gateway or its own SDK, decided in Phase 9).
 - CI split by area: `.github/workflows/backend.yml` and `frontend.yml`.
 - Node 24 for the frontend (Angular 22 needs Node ≥ 22.22).
