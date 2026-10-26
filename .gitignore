@@ -224,6 +224,3 @@ node_modules/
 # macOS
 .DS_Store
 
-# Uploads (comprovativos)
-Backend/uploads/*
-!Backend/uploads/.gitkeep
