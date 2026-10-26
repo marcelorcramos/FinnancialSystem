@@ -25,7 +25,7 @@ Decisões tomadas sobre o que o `docs/ARCHITECTURE.md` deixa em aberto ou que o 
 | Eliminar mês | Soft delete do mês; as entradas ficam escondidas com ele e voltam com o "desfazer". |
 | Acrescentar dinheiro | Valor que chega a meio do mês (ex.: +50 € para Investimento) é um `addition`: soma à etiqueta e ao rendimento do mês. |
 | Por distribuir negativo | Permitido; a UI só avisa. |
-| Filtros de relatório | Período (mês, semestre, ano) combinado opcionalmente com etiquetas ou tipos. Sem filtro de etiqueta, mostra todas juntas. |
+| Filtros de relatório | Dois filtros independentes e opcionais: **categoria** (uma ou mais etiquetas, ou um tipo) e **tempo**. Tempo: um mês, "semestre" = os últimos 6 meses até ao mês de referência (janela móvel, não jan–jun/jul–dez), ou ano civil ("quanto investi este ano?"). Sem tempo = desde o primeiro registo. Sem categoria = todas as etiquetas juntas. |
 
 ### Etiquetas padrão
 
