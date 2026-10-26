@@ -1,22 +1,23 @@
 # FinnancialSystem
 
-Ler docs/ARCHITECTURE.md e docs/DECISIONS.md antes de qualquer tarefa. O DECISIONS.md prevalece em caso de conflito. Implementar uma fase de cada vez.
+Read docs/ARCHITECTURE.md and docs/DECISIONS.md before any task. DECISIONS.md wins when they disagree. Implement one phase at a time.
 
-## Regras
-- Valores monetários: NUMERIC(14,2) na BD e Decimal em Python. Nunca float.
-- IDs são UUID.
-- Regras de negócio em backend/app/domain e services, nunca em routers ou modelos.
-- Toda query filtra por user_id. Cada endpoint novo precisa de teste de isolamento.
-- Soft delete (deleted_at) em vez de DELETE. Escritas geram audit_log.
-- Transferências são sempre pares atómicos com o mesmo transfer_id.
-- Mês fechado rejeita escritas.
-- Consumers RabbitMQ têm de ser idempotentes.
-- Escrever testes antes de dar a tarefa por concluída.
-- Commit a cada funcionalidade concluída, no branch da área (backend, frontend, infra).
+## Rules
+- Everything in the repository is in English: code, comments, docs, API messages, seed data, commits.
+- Money: NUMERIC(14,2) in the database and Decimal in Python. Never float.
+- IDs are UUIDs.
+- Business rules live in backend/app/domain and services, never in routers or models.
+- Every query filters by user_id. Every new endpoint needs an isolation test.
+- Soft delete (deleted_at) instead of DELETE. Writes produce audit_log rows.
+- Transfers are always atomic pairs sharing the same transfer_id.
+- A closed month rejects writes.
+- RabbitMQ consumers must be idempotent.
+- Write tests before calling a task done.
+- Commit after every finished feature, on the area branch (backend, frontend, infra).
 
-## Comandos
-- Subir stack: docker compose -f deploy/docker-compose.yml up
-- Testes backend: cd backend && pytest
-- Lint backend: cd backend && ruff check . && ruff format --check . && mypy app
-- Migrações: cd backend && alembic upgrade head
-- Testes E2E: cd frontend && npx playwright test
+## Commands
+- Start the stack: docker compose -f deploy/docker-compose.yml up
+- Backend tests: cd backend && pytest
+- Backend lint: cd backend && ruff check . && ruff format --check . && mypy app
+- Migrations: cd backend && alembic upgrade head
+- E2E tests: cd frontend && npx playwright test
