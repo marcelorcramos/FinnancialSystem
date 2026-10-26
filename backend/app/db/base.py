@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Any, ClassVar
 
 from sqlalchemy import DateTime, MetaData, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -18,6 +19,10 @@ class Base(DeclarativeBase):
 
 
 class UUIDPrimaryKey:
+    # Os valores gerados pela BD (created_at, updated_at) voltam no RETURNING do INSERT/UPDATE,
+    # para não haver carregamentos implícitos fora de await.
+    __mapper_args__: ClassVar[dict[str, Any]] = {"eager_defaults": True}
+
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
 
 

@@ -3,10 +3,13 @@ from pathlib import Path
 
 import pytest
 from alembic.config import Config
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from testcontainers.community.postgres import PostgresContainer
 
 from alembic import command
+from app.db.session import get_session
+from app.main import app
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 
@@ -57,3 +60,16 @@ async def session(engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
         yield session
         await session.close()
         await transaction.rollback()
+
+
+@pytest.fixture
+async def client(session: AsyncSession) -> AsyncIterator[AsyncClient]:
+    """Cliente HTTP da API a usar a sessão do teste (tudo é desfeito no fim)."""
+
+    async def _session_override() -> AsyncIterator[AsyncSession]:
+        yield session
+
+    app.dependency_overrides[get_session] = _session_override
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        yield c
+    app.dependency_overrides.clear()
