@@ -2,12 +2,17 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints
 
 from app.domain.enums import LabelKind
 
 LabelName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
-HexColor = Annotated[str, StringConstraints(pattern=r"^#[0-9A-Fa-f]{6}$")]
+# Accepts any case and stores uppercase, so "#ab47bc" and "#AB47BC" are the same color.
+HexColor = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, pattern=r"^#[0-9A-Fa-f]{6}$"),
+    AfterValidator(str.upper),
+]
 IconName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
 
 
@@ -37,3 +42,7 @@ class LabelRead(BaseModel):
     icon: str
     is_default: bool
     archived_at: datetime | None
+
+
+class ColorSuggestions(BaseModel):
+    colors: list[str] = Field(description="Colors not used by any of the user's labels")

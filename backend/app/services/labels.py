@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.colors import normalize_color, suggest_colors
 from app.domain.enums import AuditAction, MovementType
 from app.domain.errors import ConflictError, NotFoundError, ValidationError
 from app.domain.rules import ensure_label_usable
@@ -30,8 +31,13 @@ async def get_usable(session: AsyncSession, user: User, label_id: uuid.UUID) -> 
     return label
 
 
+async def color_suggestions(session: AsyncSession, user: User) -> list[str]:
+    return suggest_colors(await labels_repo.used_colors(session, user.id))
+
+
 async def create(session: AsyncSession, user: User, data: LabelCreate) -> Label:
     await _ensure_name_free(session, user, data.name)
+    await _ensure_color_free(session, user, data.color)
     label = Label(user_id=user.id, **data.model_dump())
     session.add(label)
     await session.flush()
@@ -47,6 +53,8 @@ async def update(
     changes = data.model_dump(exclude_unset=True, exclude_none=True)
     if "name" in changes:
         await _ensure_name_free(session, user, changes["name"], exclude_id=label.id)
+    if "color" in changes:
+        await _ensure_color_free(session, user, changes["color"], exclude_id=label.id)
     before = audit.snapshot(label)
     for field, value in changes.items():
         setattr(label, field, value)
@@ -95,6 +103,7 @@ async def restore(session: AsyncSession, user: User, label_id: uuid.UUID) -> Lab
     if label is None:
         raise NotFoundError("Label not found")
     await _ensure_name_free(session, user, label.name)
+    await _ensure_color_free(session, user, label.color)
     label.deleted_at = None
     await session.flush()
     _audit(session, user, label, AuditAction.RESTORE, after=audit.snapshot(label))
@@ -140,6 +149,15 @@ async def _ensure_name_free(
 ) -> None:
     if await labels_repo.name_taken(session, user.id, name, exclude_id=exclude_id):
         raise ConflictError(f"A label named {name!r} already exists")
+
+
+async def _ensure_color_free(
+    session: AsyncSession, user: User, color: str, *, exclude_id: uuid.UUID | None = None
+) -> None:
+    if normalize_color(color) in await labels_repo.used_colors(
+        session, user.id, exclude_id=exclude_id
+    ):
+        raise ConflictError(f"Another label already uses the color {normalize_color(color)}")
 
 
 def _audit(

@@ -233,3 +233,63 @@ async def test_users_cannot_touch_each_others_labels(
         f"/api/v1/labels/{own['id']}", headers=bob.headers, params={"reassign_to": label["id"]}
     )
     assert response.status_code == 404
+
+
+# --- colors ------------------------------------------------------------------
+
+
+async def test_color_suggestions_skip_colors_already_used(client: AsyncClient) -> None:
+    user = await new_user(client)
+    labels = await labels_by_name(client, user)
+    used = {lb["color"] for lb in labels.values()}
+
+    response = await client.get("/api/v1/labels/color-suggestions", headers=user.headers)
+    assert response.status_code == 200
+    colors = response.json()["colors"]
+    assert len(colors) == 8
+    assert not used & set(colors)
+
+    await create_label(client, user, color=colors[0])
+    after = (await client.get("/api/v1/labels/color-suggestions", headers=user.headers)).json()
+    assert colors[0] not in after["colors"]
+
+
+async def test_two_labels_never_share_the_same_color(client: AsyncClient) -> None:
+    user = await new_user(client)
+    food_color = (await labels_by_name(client, user))["Food"]["color"]
+    response = await client.post(
+        "/api/v1/labels",
+        headers=user.headers,
+        json={**NEW_LABEL, "color": food_color.lower()},  # same color, other case
+    )
+    assert response.status_code == 409
+
+
+async def test_color_is_stored_uppercase_and_update_checks_other_labels(
+    client: AsyncClient,
+) -> None:
+    user = await new_user(client)
+    label = await create_label(client, user, color="#ab47bc")
+    assert label["color"] == "#AB47BC"
+    url = f"/api/v1/labels/{label['id']}"
+
+    keep_own = await client.patch(url, headers=user.headers, json={"color": "#AB47BC"})
+    assert keep_own.status_code == 200
+    food_color = (await labels_by_name(client, user))["Food"]["color"]
+    taken = await client.patch(url, headers=user.headers, json={"color": food_color})
+    assert taken.status_code == 409
+
+
+async def test_restore_conflicts_when_its_color_was_reused(client: AsyncClient) -> None:
+    user = await new_user(client)
+    label = await create_label(client, user, color="#AB47BC")
+    await client.delete(f"/api/v1/labels/{label['id']}", headers=user.headers)
+    await create_label(client, user, name="Books", color="#AB47BC")
+    response = await client.post(f"/api/v1/labels/{label['id']}/restore", headers=user.headers)
+    assert response.status_code == 409
+
+
+async def test_other_users_colors_do_not_count(client: AsyncClient) -> None:
+    alice, bob = await new_user(client), await new_user(client)
+    await create_label(client, alice, color="#AB47BC")
+    await create_label(client, bob, color="#AB47BC")

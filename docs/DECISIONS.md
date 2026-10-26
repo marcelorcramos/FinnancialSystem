@@ -53,6 +53,13 @@ There is a single investment label on purpose: users create their own labels for
 
 Icon names are Material Symbols for now; they will change with the frontend redesign.
 
+### Label colors
+
+- Two labels of the same user never share the exact same color (case-insensitive); similar colors are fine. Archived labels keep their color reserved; deleted labels free it.
+- Colors are stored uppercase (`#AB47BC`).
+- `GET /labels/color-suggestions` returns 8 colors not used by any of the user's labels: a curated palette first, then generated hues.
+- Color picker (frontend): when creating or editing a label, a small pop-up shows the 8 suggestions as square swatches, plus a field to type any `#RRGGBB` code. A full-spectrum picker may come later.
+
 ## Frontend: visual identity (2026-10-26)
 
 The current look (Angular Material, Roboto, Material Symbols) feels like Google/Gmail and **will be redesigned**. Requirements: a FinnancialSystem identity of its own, without copying templates, layouts or the look of other products, and without Google Fonts. The visual direction will be agreed before building the screens.
