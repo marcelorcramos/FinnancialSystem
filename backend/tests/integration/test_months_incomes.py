@@ -9,18 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.enums import MovementType
 from app.models import Entry, Income
-from tests.integration.helpers import ApiUser, new_user
-
-
-async def create_month(
-    client: AsyncClient, user: ApiUser, year: int = 2026, month: int = 10, **extra: Any
-) -> dict[str, Any]:
-    response = await client.post(
-        "/api/v1/months", headers=user.headers, json={"year": year, "month": month, **extra}
-    )
-    assert response.status_code == 201, response.text
-    body: dict[str, Any] = response.json()
-    return body
+from tests.integration.helpers import ApiUser, create_month, label_id, new_user
 
 
 async def add_income(
@@ -35,12 +24,7 @@ async def add_income(
     return body
 
 
-async def label_id(client: AsyncClient, user: ApiUser, name: str) -> uuid.UUID:
-    labels = (await client.get("/api/v1/labels", headers=user.headers)).json()
-    return uuid.UUID(next(lb["id"] for lb in labels if lb["name"] == name))
-
-
-# --- meses -------------------------------------------------------------------
+# --- months ------------------------------------------------------------------
 
 
 async def test_create_list_and_get_month(client: AsyncClient) -> None:
@@ -193,7 +177,7 @@ async def test_restore_conflicts_when_month_was_recreated(client: AsyncClient) -
     assert restored.status_code == 409
 
 
-# --- rendimentos -------------------------------------------------------------
+# --- incomes -----------------------------------------------------------------
 
 
 async def test_income_crud_and_restore(client: AsyncClient) -> None:
@@ -273,7 +257,7 @@ async def test_income_from_addition_is_read_only(
     assert (edit.status_code, delete.status_code) == (409, 409)
 
 
-# --- isolamento --------------------------------------------------------------
+# --- isolation ---------------------------------------------------------------
 
 
 async def test_users_cannot_touch_each_others_months_and_incomes(client: AsyncClient) -> None:
