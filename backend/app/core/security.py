@@ -10,10 +10,10 @@ from argon2.exceptions import InvalidHashError, VerificationError
 from app.core.config import settings
 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_TYPE = "access"  # noqa: S105  (tipo de token, não é um segredo)
+ACCESS_TOKEN_TYPE = "access"  # noqa: S105  (token type, not a secret)
 
 _hasher = PasswordHasher()
-# Usado quando o email não existe, para o login demorar o mesmo e não revelar contas.
+# Used when the email does not exist, so login takes the same time and does not leak accounts.
 _DUMMY_HASH = _hasher.hash("dummy-password-for-timing")
 
 
@@ -36,7 +36,7 @@ def verify_password(password: str, password_hash: str | None) -> bool:
 
 
 def create_access_token(user_id: uuid.UUID, now: datetime | None = None) -> tuple[str, int]:
-    """Devolve (token, segundos até expirar)."""
+    """Return (token, seconds until it expires)."""
     now = now or datetime.now(UTC)
     expires_in = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
     payload = {

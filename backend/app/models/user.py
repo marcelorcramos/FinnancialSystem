@@ -25,7 +25,7 @@ class User(UUIDPrimaryKey, Timestamps, SoftDelete, Base):
     )
 
     email: Mapped[str] = mapped_column(String(255))
-    password_hash: Mapped[str | None] = mapped_column(String(255))  # nulo em contas só Google
+    password_hash: Mapped[str | None] = mapped_column(String(255))  # null for Google-only accounts
     name: Mapped[str] = mapped_column(String(100))
     avatar_url: Mapped[str | None] = mapped_column(String(500))
     currency: Mapped[str] = mapped_column(String(3), default="EUR", server_default="EUR")

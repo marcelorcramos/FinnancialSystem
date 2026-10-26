@@ -5,7 +5,7 @@ from fastapi import APIRouter, Query, status
 
 from app.api.deps import CurrentUser, SessionDep
 from app.repositories import labels as labels_repo
-from app.schemas.label import LabelCreate, LabelRead, LabelUpdate
+from app.schemas.label import ColorSuggestions, LabelCreate, LabelRead, LabelUpdate
 from app.services import labels
 
 router = APIRouter(prefix="/labels", tags=["labels"])
@@ -22,6 +22,12 @@ async def list_labels(
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_label(data: LabelCreate, user: CurrentUser, session: SessionDep) -> LabelRead:
     return LabelRead.model_validate(await labels.create(session, user, data))
+
+
+@router.get("/color-suggestions")
+async def color_suggestions(user: CurrentUser, session: SessionDep) -> ColorSuggestions:
+    """Eight colors for the picker, none of them already used by the user's labels."""
+    return ColorSuggestions(colors=await labels.color_suggestions(session, user))
 
 
 @router.get("/{label_id}")
@@ -55,7 +61,7 @@ async def delete_label(
     session: SessionDep,
     reassign_to: Annotated[
         uuid.UUID | None,
-        Query(description="Etiqueta que recebe as entradas da etiqueta eliminada"),
+        Query(description="Label that receives the entries of the deleted label"),
     ] = None,
 ) -> None:
     await labels.delete(session, user, label_id, reassign_to)

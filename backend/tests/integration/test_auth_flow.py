@@ -31,8 +31,8 @@ async def test_register_login_refresh_logout(client: AsyncClient) -> None:
 
 
 async def test_register_normalizes_email_and_hides_password(client: AsyncClient) -> None:
-    user = await register(client, email="  Ana.Silva@Example.COM ")
-    assert user["email"] == "ana.silva@example.com"
+    user = await register(client, email="  Alice.Smith@Example.COM ")
+    assert user["email"] == "alice.smith@example.com"
     assert "password_hash" not in user
     assert user["currency"] == "EUR"
     assert user["locale"] == "pt-PT"
@@ -56,7 +56,7 @@ async def test_register_duplicate_email_conflicts(client: AsyncClient) -> None:
     user = await register(client)
     response = await client.post(
         "/api/v1/auth/register",
-        json={"email": user["email"].upper(), "password": PASSWORD, "name": "Outra"},
+        json={"email": user["email"].upper(), "password": PASSWORD, "name": "Other"},
     )
     assert response.status_code == 409
 
@@ -71,10 +71,10 @@ async def test_register_rejects_short_password(client: AsyncClient) -> None:
 async def test_login_wrong_password_and_unknown_email_look_the_same(client: AsyncClient) -> None:
     user = await register(client)
     wrong = await client.post(
-        "/api/v1/auth/login", json={"email": user["email"], "password": "errada-123"}
+        "/api/v1/auth/login", json={"email": user["email"], "password": "wrong-123"}
     )
     unknown = await client.post(
-        "/api/v1/auth/login", json={"email": "ninguem@example.com", "password": PASSWORD}
+        "/api/v1/auth/login", json={"email": "nobody@example.com", "password": PASSWORD}
     )
     assert wrong.status_code == unknown.status_code == 401
     assert wrong.json() == unknown.json()
@@ -126,11 +126,11 @@ async def test_reused_refresh_token_revokes_the_whole_family(client: AsyncClient
     assert (await client.post("/api/v1/auth/refresh")).status_code == 200
     legit = client.cookies.get(REFRESH_COOKIE)
 
-    # O atacante usa o token antigo: é rejeitado e a família é revogada.
+    # The attacker uses the old token: it is rejected and the family is revoked.
     client.cookies.set(REFRESH_COOKIE, stolen, path="/api/v1/auth")
     assert (await client.post("/api/v1/auth/refresh")).status_code == 401
 
-    # O token legítimo mais recente também deixa de funcionar.
+    # The latest legitimate token stops working too.
     assert legit
     client.cookies.set(REFRESH_COOKIE, legit, path="/api/v1/auth")
     assert (await client.post("/api/v1/auth/refresh")).status_code == 401
@@ -152,11 +152,15 @@ async def test_update_profile(client: AsyncClient) -> None:
     response = await client.patch(
         "/api/v1/users/me",
         headers=bearer(access),
-        json={"name": "Ana Silva", "locale": "en", "timezone": "Europe/Madrid"},
+        json={"name": "Alice Smith", "locale": "en", "timezone": "Europe/Madrid"},
     )
     assert response.status_code == 200
     body = response.json()
-    assert (body["name"], body["locale"], body["timezone"]) == ("Ana Silva", "en", "Europe/Madrid")
+    assert (body["name"], body["locale"], body["timezone"]) == (
+        "Alice Smith",
+        "en",
+        "Europe/Madrid",
+    )
 
 
 async def test_update_profile_rejects_unsupported_values(client: AsyncClient) -> None:
@@ -176,18 +180,18 @@ async def test_change_password_revokes_sessions(client: AsyncClient) -> None:
     wrong = await client.post(
         "/api/v1/users/me/password",
         headers=bearer(access),
-        json={"current_password": "errada-123", "new_password": "nova-password-456"},
+        json={"current_password": "wrong-123", "new_password": "New-password-456!"},
     )
     assert wrong.status_code == 401
 
     ok = await client.post(
         "/api/v1/users/me/password",
         headers=bearer(access),
-        json={"current_password": PASSWORD, "new_password": "nova-password-456"},
+        json={"current_password": PASSWORD, "new_password": "New-password-456!"},
     )
     assert ok.status_code == 204
     assert (await client.post("/api/v1/auth/refresh")).status_code == 401
-    await login(client, user["email"], "nova-password-456")
+    await login(client, user["email"], "New-password-456!")
 
 
 async def test_user_only_sees_own_profile_and_cannot_reach_others(client: AsyncClient) -> None:
@@ -198,7 +202,7 @@ async def test_user_only_sees_own_profile_and_cannot_reach_others(client: AsyncC
     me = await client.get("/api/v1/users/me", headers=bearer(alice_token))
     assert me.json()["id"] == alice["id"]
 
-    # Não existem rotas para ler ou editar outro utilizador.
+    # There are no routes to read or edit another user.
     for method, path in (
         ("GET", f"/api/v1/users/{bob['id']}"),
         ("PATCH", f"/api/v1/users/{bob['id']}"),
@@ -219,6 +223,6 @@ async def test_docs_form_login_returns_usable_token(client: AsyncClient) -> None
     assert (await client.get("/api/v1/users/me", headers=bearer(token))).status_code == 200
 
     wrong = await client.post(
-        "/api/v1/auth/token", data={"username": user["email"], "password": "errada-123"}
+        "/api/v1/auth/token", data={"username": user["email"], "password": "wrong-123"}
     )
     assert wrong.status_code == 401

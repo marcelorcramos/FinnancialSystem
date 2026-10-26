@@ -16,12 +16,12 @@ class Entry(UUIDPrimaryKey, Timestamps, SoftDelete, Base):
     __tablename__ = "entries"
     __table_args__ = (
         CheckConstraint("amount > 0", name="amount_positive"),
-        # transfer_id existe se e só se a entrada é uma perna de transferência.
+        # transfer_id is set if and only if the entry is a transfer leg.
         CheckConstraint(
             "(movement_type IN ('transfer_in', 'transfer_out')) = (transfer_id IS NOT NULL)",
             name="transfer_id_matches_type",
         ),
-        # income_id existe se e só se a entrada é um addition.
+        # income_id is set if and only if the entry is an addition.
         CheckConstraint(
             "(movement_type = 'addition') = (income_id IS NOT NULL)",
             name="income_id_matches_type",
@@ -30,7 +30,7 @@ class Entry(UUIDPrimaryKey, Timestamps, SoftDelete, Base):
         Index("ix_entries_user_label_occurred_on", "user_id", "label_id", "occurred_on"),
         Index("ix_entries_transfer_id", "transfer_id"),
         Index("ix_entries_month_id", "month_id"),
-        # No máximo uma distribuição inicial por etiqueta e mês.
+        # At most one allocation per label and month.
         Index(
             "uq_entries_allocation_per_label_month",
             "month_id",
@@ -38,7 +38,7 @@ class Entry(UUIDPrimaryKey, Timestamps, SoftDelete, Base):
             unique=True,
             postgresql_where=text(f"movement_type = 'allocation' AND {_ACTIVE}"),
         ),
-        # Cada transferência tem no máximo uma perna de cada tipo.
+        # Each transfer has at most one leg of each type.
         Index(
             "uq_entries_transfer_leg",
             "transfer_id",

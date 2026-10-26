@@ -10,7 +10,7 @@ from app.domain.rules import ensure_distinct_labels
 
 @dataclass(frozen=True, slots=True)
 class TransferPlan:
-    """As duas pernas de uma transferência: mesmo valor, etiquetas diferentes."""
+    """The two legs of a transfer: same amount, different labels."""
 
     out_leg: Movement
     in_leg: Movement

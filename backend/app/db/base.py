@@ -19,8 +19,8 @@ class Base(DeclarativeBase):
 
 
 class UUIDPrimaryKey:
-    # Os valores gerados pela BD (created_at, updated_at) voltam no RETURNING do INSERT/UPDATE,
-    # para não haver carregamentos implícitos fora de await.
+    # Database-generated values (created_at, updated_at) come back in the INSERT/UPDATE RETURNING,
+    # so there are no implicit loads outside an await.
     __mapper_args__: ClassVar[dict[str, Any]] = {"eager_defaults": True}
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)

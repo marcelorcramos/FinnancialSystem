@@ -1,4 +1,4 @@
-"""Casos de uso de autenticação: registo, login, refresh com rotação e logout."""
+"""Authentication use cases: sign-up, login, refresh with rotation and logout."""
 
 import uuid
 from dataclasses import dataclass
@@ -17,8 +17,8 @@ from app.repositories import refresh_tokens, users
 from app.schemas.user import UserCreate
 from app.services import audit
 
-INVALID_CREDENTIALS = "Email ou password incorretos"
-INVALID_SESSION = "Sessão inválida ou expirada"
+INVALID_CREDENTIALS = "Incorrect email or password"
+INVALID_SESSION = "Invalid or expired session"
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,7 +30,7 @@ class IssuedTokens:
 
 async def register(session: AsyncSession, data: UserCreate) -> User:
     if await users.get_active_by_email(session, data.email):
-        raise ConflictError("Este email já está registado")
+        raise ConflictError("This email is already registered")
 
     user = User(
         email=data.email, name=data.name, password_hash=security.hash_password(data.password)
@@ -38,9 +38,9 @@ async def register(session: AsyncSession, data: UserCreate) -> User:
     session.add(user)
     try:
         await session.flush()
-    except IntegrityError as exc:  # corrida entre dois registos com o mesmo email
+    except IntegrityError as exc:  # race between two sign-ups with the same email
         await session.rollback()
-        raise ConflictError("Este email já está registado") from exc
+        raise ConflictError("This email is already registered") from exc
 
     labels = [
         Label(
@@ -89,7 +89,7 @@ async def refresh(session: AsyncSession, raw_token: str | None) -> IssuedTokens:
         raise AuthenticationError(INVALID_SESSION)
 
     if current.revoked_at is not None:
-        # Um token já rodado voltou a ser usado: provável roubo. Revoga a família inteira.
+        # An already rotated token was used again: likely theft. Revoke the whole family.
         await refresh_tokens.revoke_family(session, current.family_id, now)
         await session.commit()
         raise AuthenticationError(INVALID_SESSION)
@@ -119,9 +119,9 @@ async def change_password(
     session: AsyncSession, user: User, current_password: str, new_password: str
 ) -> None:
     if not security.verify_password(current_password, user.password_hash):
-        raise AuthenticationError("Password atual incorreta")
+        raise AuthenticationError("Current password is incorrect")
     user.password_hash = security.hash_password(new_password)
-    # Terminar todas as sessões abertas noutros dispositivos.
+    # End every open session on other devices.
     await refresh_tokens.revoke_all_for_user(session, user.id, datetime.now(UTC))
     await session.commit()
 

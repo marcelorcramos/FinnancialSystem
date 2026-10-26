@@ -1,7 +1,7 @@
-"""Cálculo de totais de um mês a partir dos movimentos (secção 2.2 do ARCHITECTURE.md).
+"""Month totals computed from movements (section 2.2 of ARCHITECTURE.md).
 
-Total da etiqueta = allocation + addition + transfer_in - transfer_out.
-Por distribuir = rendimento do mês - (allocation + addition).
+Label total = allocation + addition + transfer_in - transfer_out.
+Unallocated = month income - (allocation + addition).
 """
 
 import uuid
@@ -18,12 +18,12 @@ from app.domain.money import ZERO
 class Movement:
     label_id: uuid.UUID
     movement_type: MovementType
-    amount: Decimal  # sempre positivo; o sinal vem do tipo
+    amount: Decimal  # always positive; the sign comes from the type
 
 
 @dataclass(slots=True)
 class LabelBreakdown:
-    """Total de uma etiqueta separado por origem ("base + ajustes")."""
+    """A label total split by origin ("base + adjustments")."""
 
     allocation: Decimal = field(default=ZERO)
     addition: Decimal = field(default=ZERO)
@@ -57,7 +57,7 @@ def label_totals(movements: Iterable[Movement]) -> dict[uuid.UUID, Decimal]:
 
 
 def month_total(movements: Iterable[Movement]) -> Decimal:
-    """Soma de todas as etiquetas. As transferências anulam-se, por isso não a alteram."""
+    """Sum of all labels. Transfers cancel out, so they do not change it."""
     return sum((signed_amount(m) for m in movements), ZERO)
 
 
