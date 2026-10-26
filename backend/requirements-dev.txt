@@ -1,0 +1,9 @@
+-r requirements.txt
+pytest
+pytest-asyncio
+pytest-cov
+httpx
+testcontainers[postgres]
+ruff
+mypy
+pre-commit

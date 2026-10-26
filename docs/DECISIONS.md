@@ -13,7 +13,19 @@ Decisões tomadas sobre o que o `docs/ARCHITECTURE.md` deixa em aberto ou que o 
 | Distribuição inicial | No máximo uma `allocation` por etiqueta e mês, editável (índice único parcial). |
 | Refresh tokens | Tabela `refresh_tokens` (hash do token, família, `expires_at`, `revoked_at`, `replaced_by_id`). Rotação a cada refresh; reutilizar um token já rodado revoga a família inteira. |
 | Admin | Fica para mais tarde. Não há rotas que listem ou editem outros utilizadores. |
+| Contas | Email sem verificação por agora (só tem de ser um email válido). Passwords novas: mínimo 8 caracteres, com minúscula, maiúscula, número e caractere especial. |
 | Moeda e locale | Só EUR no MVP (o campo `currency` existe para mudar mais tarde). Locale padrão `pt-PT`, fuso `Europe/Lisbon`. |
+
+## Meses, entradas e relatórios (2026-10-26)
+
+| Tema | Decisão |
+|---|---|
+| Copiar mês anterior | Opcional ao criar: copia a distribuição inicial e/ou os rendimentos do último mês existente. O que é copiado são entradas normais, editáveis depois (ex.: Mercado passa de 200 € para 220 €). |
+| Mês fechado | Bloqueia todas as escritas, incluindo a nota. Pode sempre ser reaberto, editado e fechado outra vez. |
+| Eliminar mês | Soft delete do mês; as entradas ficam escondidas com ele e voltam com o "desfazer". |
+| Acrescentar dinheiro | Valor que chega a meio do mês (ex.: +50 € para Investimento) é um `addition`: soma à etiqueta e ao rendimento do mês. |
+| Por distribuir negativo | Permitido; a UI só avisa. |
+| Filtros de relatório | Período (mês, semestre, ano) combinado opcionalmente com etiquetas ou tipos. Sem filtro de etiqueta, mostra todas juntas. |
 
 ### Etiquetas padrão
 
@@ -28,6 +40,10 @@ Decisões tomadas sobre o que o `docs/ARCHITECTURE.md` deixa em aberto ou que o 
 | Fundo de emergência | saving | `#26A69A` | `health_and_safety` |
 | Investimento | investment | `#42A5F5` | `trending_up` |
 
+## Frontend: identidade visual (2026-10-26)
+
+O visual atual (Angular Material, Roboto, Material Symbols) parece Google/Gmail e **vai ser repaginado**. Requisitos: identidade própria do FinnancialSystem, sem copiar templates, layouts nem o aspeto de outros produtos, e sem Google Fonts. A direção visual será definida em conjunto antes de avançar com os ecrãs.
+
 ## Estrutura e ferramentas
 
 - Monorepo: `backend/`, `frontend/`, `deploy/`, `docs/`, `.github/workflows/`.
@@ -36,6 +52,7 @@ Decisões tomadas sobre o que o `docs/ARCHITECTURE.md` deixa em aberto ou que o 
 - SQLAlchemy 2.0 async com `asyncpg`.
 - Testes de integração com testcontainers (PostgreSQL real); precisam do Docker a correr.
 - Frontend: Angular (última versão estável), standalone components, Signals, zoneless, novo control flow, Angular Material (M3) com design tokens em variáveis CSS, ECharts via ngx-echarts.
+- Armazenamento de ficheiros em dev: SeaweedFS (S3 compatível) em vez de MinIO, porque as imagens Docker do MinIO deixaram de ser públicas. O código fala S3, por isso produção continua em Azure Blob (via gateway S3 ou SDK próprio, a decidir na Fase 9).
 - CI separado por área: `.github/workflows/backend.yml` e `frontend.yml`.
 
 ## Contrato da API de autenticação
