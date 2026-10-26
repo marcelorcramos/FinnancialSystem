@@ -1,0 +1,37 @@
+:host {
+  --money-amount-color: currentColor;
+
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--money-amount-color);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+:host([data-kind='expense']) {
+  --money-amount-color: var(--kind-expense);
+}
+
+:host([data-kind='saving']) {
+  --money-amount-color: var(--kind-saving);
+}
+
+:host([data-kind='investment']) {
+  --money-amount-color: var(--kind-investment);
+}
+
+.money-amount__icon {
+  width: 1.25em;
+  height: 1.25em;
+  font-size: 1.25em;
+}
+
+.money-amount__value {
+  font-weight: 500;
+}
+
+.money-amount__kind {
+  font: var(--mat-sys-label-small);
+  opacity: 0.85;
+}

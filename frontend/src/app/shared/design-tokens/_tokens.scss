@@ -1,0 +1,40 @@
+// Design tokens as CSS custom properties.
+//
+// Kind colours are the semantic colour of *values* (never the label's own
+// colour). Each has a light and a dark version; the active one is picked by
+// `light-dark()` from the current `color-scheme` (see ThemeService). Colour is
+// never the only signal: MoneyAmount always pairs it with an icon and text.
+// Contrast of each foreground against the M3 surface is >= 4.5:1.
+
+:root {
+  --kind-expense-light: #b3403a;
+  --kind-expense-dark: #ff9e97;
+  --kind-saving-light: #2e7d32;
+  --kind-saving-dark: #8bd38e;
+  --kind-investment-light: #1a62b8;
+  --kind-investment-dark: #8cc4ff;
+
+  --kind-expense: light-dark(var(--kind-expense-light), var(--kind-expense-dark));
+  --kind-saving: light-dark(var(--kind-saving-light), var(--kind-saving-dark));
+  --kind-investment: light-dark(var(--kind-investment-light), var(--kind-investment-dark));
+
+  --kind-expense-container: light-dark(#fdeceb, #4a2220);
+  --kind-saving-container: light-dark(#e6f4e6, #1e3a20);
+  --kind-investment-container: light-dark(#e5effb, #1b3352);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --radius-s: 8px;
+  --radius-m: 12px;
+  --radius-l: 16px;
+
+  --content-max-width: 1200px;
+  --sidenav-width: 248px;
+  --sidenav-rail-width: 80px;
+}

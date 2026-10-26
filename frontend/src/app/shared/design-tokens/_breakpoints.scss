@@ -1,0 +1,21 @@
+// Keep in sync with shared/layout/breakpoints.ts.
+$tablet: 600px;
+$desktop: 1024px;
+
+@mixin phone {
+  @media (max-width: #{$tablet - 1px}) {
+    @content;
+  }
+}
+
+@mixin tablet-up {
+  @media (min-width: $tablet) {
+    @content;
+  }
+}
+
+@mixin desktop-up {
+  @media (min-width: $desktop) {
+    @content;
+  }
+}
