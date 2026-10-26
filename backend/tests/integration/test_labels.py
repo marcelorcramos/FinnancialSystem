@@ -6,6 +6,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.default_labels import DEFAULT_LABELS
 from app.domain.enums import MovementType
 from app.models import AuditLog, Entry, Month
 from tests.integration.helpers import ApiUser, new_user
@@ -31,7 +32,7 @@ async def labels_by_name(client: AsyncClient, user: ApiUser, **params: str) -> d
 async def test_list_starts_with_default_labels(client: AsyncClient) -> None:
     user = await new_user(client)
     labels = await labels_by_name(client, user)
-    assert len(labels) == 7
+    assert len(labels) == len(DEFAULT_LABELS)
     assert labels["Food"]["kind"] == "expense"
     assert labels["Investments"]["kind"] == "investment"
 

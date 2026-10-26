@@ -19,4 +19,8 @@ DEFAULT_LABELS: tuple[LabelTemplate, ...] = (
     LabelTemplate("Housing", LabelKind.EXPENSE, "#E57373", "home"),
     LabelTemplate("Electricity", LabelKind.EXPENSE, "#FFD54F", "bolt"),
     LabelTemplate("Water", LabelKind.EXPENSE, "#4FC3F7", "water_drop"),
+    LabelTemplate("Transport", LabelKind.EXPENSE, "#9575CD", "directions_bus"),
+    LabelTemplate("Health", LabelKind.EXPENSE, "#F06292", "medical_services"),
+    LabelTemplate("Phone & Internet", LabelKind.EXPENSE, "#7986CB", "wifi"),
+    LabelTemplate("Subscriptions", LabelKind.EXPENSE, "#BA68C8", "subscriptions"),
 )

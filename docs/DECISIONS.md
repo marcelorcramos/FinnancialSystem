@@ -42,6 +42,12 @@ Everything in the repository is in **English**: code, identifiers, comments, doc
 | Housing | expense | `#E57373` | `home` |
 | Electricity | expense | `#FFD54F` | `bolt` |
 | Water | expense | `#4FC3F7` | `water_drop` |
+| Transport | expense | `#9575CD` | `directions_bus` |
+| Health | expense | `#F06292` | `medical_services` |
+| Phone & Internet | expense | `#7986CB` | `wifi` |
+| Subscriptions | expense | `#BA68C8` | `subscriptions` |
+
+There is a single investment label on purpose: users create their own labels for specific investments (ETFs, pension plan...). Other categories (leisure, travel funds...) are left to the user.
 
 Icon names are Material Symbols for now; they will change with the frontend redesign.
 
