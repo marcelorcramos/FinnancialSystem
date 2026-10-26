@@ -207,3 +207,18 @@ async def test_user_only_sees_own_profile_and_cannot_reach_others(client: AsyncC
     ):
         response = await client.request(method, path, headers=bearer(alice_token), json={})
         assert response.status_code in (404, 405), (method, path)
+
+
+async def test_docs_form_login_returns_usable_token(client: AsyncClient) -> None:
+    user = await register(client)
+    response = await client.post(
+        "/api/v1/auth/token", data={"username": user["email"].upper(), "password": PASSWORD}
+    )
+    assert response.status_code == 200
+    token = response.json()["access_token"]
+    assert (await client.get("/api/v1/users/me", headers=bearer(token))).status_code == 200
+
+    wrong = await client.post(
+        "/api/v1/auth/token", data={"username": user["email"], "password": "errada-123"}
+    )
+    assert wrong.status_code == 401

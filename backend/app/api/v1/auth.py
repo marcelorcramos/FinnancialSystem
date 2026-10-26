@@ -1,6 +1,7 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Cookie, Response, status
+from fastapi import APIRouter, Cookie, Depends, Response, status
+from fastapi.security import OAuth2PasswordRequestForm
 
 from app.api.deps import SessionDep
 from app.core.config import settings
@@ -40,6 +41,15 @@ async def register(data: UserCreate, session: SessionDep) -> UserRead:
 async def login(data: LoginRequest, session: SessionDep, response: Response) -> AccessToken:
     tokens = await auth.login(session, data.email, data.password)
     return _respond_with_tokens(response, tokens)
+
+
+@router.post("/token", include_in_schema=False)
+async def token_for_docs(
+    form: Annotated[OAuth2PasswordRequestForm, Depends()], session: SessionDep
+) -> AccessToken:
+    """Login por formulário, usado pelo botão Authorize do Swagger. O username é o email."""
+    tokens = await auth.login(session, form.username.strip().lower(), form.password)
+    return AccessToken(access_token=tokens.access_token, expires_in=tokens.expires_in)
 
 
 @router.post("/refresh")

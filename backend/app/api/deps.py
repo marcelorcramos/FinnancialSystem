@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import decode_access_token
@@ -11,15 +11,15 @@ from app.repositories import users
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
-# auto_error=False para responder sempre 401 (o HTTPBearer por omissão varia entre 401 e 403).
-_bearer = HTTPBearer(auto_error=False)
+# OAuth2 password flow só para o botão Authorize do Swagger (/docs) pedir email e password.
+# A app usa POST /auth/login (JSON); ambos devolvem o mesmo access token.
+_oauth2 = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token", auto_error=False)
 
 
 async def get_current_user(
-    session: SessionDep,
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
+    session: SessionDep, token: Annotated[str | None, Depends(_oauth2)]
 ) -> User:
-    user_id = decode_access_token(credentials.credentials) if credentials else None
+    user_id = decode_access_token(token) if token else None
     user = await users.get_active_by_id(session, user_id) if user_id else None
     if user is None:
         raise HTTPException(
