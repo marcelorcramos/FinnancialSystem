@@ -41,6 +41,23 @@ async def active_transfer_legs(
     return {leg.movement_type: leg for leg in await session.scalars(stmt.with_for_update())}
 
 
+async def get_for_user(
+    session: AsyncSession, user_id: uuid.UUID, entry_id: uuid.UUID, *, deleted: bool = False
+) -> Entry | None:
+    stmt = select(Entry).where(Entry.id == entry_id, Entry.user_id == user_id)
+    stmt = stmt.where(Entry.deleted_at.is_not(None) if deleted else Entry.deleted_at.is_(None))
+    return await session.scalar(stmt.with_for_update())
+
+
+async def list_active_for_month(session: AsyncSession, month_id: uuid.UUID) -> list[Entry]:
+    stmt = (
+        select(Entry)
+        .where(Entry.month_id == month_id, Entry.deleted_at.is_(None))
+        .order_by(Entry.occurred_on, Entry.created_at, Entry.movement_type)
+    )
+    return list(await session.scalars(stmt))
+
+
 async def closed_months_with_label_entries(
     session: AsyncSession, label_id: uuid.UUID
 ) -> list[Month]:

@@ -6,16 +6,21 @@ from datetime import UTC, date, datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.enums import AuditAction, MovementType
-from app.domain.errors import NotFoundError
+from app.domain.errors import ConflictError, NotFoundError, ValidationError
 from app.domain.money import ZERO
 from app.domain.rules import ensure_date_in_month, ensure_distinct_labels
 from app.domain.transfers import plan_transfer
-from app.models import Entry, Income, User
+from app.models import Entry, Income, Label, Month, User
 from app.repositories import entries as entries_repo
+from app.repositories import incomes as incomes_repo
+from app.repositories import labels as labels_repo
 from app.schemas.entry import (
     DEFAULT_ADDITION_SOURCE,
     AdditionCreate,
     AllocationSet,
+    EntryListItem,
+    EntryRead,
+    EntryUpdate,
     TransferCreate,
     TransferRead,
     TransferUpdate,
@@ -189,6 +194,195 @@ async def update_transfer(
         _log(session, user, leg, AuditAction.UPDATE, before)
     await session.commit()
     return _transfer_read(out_leg, in_leg)
+
+
+async def list_for_month(
+    session: AsyncSession, user: User, month_id: uuid.UUID
+) -> list[EntryListItem]:
+    """The month's entries by date, each with its origin (invariant 2.2.9)."""
+    month = await months.get(session, user, month_id)
+    rows = await entries_repo.list_active_for_month(session, month.id)
+    sources = {i.id: i.source for i in await incomes_repo.list_for_month(session, month.id)}
+    legs: dict[uuid.UUID, dict[MovementType, uuid.UUID]] = {}
+    for row in rows:
+        if row.transfer_id is not None:
+            legs.setdefault(row.transfer_id, {})[row.movement_type] = row.label_id
+
+    items = []
+    for row in rows:
+        base = EntryRead.model_validate(row).model_dump()
+        if row.movement_type is MovementType.ALLOCATION:
+            item = EntryListItem(**base, origin="initial_distribution")
+        elif row.movement_type is MovementType.ADDITION:
+            source = sources.get(row.income_id) if row.income_id else None
+            item = EntryListItem(**base, origin="external_income", source=source)
+        else:
+            assert row.transfer_id is not None
+            other = (
+                MovementType.TRANSFER_OUT
+                if row.movement_type is MovementType.TRANSFER_IN
+                else MovementType.TRANSFER_IN
+            )
+            item = EntryListItem(
+                **base,
+                origin=row.movement_type.value,
+                counterpart_label_id=legs[row.transfer_id].get(other),
+            )
+        items.append(item)
+    return items
+
+
+async def update_entry(
+    session: AsyncSession, user: User, entry_id: uuid.UUID, data: EntryUpdate
+) -> Entry:
+    """Edit an allocation or an addition; an addition keeps its income in sync."""
+    entry = await _get_entry(session, user, entry_id)
+    month = await months.get_open(session, user, entry.month_id)
+    changes = data.model_dump(exclude_unset=True)
+
+    if entry.transfer_id is not None:
+        raise ValidationError("Transfers are edited through /transfers/{transfer_id}")
+    if entry.movement_type is MovementType.ALLOCATION:
+        not_allowed = changes.keys() - {"amount", "note"}
+        if not_allowed:
+            raise ValidationError(
+                f"An allocation only accepts amount and note (got {', '.join(sorted(not_allowed))})"
+            )
+
+    before = audit.snapshot(entry)
+    if changes.get("amount") is not None:
+        entry.amount = changes["amount"]
+    if "note" in changes:
+        entry.note = changes["note"]
+    if changes.get("occurred_on") is not None:
+        ensure_date_in_month(changes["occurred_on"], month.year, month.month)
+        entry.occurred_on = changes["occurred_on"]
+    if changes.get("label_id") is not None and changes["label_id"] != entry.label_id:
+        entry.label_id = (await labels.get_usable(session, user, changes["label_id"])).id
+
+    if entry.movement_type is MovementType.ADDITION:
+        await _sync_income(session, user, entry, changes.get("source"))
+    await session.flush()
+    _log(session, user, entry, AuditAction.UPDATE, before)
+    await session.commit()
+    return entry
+
+
+async def delete_entry(session: AsyncSession, user: User, entry_id: uuid.UUID) -> None:
+    """Soft delete. A transfer leg takes the other leg along; an addition takes its income."""
+    entry = await _get_entry(session, user, entry_id)
+    await months.get_open(session, user, entry.month_id)
+    now = datetime.now(UTC)
+    for item in await _linked_entries(session, user, entry, deleted=False):
+        before = audit.snapshot(item)
+        item.deleted_at = now
+        await session.flush()
+        _log(session, user, item, AuditAction.DELETE, before)
+    if entry.income_id is not None:
+        income = await incomes_repo.get_for_user(session, user.id, entry.income_id)
+        if income is not None:
+            income_before = audit.snapshot(income)
+            income.deleted_at = now
+            await session.flush()
+            audit.log(
+                session,
+                user_id=user.id,
+                entity="income",
+                obj=income,
+                action=AuditAction.DELETE,
+                before=income_before,
+            )
+    await session.commit()
+
+
+async def restore_entry(session: AsyncSession, user: User, entry_id: uuid.UUID) -> Entry:
+    """Undo a delete, bringing back the other transfer leg or the addition's income too."""
+    entry = await entries_repo.get_for_user(session, user.id, entry_id, deleted=True)
+    if entry is None:
+        raise NotFoundError("Entry not found")
+    month = await months.get_open(session, user, entry.month_id)
+    restored = await _linked_entries(session, user, entry, deleted=True)
+    for item in restored:
+        await _ensure_restorable(session, user, month, item)
+    for item in restored:
+        item.deleted_at = None
+        await session.flush()
+        _log(session, user, item, AuditAction.RESTORE)
+    if entry.income_id is not None:
+        income = await incomes_repo.get_for_user(session, user.id, entry.income_id, deleted=True)
+        if income is not None:
+            income.deleted_at = None
+            await session.flush()
+            audit.log(
+                session, user_id=user.id, entity="income", obj=income, action=AuditAction.RESTORE
+            )
+    await session.commit()
+    return entry
+
+
+async def delete_transfer(session: AsyncSession, user: User, transfer_id: uuid.UUID) -> None:
+    out_leg, _ = await _transfer_legs(session, user, transfer_id)
+    await delete_entry(session, user, out_leg.id)
+
+
+async def restore_transfer(
+    session: AsyncSession, user: User, transfer_id: uuid.UUID
+) -> TransferRead:
+    legs = await entries_repo.transfer_legs(session, transfer_id)
+    deleted = [leg for leg in legs if leg.user_id == user.id and leg.deleted_at is not None]
+    if len(deleted) != 2:
+        raise NotFoundError("Transfer not found")
+    await restore_entry(session, user, deleted[0].id)
+    return _transfer_read(*await _transfer_legs(session, user, transfer_id))
+
+
+async def _get_entry(session: AsyncSession, user: User, entry_id: uuid.UUID) -> Entry:
+    entry = await entries_repo.get_for_user(session, user.id, entry_id)
+    if entry is None:
+        raise NotFoundError("Entry not found")
+    return entry
+
+
+async def _linked_entries(
+    session: AsyncSession, user: User, entry: Entry, *, deleted: bool
+) -> list[Entry]:
+    """The entry plus, for a transfer, its other leg in the same state."""
+    if entry.transfer_id is None:
+        return [entry]
+    legs = await entries_repo.transfer_legs(session, entry.transfer_id)
+    return [
+        leg for leg in legs if leg.user_id == user.id and (leg.deleted_at is not None) == deleted
+    ]
+
+
+async def _ensure_restorable(session: AsyncSession, user: User, month: Month, entry: Entry) -> None:
+    label: Label | None = await labels_repo.get_for_user(session, user.id, entry.label_id)
+    if label is None:
+        raise ConflictError("The entry's label was deleted; restore the label first")
+    if entry.movement_type is MovementType.ALLOCATION and await entries_repo.active_allocation(
+        session, month.id, entry.label_id
+    ):
+        raise ConflictError("This label already has another allocation in this month")
+
+
+async def _sync_income(session: AsyncSession, user: User, entry: Entry, source: str | None) -> None:
+    assert entry.income_id is not None
+    income = await incomes_repo.get_for_user(session, user.id, entry.income_id)
+    if income is None:
+        return
+    before = audit.snapshot(income)
+    income.amount, income.received_on, income.note = entry.amount, entry.occurred_on, entry.note
+    if source is not None:
+        income.source = source
+    await session.flush()
+    audit.log(
+        session,
+        user_id=user.id,
+        entity="income",
+        obj=income,
+        action=AuditAction.UPDATE,
+        before=before,
+    )
 
 
 async def _transfer_legs(

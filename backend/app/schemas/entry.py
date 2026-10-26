@@ -1,6 +1,7 @@
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -76,3 +77,26 @@ class TransferRead(BaseModel):
     note: str | None
     out_entry_id: uuid.UUID
     in_entry_id: uuid.UUID
+
+
+EntryOrigin = Literal["initial_distribution", "external_income", "transfer_in", "transfer_out"]
+
+
+class EntryListItem(EntryRead):
+    """An entry with where its money came from, for the month's entry list."""
+
+    origin: EntryOrigin
+    source: str | None = Field(default=None, description="Income source of an addition")
+    counterpart_label_id: uuid.UUID | None = Field(
+        default=None, description="The other label of a transfer"
+    )
+
+
+class EntryUpdate(BaseModel):
+    """Edit an allocation (amount, note) or an addition (all fields). Transfers use /transfers."""
+
+    amount: PositiveMoney | None = None
+    occurred_on: date | None = None
+    label_id: uuid.UUID | None = None
+    source: Source | None = None
+    note: Note | None = None
