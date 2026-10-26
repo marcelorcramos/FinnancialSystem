@@ -1,3 +1,16 @@
 import { Routes } from '@angular/router';
 
-export const routes: Routes = [];
+import { authGuard } from './core/auth/auth.guards';
+
+export const routes: Routes = [
+  { path: 'auth', loadChildren: () => import('./features/auth/auth.routes') },
+  {
+    path: '',
+    loadComponent: () => import('./core/layout/shell').then((m) => m.Shell),
+    canActivate: [authGuard],
+    children: [
+      { path: '', title: 'nav.home', loadComponent: () => import('./features/home/home-page') },
+    ],
+  },
+  { path: '**', redirectTo: '' },
+];

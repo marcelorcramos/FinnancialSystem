@@ -1,0 +1,41 @@
+@use '../../shared/design-tokens/breakpoints' as bp;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background: var(--mat-sys-surface-container-low);
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-4);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--mat-sys-title-medium);
+  color: var(--mat-sys-primary);
+}
+
+.actions {
+  display: inline-flex;
+  align-items: center;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--space-4);
+
+  @include bp.tablet-up {
+    align-items: center;
+    padding: var(--space-6);
+  }
+}
