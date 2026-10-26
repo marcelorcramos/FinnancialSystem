@@ -1,4 +1,6 @@
+from datetime import date, datetime
 from typing import Annotated
+from zoneinfo import ZoneInfo
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -31,3 +33,11 @@ async def get_current_user(
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+async def get_today(user: CurrentUser) -> date:
+    """Today in the user's time zone: the reference for rolling report windows."""
+    return datetime.now(ZoneInfo(user.timezone)).date()
+
+
+Today = Annotated[date, Depends(get_today)]

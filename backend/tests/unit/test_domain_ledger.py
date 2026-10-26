@@ -153,3 +153,17 @@ def test_money_rejects_invalid_or_huge(value: str) -> None:
 def test_positive_money_rejects_zero() -> None:
     with pytest.raises(ValidationError):
         positive_money("0.004")
+
+
+def test_distribution_shares_split_positive_money() -> None:
+    shares = ledger.distribution_shares({FOOD: D("300.00"), SAVINGS: D("100.00")})
+    assert shares == {FOOD: D("75.00"), SAVINGS: D("25.00")}
+
+
+def test_distribution_shares_give_no_slice_to_zero_or_negative() -> None:
+    shares = ledger.distribution_shares({FOOD: D("200.00"), SAVINGS: D("-50.00"), INVEST: D("0")})
+    assert shares == {FOOD: D("100.00"), SAVINGS: D("0.00"), INVEST: D("0.00")}
+
+
+def test_distribution_shares_when_nothing_was_distributed() -> None:
+    assert ledger.distribution_shares({FOOD: D("0.00")}) == {FOOD: D("0.00")}

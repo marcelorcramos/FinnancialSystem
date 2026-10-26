@@ -83,3 +83,18 @@ def totals_by_kind(
     for label_id, total in totals.items():
         result[kinds[label_id]] += total
     return result
+
+
+def distribution_shares[K](totals: Mapping[K, Decimal]) -> dict[K, Decimal]:
+    """Percentage of the money held by each key, for the donut chart.
+
+    Only positive totals take a share; a key at zero or below (money moved out of it) gets 0.
+    Shares are rounded to 2 decimals.
+    """
+    positive = sum((t for t in totals.values() if t > ZERO), ZERO)
+    if positive == ZERO:
+        return dict.fromkeys(totals, ZERO)
+    return {
+        key: (total / positive * 100).quantize(Decimal("0.01")) if total > ZERO else ZERO
+        for key, total in totals.items()
+    }
