@@ -70,6 +70,17 @@ services:
       <<: *healthcheck
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
 
+  web:
+    build: ../frontend
+    environment:
+      API_UPSTREAM: http://api:8000
+    ports: ["8080:80"]
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+
 volumes:
   pgdata:
   s3data:
