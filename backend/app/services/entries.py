@@ -8,9 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain.enums import AuditAction, MovementType
 from app.domain.errors import NotFoundError
 from app.domain.money import ZERO
-from app.models import Entry, User
+from app.domain.rules import ensure_date_in_month
+from app.models import Entry, Income, User
 from app.repositories import entries as entries_repo
-from app.schemas.entry import AllocationSet
+from app.schemas.entry import DEFAULT_ADDITION_SOURCE, AdditionCreate, AllocationSet
 from app.services import audit, labels, months
 
 ENTITY = "entry"
@@ -82,6 +83,42 @@ async def _remove_allocation(
     allocation.deleted_at = datetime.now(UTC)
     await session.flush()
     _log(session, user, allocation, AuditAction.DELETE, before)
+
+
+async def add_money(
+    session: AsyncSession, user: User, month_id: uuid.UUID, data: AdditionCreate
+) -> tuple[Entry, Income]:
+    """Create an `addition` and its income in one transaction (invariant 2.2.2)."""
+    month = await months.get_open(session, user, month_id)
+    label = await labels.get_usable(session, user, data.label_id)
+    ensure_date_in_month(data.occurred_on, month.year, month.month)
+
+    income = Income(
+        user_id=user.id,
+        month_id=month.id,
+        source=data.source or DEFAULT_ADDITION_SOURCE,
+        amount=data.amount,
+        received_on=data.occurred_on,
+        note=data.note,
+    )
+    session.add(income)
+    await session.flush()
+    entry = Entry(
+        user_id=user.id,
+        month_id=month.id,
+        label_id=label.id,
+        amount=data.amount,
+        movement_type=MovementType.ADDITION,
+        income_id=income.id,
+        occurred_on=data.occurred_on,
+        note=data.note,
+    )
+    session.add(entry)
+    await session.flush()
+    audit.log(session, user_id=user.id, entity="income", obj=income, action=AuditAction.CREATE)
+    _log(session, user, entry, AuditAction.CREATE)
+    await session.commit()
+    return entry, income
 
 
 def _log(

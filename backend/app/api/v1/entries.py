@@ -3,7 +3,7 @@ import uuid
 from fastapi import APIRouter, Response, status
 
 from app.api.deps import CurrentUser, SessionDep
-from app.schemas.entry import AllocationSet, EntryRead
+from app.schemas.entry import AdditionCreate, AdditionRead, AllocationSet, EntryRead
 from app.services import entries
 
 router = APIRouter(tags=["entries"])
@@ -32,3 +32,13 @@ async def remove_allocation(
     month_id: uuid.UUID, label_id: uuid.UUID, user: CurrentUser, session: SessionDep
 ) -> None:
     await entries.remove_allocation(session, user, month_id, label_id)
+
+
+@router.post("/months/{month_id}/additions", status_code=status.HTTP_201_CREATED)
+async def add_money(
+    month_id: uuid.UUID, data: AdditionCreate, user: CurrentUser, session: SessionDep
+) -> AdditionRead:
+    entry, income = await entries.add_money(session, user, month_id, data)
+    return AdditionRead.model_validate(
+        {**EntryRead.model_validate(entry).model_dump(), "source": income.source}
+    )
