@@ -39,8 +39,8 @@ describe('RegisterPage', () => {
     const values = {
       name: ' Ana ',
       email: USER.email,
-      password: 'secret123',
-      confirmPassword: 'secret123',
+      password: 'Secret#123',
+      confirmPassword: 'Secret#123',
       ...overrides,
     };
     for (const [name, value] of Object.entries(values)) type(name, value);
@@ -56,7 +56,7 @@ describe('RegisterPage', () => {
     expect(store.register).toHaveBeenCalledWith({
       name: 'Ana',
       email: USER.email,
-      password: 'secret123',
+      password: 'Secret#123',
     });
     register$.next(USER);
     register$.complete();
@@ -68,6 +68,15 @@ describe('RegisterPage', () => {
 
     expect(store.register).not.toHaveBeenCalled();
     expect(errors()).toContain('Mínimo de 8 caracteres.');
+  });
+
+  it('requires upper, lower, digit and symbol in the password', async () => {
+    await fill({ password: 'segura2026', confirmPassword: 'segura2026' });
+
+    expect(store.register).not.toHaveBeenCalled();
+    expect(errors()).toContain(
+      'Usa pelo menos 8 caracteres, com maiúscula, minúscula, número e símbolo.',
+    );
   });
 
   it('requires both passwords to match', async () => {

@@ -17,6 +17,7 @@ export function fieldError(control: AbstractControl): FieldError | null {
   if (errors['maxlength']) {
     return { key: 'validation.maxLength', params: { max: errors['maxlength'].requiredLength } };
   }
+  if (errors['passwordPolicy']) return { key: 'validation.passwordPolicy' };
   if (errors['passwordMismatch']) return { key: 'validation.passwordMismatch' };
   return null;
 }
