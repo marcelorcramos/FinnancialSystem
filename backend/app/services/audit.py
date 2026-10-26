@@ -43,3 +43,26 @@ def record(
             after=after,
         )
     )
+
+
+def log(
+    session: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    entity: str,
+    obj: Base,
+    action: AuditAction,
+    before: dict[str, Any] | None = None,
+) -> None:
+    """Regista uma escrita; o estado "depois" é tirado do objeto (exceto em DELETE)."""
+    after = None if action is AuditAction.DELETE else snapshot(obj)
+    entity_id = getattr(obj, "id")  # noqa: B009  (todos os modelos auditados têm id)
+    record(
+        session,
+        user_id=user_id,
+        entity=entity,
+        entity_id=entity_id,
+        action=action,
+        before=before,
+        after=after,
+    )
