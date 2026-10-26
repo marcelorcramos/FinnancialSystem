@@ -176,18 +176,18 @@ async def test_change_password_revokes_sessions(client: AsyncClient) -> None:
     wrong = await client.post(
         "/api/v1/users/me/password",
         headers=bearer(access),
-        json={"current_password": "errada-123", "new_password": "nova-password-456"},
+        json={"current_password": "errada-123", "new_password": "Nova-password-456!"},
     )
     assert wrong.status_code == 401
 
     ok = await client.post(
         "/api/v1/users/me/password",
         headers=bearer(access),
-        json={"current_password": PASSWORD, "new_password": "nova-password-456"},
+        json={"current_password": PASSWORD, "new_password": "Nova-password-456!"},
     )
     assert ok.status_code == 204
     assert (await client.post("/api/v1/auth/refresh")).status_code == 401
-    await login(client, user["email"], "nova-password-456")
+    await login(client, user["email"], "Nova-password-456!")
 
 
 async def test_user_only_sees_own_profile_and_cannot_reach_others(client: AsyncClient) -> None:

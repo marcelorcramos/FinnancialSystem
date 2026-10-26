@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from httpx import AsyncClient
 
-PASSWORD = "password-segura-123"
+PASSWORD = "Password-segura-123"
 
 
 @dataclass
