@@ -23,3 +23,10 @@ class AuthenticationError(DomainError):
 
 class ValidationError(DomainError):
     code = "validation_failed"
+
+
+class MonthClosedError(ConflictError):
+    code = "month_closed"
+
+    def __init__(self) -> None:
+        super().__init__("O mês está fechado. Reabre-o para fazer alterações.")
