@@ -1,4 +1,4 @@
-/** Shapes from the "Contrato da API de autenticação" in docs/DECISIONS.md. */
+/** Shapes from the "Authentication API contract" in docs/DECISIONS.md. */
 
 export interface UserRead {
   id: string;
