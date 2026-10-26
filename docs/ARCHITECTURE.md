@@ -1,152 +1,156 @@
-# FinnancialSystem: Arquitetura de Implementação
+# FinnancialSystem: Implementation Architecture
 
-Documento de referência para guiar o desenvolvimento com o Claude Code. Define o produto, as regras de domínio, a stack, a estrutura do repositório e as fases de implementação, por ordem.
+Reference document that guides development. It defines the product, the domain rules, the stack, the repository layout and the implementation phases, in order.
 
-**Como usar com o Claude Code:** guarda este documento como `docs/ARCHITECTURE.md` no repositório, cria um `CLAUDE.md` na raiz a apontar para ele (ver secção 9) e pede **uma fase de cada vez**, por exemplo: "Implementa a Fase 2 do docs/ARCHITECTURE.md, cumprindo os critérios de aceitação". Não avances de fase sem os critérios cumpridos e os testes a passar.
+> Decisions made during development refine this plan and live in [`docs/DECISIONS.md`](DECISIONS.md). When the two disagree, `DECISIONS.md` wins.
+
+**How to use it with Claude Code:** ask for **one phase at a time**, for example: "Implement Phase 2 of docs/ARCHITECTURE.md, meeting its acceptance criteria". Do not move to the next phase until the criteria are met and the tests pass.
 
 ---
 
-## 1. Visão do produto
+## 1. Product vision
 
-Plataforma de controlo financeiro pessoal. O utilizador trabalha por **mês** (uma "planilha" por mês) e distribui o dinheiro por **etiquetas** (Aluguel, Comida, Investimento, Poupança...). Os dados são **introduzidos manualmente** (sem bots, sem áudio, sem ligação a bancos).
+A personal finance platform. The user works **month by month** (one "sheet" per month) and distributes money across **labels** (Rent, Food, Investments, Savings...). Data is **entered manually** (no bots, no voice, no bank connections).
 
-A app responde a perguntas como "quanto gastei em água nos últimos 6 meses?" ou "quanto investi este ano?", e mostra tudo de forma visual e imediata.
+The app answers questions such as "how much did I spend on water in the last 6 months?" or "how much did I invest this year?", and shows everything visually and immediately.
 
-## 2. Regras de domínio (invariantes)
+## 2. Domain rules (invariants)
 
-Estas regras são a parte mais importante do projeto. Devem estar cobertas por testes automáticos e nunca podem ser violadas por nenhum endpoint, tarefa ou consumer.
+These rules are the most important part of the project. They must be covered by automated tests and can never be broken by any endpoint, task or consumer.
 
-### 2.1 Etiquetas e tipo
+### 2.1 Labels and kind
 
-- Cada etiqueta tem um `kind`: `expense` (gasto), `saving` (poupança) ou `investment` (investimento).
-- O tipo é perguntado na criação da etiqueta e determina a **cor semântica dos valores**: gasto em vermelho suave, poupança em verde, investimento em azul.
-- A **cor da etiqueta** (escolhida pelo utilizador) é independente e serve de identidade em donuts, ícones e linhas de gráficos.
-- A cor nunca é o único sinal: acompanhar sempre de ícone e texto (acessibilidade).
-- Mudar o `kind` de uma etiqueta é permitido, mas altera retroativamente os relatórios; a UI deve avisar.
-- Etiquetas padrão são criadas no registo, já com o tipo certo. Todas têm nome, cor e ícone.
-- Etiqueta com entradas não se elimina: ou se arquiva, ou se reatribuem as entradas a outra etiqueta.
+- Every label has a `kind`: `expense`, `saving` or `investment`.
+- The kind is asked when the label is created and sets the **semantic color of amounts**: expense in soft red, saving in green, investment in blue.
+- The **label color** (chosen by the user) is independent and acts as its identity in donuts, icons and chart lines.
+- Color is never the only signal: always pair it with an icon and text (accessibility).
+- Changing a label's `kind` is allowed, but it retroactively changes reports; the UI must warn about it.
+- Default labels are created at sign-up, already with the right kind. Every label has a name, a color and an icon.
+- A label with entries is not deleted: it is either archived or its entries are reassigned to another label.
 
-### 2.2 Movimentos (entradas)
+### 2.2 Movements (entries)
 
-Uma etiqueta mostra sempre a **soma de tudo o que foi posto nela**. Não há "consumo de orçamento": se Mercado tinha 200 € e se gastaram mais 12 €, mostra 212 €.
+A label always shows the **sum of everything put into it**. There is no "budget consumption": if Food had €200 and €12 more were added, it shows €212.
 
-Cada movimento tem data (`occurred_on`), valor positivo e um `movement_type`:
+Every movement has a date (`occurred_on`), a positive amount and a `movement_type`:
 
-| Tipo | Significado | Efeito na etiqueta |
+| Type | Meaning | Effect on the label |
 |---|---|---|
-| `allocation` | Distribuição inicial do mês | soma |
-| `addition` | Valor acrescentado depois, vindo de fora da app | soma |
-| `transfer_in` | Valor que entra vindo de outra etiqueta | soma |
-| `transfer_out` | Valor que sai para outra etiqueta | subtrai |
+| `allocation` | Initial distribution of the month | adds |
+| `addition` | Amount added later, coming from outside the app | adds |
+| `transfer_in` | Amount coming in from another label | adds |
+| `transfer_out` | Amount going out to another label | subtracts |
 
-**Total da etiqueta = allocation + addition + transfer_in − transfer_out.**
+**Label total = allocation + addition + transfer_in − transfer_out.**
 
-Invariantes:
+Invariants:
 
-1. `amount` é sempre `NUMERIC(14,2)` e estritamente positivo. O sinal vem do tipo. Nunca usar `float`.
-2. Um `addition` cria também um registo de rendimento (`incomes`) ligado por `income_id`, para o rendimento do mês subir o mesmo valor.
-3. Uma transferência é **sempre um par** de entradas (`transfer_out` + `transfer_in`) com o mesmo `transfer_id`, mesmo valor, mesma data, etiquetas diferentes, criado numa única transação de base de dados.
-4. Apagar ou editar uma perna da transferência afeta as duas (atomicamente).
-5. Tirar dinheiro de uma etiqueta é sempre uma transferência para outra. O dinheiro nunca desaparece sem destino. Corrigir enganos faz-se editando ou apagando a entrada (com desfazer).
-6. O total do mês é invariante a transferências: a soma de `transfer_in` e `transfer_out` num mês é sempre igual.
-7. **Por distribuir** = rendimento total do mês − soma de (`allocation` + `addition`). Os `addition` sobem as duas parcelas por igual, por isso não alteram o por distribuir.
-8. Uma etiqueta de poupança ou investimento pode ficar com saldo mensal negativo (significa que se usou dinheiro acumulado). A evolução do património usa saldos **acumulados** entre meses.
-9. Cada entrada mostra a sua origem (distribuição inicial, rendimento externo, transferido de X) e a data, para se ver a diferença ao longo do mês.
+1. `amount` is always `NUMERIC(14,2)` and strictly positive. The sign comes from the type. Never use `float`.
+2. An `addition` also creates an income record (`incomes`) linked by `income_id`, so the month's income goes up by the same amount.
+3. A transfer is **always a pair** of entries (`transfer_out` + `transfer_in`) with the same `transfer_id`, same amount, same date and different labels, created in a single database transaction.
+4. Deleting or editing one leg of a transfer affects both (atomically).
+5. Taking money out of a label is always a transfer to another label. Money never disappears without a destination. Mistakes are fixed by editing or deleting the entry (with undo).
+6. The month total is invariant to transfers: the sum of `transfer_in` and `transfer_out` in a month is always equal.
+7. **Unallocated** = total month income − sum of (`allocation` + `addition`). Additions raise both sides by the same amount, so they do not change the unallocated amount.
+8. A saving or investment label may end a month with a negative balance (it means accumulated money was used). Net worth evolution uses balances **accumulated** across months.
+9. Every entry shows its origin (initial distribution, external income, transferred from X) and its date, so the changes during the month are visible.
 
-### 2.3 Meses
+### 2.3 Months
 
-- Um mês por utilizador por ano/mês (`UNIQUE(user_id, year, month)`).
-- Ao criar: opção de copiar a estrutura do mês anterior (mesmas etiquetas, valores em branco ou copiados).
-- Um mês **fechado** rejeita qualquer escrita (entradas, rendimentos, transferências) até ser reaberto.
-- Observação opcional no mês e em cada entrada.
-- Vários rendimentos por mês (salário, extra...).
+- One month per user per year/month (`UNIQUE(user_id, year, month)`).
+- On creation: option to copy the previous month's structure (same labels, blank or copied amounts).
+- A **closed** month rejects any write (entries, incomes, transfers) until it is reopened.
+- Optional note on the month and on each entry.
+- Several incomes per month (salary, extra...).
 
-### 2.4 Transversais
+### 2.4 Cross-cutting
 
-- **Isolamento:** cada utilizador só acede aos seus dados. Toda a query filtra por `user_id`; há testes dedicados a tentar aceder a dados de outro utilizador.
-- **Soft delete** em entradas, meses, etiquetas e metas (`deleted_at`). Eliminar mostra um toast com "desfazer". Dupla confirmação só em ações destrutivas a sério (apagar conta, apagar etiqueta com entradas).
-- **Audit log** de criação, edição e eliminação de entradas, meses e etiquetas.
-- **Uma moeda por utilizador** no MVP. Multi-moeda fica fora do âmbito.
-- Valores arredondados e formatados de forma consistente (backend e frontend).
+- **Isolation:** each user only accesses their own data. Every query filters by `user_id`; dedicated tests try to access another user's data.
+- **Soft delete** on entries, months, labels and goals (`deleted_at`). Deleting shows a toast with "undo". Double confirmation only for truly destructive actions (delete account, delete a label with entries).
+- **Audit log** of creation, update and deletion of entries, months and labels.
+- **One currency per user** in the MVP. Multi-currency is out of scope.
+- Amounts rounded and formatted consistently (backend and frontend).
 
-## 3. Âmbito: MVP e V2
+## 3. Scope: MVP and V2
 
-**MVP:** utilizadores e perfil; etiquetas com tipo; meses; rendimentos; entradas e transferências; home com donut e seletor de mês; filtros e totais por etiqueta e período; limites com alertas (faixas fixas 80% e 100%); metas e fundo de emergência; comprovativos; mês fechado; modo demo.
+**MVP:** users and profile; labels with kind; months; incomes; entries and transfers; home with donut and month picker; filters and totals by label and period; limits with alerts (fixed 80% and 100% thresholds); goals and emergency fund; receipts; closed month; demo mode.
 
-**V2:** faixas de limite configuráveis; personalização de gráficos; investimentos por tipo (ETF, PPR...) com divisão de uma entrada; comparações mês a mês e ano a ano; evolução do património; exportação CSV/PDF avançada; pesquisa por texto em observações; alertas por email; importação de extrato CSV.
+**V2:** configurable limit thresholds; chart customization; investments by type (ETF, pension plan...) with entry splitting; month-over-month and year-over-year comparisons; net worth evolution; advanced CSV/PDF export; text search in notes; email alerts; bank statement CSV import.
 
 ## 4. Stack
 
-| Camada | Tecnologia |
+| Layer | Technology |
 |---|---|
 | Backend | Python 3.12, FastAPI, SQLAlchemy 2.0 (async), Alembic, Pydantic v2 |
-| Frontend | Angular (versão estável recente), standalone components, Signals, novo control flow (`@if`, `@for`), ECharts (ngx-echarts) |
-| Base de dados | PostgreSQL |
-| Cache e rate limiting | Redis |
-| Mensageria | RabbitMQ (eventos de domínio e broker do Celery) |
-| Tarefas | Celery + Celery beat |
-| Auth | JWT com refresh token em cookie HttpOnly; OAuth Google (Authlib) |
-| Ficheiros | MinIO em local, Azure Blob Storage em produção (URLs assinadas) |
-| Emails | Mailpit em dev, Azure Communication Services ou Resend em produção |
-| IA | Claude API (chat financeiro e insights, com tool use sobre as queries de relatórios) |
-| Tempo real | WebSockets ou SSE (alertas) |
-| Testes | pytest, pytest-asyncio, testcontainers, Ruff, mypy; Vitest ou Jest; Playwright |
-| Observabilidade | Prometheus, Grafana, structlog, OpenTelemetry, Application Insights |
+| Frontend | Angular (recent stable), standalone components, Signals, new control flow (`@if`, `@for`), ECharts (ngx-echarts) |
+| Database | PostgreSQL |
+| Cache and rate limiting | Redis |
+| Messaging | RabbitMQ (domain events and Celery broker) |
+| Tasks | Celery + Celery beat |
+| Auth | JWT with refresh token in an HttpOnly cookie; Google OAuth (Authlib) |
+| Files | S3-compatible storage locally, Azure Blob Storage in production (signed URLs) |
+| Email | Mailpit in dev, Azure Communication Services or Resend in production |
+| AI | Claude API (financial chat and insights, with tool use over the report queries) |
+| Real time | WebSockets or SSE (alerts) |
+| Tests | pytest, pytest-asyncio, testcontainers, Ruff, mypy; Vitest; Playwright |
+| Observability | Prometheus, Grafana, structlog, OpenTelemetry, Application Insights |
 | Infra | Docker, Docker Compose, Kubernetes (Helm), Terraform, Azure (AKS, ACR, Key Vault, PostgreSQL Flexible Server, Blob Storage) |
-| CI/CD | GitHub Actions (login Azure por OIDC) |
+| CI/CD | GitHub Actions (Azure login via OIDC) |
 
-## 5. Estrutura do repositório (monorepo)
+## 5. Repository layout (monorepo)
 
 ```
 finnancial-system/
 ├── CLAUDE.md
 ├── README.md
 ├── docs/
-│   ├── ARCHITECTURE.md        # este documento
+│   ├── ARCHITECTURE.md        # this document
+│   ├── DECISIONS.md           # decisions that refine this plan
 │   ├── adr/                   # Architecture Decision Records
 │   └── diagrams/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py
-│   │   ├── core/              # config, segurança, logging, dependências
-│   │   ├── db/                # sessão, base, migrações (alembic)
-│   │   ├── domain/            # regras de negócio puras (sem FastAPI)
-│   │   ├── models/            # modelos SQLAlchemy
+│   │   ├── core/              # config, security, logging
+│   │   ├── db/                # session, base, column types
+│   │   ├── domain/            # pure business rules (no FastAPI, no database)
+│   │   ├── models/            # SQLAlchemy models
 │   │   ├── schemas/           # Pydantic
-│   │   ├── repositories/      # acesso a dados
-│   │   ├── services/          # casos de uso
+│   │   ├── repositories/      # data access
+│   │   ├── services/          # use cases
 │   │   ├── api/v1/            # routers
 │   │   ├── events/            # publishers, consumers, outbox
-│   │   └── workers/           # tarefas Celery
+│   │   └── workers/           # Celery tasks
+│   ├── alembic/               # migrations
 │   ├── tests/
 │   │   ├── unit/
 │   │   ├── integration/
 │   │   └── conftest.py
-│   ├── pyproject.toml
+│   ├── requirements.txt
 │   └── Dockerfile
 ├── frontend/
 │   ├── src/app/
 │   │   ├── core/              # auth, interceptors, guards
-│   │   ├── shared/            # componentes, design tokens, pipes
+│   │   ├── shared/            # components, design tokens, pipes
 │   │   ├── features/          # auth, months, labels, dashboard, goals...
 │   │   └── app.routes.ts
 │   ├── e2e/                   # Playwright
 │   └── Dockerfile
 ├── deploy/
 │   ├── docker-compose.yml
-│   ├── docker-compose.override.yml
 │   ├── helm/                  # charts: api, worker, consumers, frontend
 │   └── terraform/             # azure
-└── .github/workflows/         # ci.yml, cd.yml
+└── .github/workflows/         # backend.yml, frontend.yml, cd.yml
 ```
 
-Princípio de arquitetura: **as regras de negócio vivem em `domain/` e `services/`**, não nos routers nem nos modelos. Isso permite testá-las sem HTTP nem base de dados.
+Architecture principle: **business rules live in `domain/` and `services/`**, not in routers or models. That makes them testable without HTTP or a database.
 
-## 6. Modelo de dados (resumo)
+## 6. Data model (summary)
 
 ```
 users              id, email, password_hash, name, avatar_url, currency, locale, timezone,
                    email_verified_at, google_id, deleted_at
+refresh_tokens     id, user_id, family_id, token_hash, expires_at, revoked_at, replaced_by_id
 labels             id, user_id, name, kind (expense|saving|investment), color, icon,
                    is_default, archived_at, deleted_at
 months             id, user_id, year, month, note, closed_at, deleted_at   UNIQUE(user_id, year, month)
@@ -154,7 +158,7 @@ incomes            id, user_id, month_id, source, amount, received_on, note, del
 entries            id, user_id, month_id, label_id, amount, movement_type, transfer_id (nullable),
                    income_id (nullable), occurred_on, note, deleted_at
 attachments        id, user_id, entry_id (nullable), month_id, storage_key, filename, mime, size
-limits             id, user_id, label_id, month_id (nullable = padrão), amount
+limits             id, user_id, label_id, month_id (nullable = default), amount
 alerts             id, user_id, limit_id, level (warning|exceeded), seen_at, created_at
 goals              id, user_id, label_id, target_amount, deadline, type (normal|emergency_fund),
                    manual_progress (nullable), completed_at, deleted_at
@@ -164,299 +168,274 @@ outbox_events      id, type, payload (jsonb), created_at, published_at
 # V2: investment_types, entry_investments
 ```
 
-Índices essenciais: `entries(user_id, occurred_on)`, `entries(user_id, label_id, occurred_on)`, `entries(transfer_id)`, `months(user_id, year, month)`. Constraints: `CHECK (amount > 0)`, `CHECK` de coerência entre `movement_type` e `transfer_id`.
+Essential indexes: `entries(user_id, occurred_on)`, `entries(user_id, label_id, occurred_on)`, `entries(transfer_id)`, `months(user_id, year, month)`. Constraints: `CHECK (amount > 0)`, `CHECK` for consistency between `movement_type` and `transfer_id`.
 
-## 7. Fluxo de eventos (alvo)
+## 7. Event flow (target)
 
 ```
-Angular → FastAPI → grava no PostgreSQL + escreve evento na tabela outbox (mesma transação)
+Angular → FastAPI → writes to PostgreSQL + writes an event to the outbox table (same transaction)
                        │
-                  relay publica no RabbitMQ
-                       ├─ consumer "limits" : recalcula limites e cria alertas
-                       ├─ consumer "cache"  : invalida o cache do dashboard (Redis)
-                       ├─ consumer "goals"  : atualiza progresso de metas
-                       └─ consumer "emails" : envia alertas por email (V2)
+                  relay publishes to RabbitMQ
+                       ├─ consumer "limits" : recomputes limits and creates alerts
+                       ├─ consumer "cache"  : invalidates the dashboard cache (Redis)
+                       ├─ consumer "goals"  : updates goal progress
+                       └─ consumer "emails" : sends email alerts (V2)
 
-Celery beat / CronJob → cria entradas recorrentes no início de cada mês
-Celery workers        → exportações PDF/CSV, RGPD, emails
+Celery beat / CronJob → creates recurring entries at the start of each month
+Celery workers        → PDF/CSV exports, GDPR, emails
 ```
 
-Eventos: `EntryCreated`, `EntryUpdated`, `EntryDeleted`, `TransferCreated`, `MonthClosed`, `MonthReopened`. Consumers são **idempotentes** (a mesma mensagem processada duas vezes não pode duplicar efeitos). Mensagens que falham várias vezes vão para uma dead-letter queue.
+Events: `EntryCreated`, `EntryUpdated`, `EntryDeleted`, `TransferCreated`, `MonthClosed`, `MonthReopened`. Consumers are **idempotent** (the same message processed twice cannot duplicate effects). Messages that fail repeatedly go to a dead-letter queue.
 
 ---
 
-## 8. Fases de implementação
+## 8. Implementation phases
 
-Regra geral: cada fase termina com **código, testes e documentação mínima**, e o CI verde. Não começar a fase seguinte antes.
+General rule: every phase ends with **code, tests and minimal documentation**, and a green CI. Do not start the next phase before that.
 
-### Fase 0: Fundação do repositório
+### Phase 0: Repository foundation
 
-**Objetivo:** ambiente reprodutível e pipeline mínimo.
+**Goal:** reproducible environment and a minimal pipeline.
 
-**Entregáveis**
+**Deliverables**
 
-- Estrutura do monorepo (secção 5), `README.md` e `CLAUDE.md`
-- `docker-compose.yml` com PostgreSQL, Redis, RabbitMQ (com management UI), MinIO e Mailpit; healthchecks em todos
-- Backend FastAPI mínimo com `/health`, configuração por variáveis de ambiente (pydantic-settings), logging estruturado
-- Frontend Angular gerado e a servir uma página inicial
-- Ruff, mypy, pre-commit; pytest configurado
-- GitHub Actions `ci.yml`: lint, type-check e testes do backend e lint/build do frontend
-- Dockerfiles do backend e do frontend
+- Monorepo layout (section 5), `README.md` and `CLAUDE.md`
+- `docker-compose.yml` with PostgreSQL, Redis, RabbitMQ (with management UI), S3-compatible storage and Mailpit; healthchecks on all of them
+- Minimal FastAPI backend with `/health`, configuration through environment variables (pydantic-settings), structured logging
+- Generated Angular frontend serving a home page
+- Ruff, mypy, pre-commit; pytest configured
+- GitHub Actions: lint, type-check and backend tests; frontend lint/build
+- Backend and frontend Dockerfiles
 
-**Critérios de aceitação**
+**Acceptance criteria**
 
-- `docker compose up` sobe toda a stack sem passos manuais
-- `GET /health` responde 200 e o CI passa num push
+- `docker compose up` starts the whole stack with no manual steps
+- `GET /health` answers 200 and CI passes on push
 
-### Fase 1: Base de dados e autenticação
+### Phase 1: Database and authentication
 
-**Objetivo:** utilizadores reais e modelo base migrado.
+**Goal:** real users and the base model migrated.
 
-**Entregáveis**
+**Deliverables**
 
-- SQLAlchemy async + Alembic; migração inicial com `users`, `labels`, `months`, `incomes`, `entries`, `audit_log` e constraints/índices da secção 6
-- Registo com email e password (hash com argon2 ou bcrypt), login, logout, refresh token (cookie HttpOnly), rotação de refresh
-- Dependência `get_current_user` usada em todos os routers protegidos
-- Edição de perfil (nome, moeda, idioma, fuso horário) e alteração de password
-- Criação das etiquetas padrão (com `kind`) no registo
-- Testes de integração com testcontainers (PostgreSQL real)
+- Async SQLAlchemy + Alembic; initial migration with `users`, `labels`, `months`, `incomes`, `entries`, `audit_log` and the constraints/indexes from section 6
+- Sign-up with email and password (argon2 or bcrypt hash), login, logout, refresh token (HttpOnly cookie), refresh rotation
+- `get_current_user` dependency used by every protected router
+- Profile editing (name, currency, language, time zone) and password change
+- Creation of the default labels (with kind) at sign-up
+- Integration tests with testcontainers (real PostgreSQL)
 
-**Critérios de aceitação**
+**Acceptance criteria**
 
-- Fluxo registo → login → refresh → logout testado
-- Teste que prova que um utilizador não acede a recursos de outro
-- Migrações sobem e descem sem erros
+- Sign-up → login → refresh → logout flow tested
+- A test proving a user cannot access another user's resources
+- Migrations upgrade and downgrade without errors
 
-### Fase 2: Núcleo de domínio (etiquetas, meses, entradas)
+### Phase 2: Domain core (labels, months, entries)
 
-**Objetivo:** implementar as regras da secção 2. É a fase mais importante.
+**Goal:** implement the rules from section 2. This is the most important phase.
 
-**Entregáveis**
+**Deliverables**
 
-- CRUD de etiquetas (com `kind`, cor, ícone, arquivar, reatribuir ao eliminar)
-- CRUD de meses, com cópia do mês anterior e fecho/reabertura
-- CRUD de rendimentos por mês
-- Distribuição inicial (`allocation`) por etiqueta
-- Criar `addition` (com `income` associado) e transferências (par atómico com `transfer_id`)
-- Soft delete com endpoint de restauro (para o "desfazer")
-- Audit log em todas as escritas
-- Camada `domain/` pura com as regras e cálculo de totais e "por distribuir"
+- Labels CRUD (kind, color, icon, archive, reassign on delete)
+- Months CRUD, with copy from the previous month and close/reopen
+- Incomes CRUD per month
+- Initial distribution (`allocation`) per label
+- Create `addition` (with its income) and transfers (atomic pair with `transfer_id`)
+- Soft delete with a restore endpoint (for "undo")
+- Audit log on every write
+- Pure `domain/` layer with the rules and the computation of totals and "unallocated"
 
-**Critérios de aceitação**
+**Acceptance criteria**
 
-- Testes unitários para cada invariante da secção 2.2 e 2.3, incluindo: mês fechado rejeita escritas; transferência é sempre par; apagar uma perna apaga as duas; total do mês invariante a transferências; Mercado 200 + 12 = 212; por distribuir correto após `addition`
-- Nenhum cálculo usa `float`
+- Unit tests for every invariant in sections 2.2 and 2.3, including: a closed month rejects writes; a transfer is always a pair; deleting one leg deletes both; the month total is invariant to transfers; Food 200 + 12 = 212; unallocated is correct after an addition
+- No calculation uses float
 
-### Fase 3: Relatórios e agregações
+### Phase 3: Reports and aggregations
 
-**Objetivo:** responder a perguntas por período.
+**Goal:** answer questions by period.
 
-**Entregáveis**
+**Deliverables**
 
-- Endpoint de resumo do mês: total por etiqueta, total por `kind`, origem de cada parte (base + ajustes), por distribuir
-- Endpoint de relatório por intervalo livre: filtro por etiqueta, por `kind` e por período (3, 6, 12 meses, ano, intervalo), com total e lista de entradas
-- Série temporal por etiqueta (evolução ao longo dos meses)
-- Queries otimizadas e índices validados com `EXPLAIN`
-- Serviço único `ReportService`, que será depois reutilizado pelo chat com Claude
+- Month summary endpoint: total per label, total per kind, origin of each part (base + adjustments), unallocated
+- Report endpoint with optional filters: by label, by kind and by period, with a total and the list of entries
+- Time series per label (evolution across months)
+- Optimized queries and indexes validated with `EXPLAIN`
+- A single `ReportService`, later reused by the Claude chat
 
-**Critérios de aceitação**
+**Acceptance criteria**
 
-- Testes com dados fixos que comprovam os totais, incluindo etiquetas com transferências
-- "Gasto em água nos últimos 6 meses" devolve o valor certo
+- Tests with fixed data proving the totals, including labels with transfers
+- "Water spending in the last 6 months" returns the right amount
 
-### Fase 4: Frontend base
+### Phase 4: Frontend foundation
 
-**Objetivo:** app navegável com autenticação e lançamento de dados.
+**Goal:** a navigable app with authentication and data entry.
 
-**Entregáveis**
+**Deliverables**
 
-- Layout responsivo (telemóvel, tablet, desktop), dark mode, i18n PT/EN
-- **Design tokens** em variáveis CSS: `--kind-expense`, `--kind-saving`, `--kind-investment` (com versão dark) e componente `MoneyAmount` que aplica cor, ícone e texto por `kind`
-- Auth: registo, login, interceptor com refresh, guards
-- Gestão de etiquetas (criar com pergunta do tipo, cor, ícone)
-- Ecrã do mês: distribuição inicial, lista de entradas por data com origem, formulário rápido de entrada, fluxo "acrescentar dinheiro" que pergunta a origem (fonte externa ou outra etiqueta)
-- Toast com "desfazer" após eliminar
-- Cliente HTTP tipado, gerado a partir do OpenAPI do backend
+- Responsive layout (phone, tablet, desktop), dark mode, i18n
+- Design tokens as CSS variables: `--kind-expense`, `--kind-saving`, `--kind-investment` (with dark variants) and a `MoneyAmount` component that applies color, icon and text per kind
+- Auth: sign-up, login, interceptor with refresh, guards
+- Label management (create with the kind question, color, icon)
+- Month screen: initial distribution, list of entries by date with origin, quick entry form, "add money" flow that asks for the origin (external source or another label)
+- Toast with "undo" after deleting
+- Typed HTTP client generated from the backend OpenAPI
 
-**Critérios de aceitação**
+**Acceptance criteria**
 
-- Registar-se, criar um mês, distribuir 1000 € e acrescentar 50 € vindos de fonte externa e 50 € vindos de Poupança, vendo tudo refletido corretamente
-- Utilizável em ecrã de telemóvel
+- Sign up, create a month, distribute €1000 and add €50 from an external source and €50 from Savings, with everything reflected correctly
+- Usable on a phone screen
 
-### Fase 5: Dashboard e gráficos
+### Phase 5: Dashboard and charts
 
-**Objetivo:** a visão geral que dá identidade ao produto.
+**Goal:** the overview that gives the product its identity.
 
-**Entregáveis**
+**Deliverables**
 
-- Home com último mês por defeito e seletor de mês
-- Três totais no topo (gasto, poupado, investido) e por distribuir
-- Donut por `kind` e, ao clicar, por etiqueta; barras ordenadas; linha de evolução de uma etiqueta
-- Filtros por etiqueta e período com total atualizado e lista
-- Vista "base + ajustes" por etiqueta (barra empilhada ou linha do tempo)
-- Alternativa textual (tabela) para cada gráfico
+- Home with the latest month by default and a month picker
+- Three totals at the top (spent, saved, invested) and unallocated
+- Donut by kind and, on click, by label; sorted bars; evolution line for one label
+- Filters by label and period with an updated total and list
+- "Base + adjustments" view per label (stacked bar or timeline)
+- Text alternative (table) for every chart
 
-**Critérios de aceitação**
+**Acceptance criteria**
 
-- Os valores do dashboard coincidem com os endpoints da Fase 3
-- Contraste e navegação por teclado verificados nos gráficos
+- Dashboard values match the Phase 3 endpoints
+- Contrast and keyboard navigation checked on the charts
 
-### Fase 6: Testes E2E e CI completo
+### Phase 6: E2E tests and full CI
 
-**Entregáveis**
+**Deliverables**
 
-- Playwright: registo, login, criar mês, distribuir, acrescentar valor, transferir, fechar mês, ver dashboard
-- CI com testcontainers, cobertura com badge no README e Playwright a correr contra a stack em Docker Compose
-- Pre-commit e proteção do ramo principal
+- Playwright: sign up, log in, create a month, distribute, add money, transfer, close the month, view the dashboard
+- CI with testcontainers, coverage badge in the README and Playwright running against the Docker Compose stack
+- Pre-commit and protection of the main branch
 
-**Critérios de aceitação:** pipeline completo verde num pull request.
+**Acceptance criteria:** full pipeline green on a pull request.
 
-### Fase 7: Redis, RabbitMQ, Celery e outbox
+### Phase 7: Redis, RabbitMQ, Celery and outbox
 
-**Objetivo:** arquitetura orientada a eventos.
+**Goal:** event-driven architecture.
 
-**Entregáveis**
+**Deliverables**
 
-- Cache Redis dos resumos e relatórios, com chaves por utilizador e período; rate limiting nos endpoints de auth
-- Tabela `outbox_events` escrita na mesma transação das entradas; relay que publica no RabbitMQ
-- Exchange com filas separadas e dead-letter queue; consumers `cache`, `limits`, `goals` idempotentes
-- Celery + beat: **entradas recorrentes** (aluguel, salário) criadas no início do mês; tarefas assíncronas base
-- Processos separados no Compose: `api`, `worker`, `beat`, `consumers`
+- Redis cache for summaries and reports, keyed by user and period; rate limiting on auth endpoints
+- `outbox_events` table written in the same transaction as entries; relay that publishes to RabbitMQ
+- Exchange with separate queues and a dead-letter queue; idempotent `cache`, `limits` and `goals` consumers
+- Celery + beat: recurring entries (rent, salary) created at the start of the month; base async tasks
+- Separate processes in Compose: api, worker, beat, consumers
 
-**Critérios de aceitação**
+**Acceptance criteria**
 
-- Criar uma entrada invalida o cache e a próxima leitura devolve o valor atualizado
-- Reprocessar a mesma mensagem não duplica efeitos (teste)
-- Se um consumer falhar, a entrada continua gravada e a mensagem é reprocessada
+- Creating an entry invalidates the cache and the next read returns the updated value
+- Reprocessing the same message does not duplicate effects (test)
+- If a consumer fails, the entry stays saved and the message is reprocessed
 
-### Fase 8: Limites, alertas, metas e fundo de emergência
+### Phase 8: Limits, alerts, goals and emergency fund
 
-**Entregáveis**
+**Deliverables**
 
-- Limites por etiqueta e mês, com avisos aos 80% e 100% (fixos no MVP)
-- Alertas criados pelo consumer `limits` e empurrados para a UI por WebSocket ou SSE
-- Metas (etiqueta, valor-alvo, prazo) com progresso, tempo restante e "precisas de guardar X €/mês"
-- Fundo de emergência como meta especial: alvo em "N meses de despesas", calculado com a média dos gastos (etiquetas `expense`)
-- Metas concluídas guardadas no histórico
+- Limits per label and month, with warnings at 80% and 100% (fixed in the MVP)
+- Alerts created by the `limits` consumer and pushed to the UI via WebSocket or SSE
+- Goals (label, target amount, deadline) with progress, time left and "you need to save €X/month"
+- Emergency fund as a special goal: target in "N months of expenses", computed from average spending (expense labels)
+- Completed goals kept in history
 
-**Critérios de aceitação:** testes unitários dos cálculos (percentagens, ritmo, média de despesas) e alerta a aparecer na UI sem recarregar.
+**Acceptance criteria:** unit tests for the calculations (percentages, pace, average expenses) and an alert showing in the UI without reloading.
 
-### Fase 9: Comprovativos, exportação, RGPD e emails
+### Phase 9: Receipts, export, GDPR and email
 
-**Entregáveis**
+**Deliverables**
 
-- Upload de foto/PDF ligado a entrada e mês, guardado em MinIO com URLs assinadas e validação de tipo e tamanho; ver, descarregar e remover
-- Exportação CSV e PDF por período e etiquetas (tarefa Celery, ficheiro no storage, link para download)
-- Exportação de dados e eliminação de conta (RGPD)
-- Verificação de email e recuperação de password (Mailpit em dev)
+- Photo/PDF upload linked to an entry and a month, stored in S3 with signed URLs and type/size validation; view, download and remove
+- CSV and PDF export by period and labels (Celery task, file in storage, download link)
+- Data export and account deletion (GDPR)
+- Email verification and password recovery (Mailpit in dev)
 
-**Critérios de aceitação:** um utilizador não consegue aceder a anexos de outro, nem com URL adivinhada.
+**Acceptance criteria:** a user cannot access another user's attachments, not even with a guessed URL.
 
-### Fase 10: OAuth Google e modo demo
+### Phase 10: Google OAuth and demo mode
 
-**Entregáveis**
+**Deliverables**
 
-- Login com Google (Authlib), com ligação a conta existente pelo email verificado
-- 2FA TOTP (opcional)
-- **Conta demo** com dados realistas pré-carregados (vários meses, transferências, metas), reposta por tarefa agendada, acessível por um botão "Experimentar"
+- Google login (Authlib), linking to an existing account by verified email
+- TOTP 2FA (optional)
+- Demo account with realistic preloaded data (several months, transfers, goals), reset by a scheduled task, reachable through a "Try it" button
 
-### Fase 11: IA com Claude
+### Phase 11: AI with Claude
 
-**Objetivo:** camada de leitura e análise. A introdução de dados continua manual.
+**Goal:** a read and analysis layer. Data entry stays manual.
 
-**Entregáveis**
+**Deliverables**
 
-- **Chat financeiro** com tool use sobre o `ReportService` (ferramentas: resumo do mês, relatório por etiqueta e período, evolução, metas). O modelo nunca recebe SQL livre nem dados de outros utilizadores
-- **Insights do mês** gerados ao fechar o mês (consumer do evento `MonthClosed`)
-- **Sugestão de etiqueta** ao escrever a descrição de uma entrada (opcional)
-- Chave da API em segredo, limite de pedidos por utilizador, timeout e tratamento de erros
-- Testes com o cliente da API simulado (mock)
+- Financial chat with tool use over the `ReportService` (tools: month summary, report by label and period, evolution, goals). The model never receives free SQL nor other users' data
+- Month insights generated when the month is closed (consumer of the `MonthClosed` event)
+- Label suggestion while typing an entry description (optional)
+- API key as a secret, per-user rate limit, timeout and error handling
+- Tests with a mocked API client
 
-**Critérios de aceitação:** "quanto investi nos últimos 2 meses?" devolve o mesmo valor que o relatório da Fase 3.
+**Acceptance criteria:** "how much did I invest in the last 2 months?" returns the same amount as the Phase 3 report.
 
-### Fase 12: Observabilidade
+### Phase 12: Observability
 
-**Entregáveis**
+**Deliverables**
 
-- Métricas Prometheus na API (pedidos, latência, erros) e nas filas (tamanho, falhas)
-- Dashboards Grafana no repositório (provisioning)
-- OpenTelemetry e Sentry; logs estruturados com `request_id`
-- Prometheus e Grafana no Compose
+- Prometheus metrics on the API (requests, latency, errors) and on the queues (size, failures)
+- Grafana dashboards in the repository (provisioning)
+- OpenTelemetry and Sentry; structured logs with `request_id`
+- Prometheus and Grafana in Compose
 
-### Fase 13: Kubernetes local
+### Phase 13: Local Kubernetes
 
-**Entregáveis**
+**Deliverables**
 
-- Cluster local com kind ou k3d
-- Helm charts: `api`, `worker`, `consumers`, `frontend`; RabbitMQ e Redis via charts existentes
-- Deployments separados, probes de liveness e readiness, resource limits, ConfigMaps e Secrets
-- CronJob para as recorrências, HPA nos workers, Ingress NGINX
-- `kube-prometheus-stack` para métricas
+- Local cluster with kind or k3d
+- Helm charts: api, worker, consumers, frontend; RabbitMQ and Redis via existing charts
+- Separate deployments, liveness and readiness probes, resource limits, ConfigMaps and Secrets
+- CronJob for recurring entries, HPA on the workers, NGINX Ingress
+- kube-prometheus-stack for metrics
 
-**Critérios de aceitação:** `helm install` sobe a aplicação completa no cluster local.
+**Acceptance criteria:** `helm install` brings up the full application on the local cluster.
 
-### Fase 14: Azure, Terraform e CD
+### Phase 14: Azure, Terraform and CD
 
-**Entregáveis**
+**Deliverables**
 
-- Terraform: resource group, ACR, AKS, PostgreSQL Flexible Server, Key Vault, Storage Account, rede
-- Workload Identity para os pods lerem segredos do Key Vault
-- `cd.yml`: build das imagens, push para ACR e `helm upgrade` no AKS, com login Azure por OIDC (sem segredos estáticos)
-- Ingress com HTTPS (cert-manager) e domínio
-- Ambiente destruível e recriável por Terraform (controlo de custos)
+- Terraform: resource group, ACR, AKS, PostgreSQL Flexible Server, Key Vault, Storage Account, network
+- Workload Identity so pods read secrets from Key Vault
+- `cd.yml`: build images, push to ACR and `helm upgrade` on AKS, with Azure login via OIDC (no static secrets)
+- Ingress with HTTPS (cert-manager) and a domain
+- Environment that can be destroyed and recreated with Terraform (cost control)
 
-**Critérios de aceitação:** um merge no ramo principal faz deploy automático e a URL pública responde com HTTPS.
+**Acceptance criteria:** a merge into the main branch deploys automatically and the public URL answers over HTTPS.
 
-### Fase 15: Polimento para o portfólio
+### Phase 15: Portfolio polish
 
-**Entregáveis**
+**Deliverables**
 
-- Landing page com demo e explicação de segurança
-- README com diagrama de arquitetura (C4), GIFs, instruções de execução e badges (CI, cobertura)
-- ADRs para as decisões principais (outbox, RabbitMQ vs Redis, Kubernetes, modelo de movimentos)
-- Revisão de segurança (CORS, headers, rate limiting, dependências)
-- Acessibilidade e performance verificadas (Lighthouse)
+- Landing page with a demo and a security overview
+- README with an architecture diagram (C4), GIFs, run instructions and badges (CI, coverage)
+- ADRs for the main decisions (outbox, RabbitMQ vs Redis, Kubernetes, movement model)
+- Security review (CORS, headers, rate limiting, dependencies)
+- Accessibility and performance checked (Lighthouse)
 
-### Fase V2 (depois)
+### V2 phase (later)
 
-Investimentos por tipo com divisão de entradas; comparações mês a mês e ano a ano; evolução do património; faixas de limite configuráveis; personalização de gráficos; pesquisa por texto; alertas por email; importação de extrato CSV.
+Investments by type with entry splitting; month-over-month and year-over-year comparisons; net worth evolution; configurable limit thresholds; chart customization; text search; email alerts; bank statement CSV import.
 
 ---
 
-## 9. Ficheiro `CLAUDE.md` sugerido (raiz do repositório)
+## 9. Summary of the order
 
-```
-# FinnancialSystem
-
-Ler docs/ARCHITECTURE.md antes de qualquer tarefa. Implementar uma fase de cada vez.
-
-## Regras
-- Valores monetários: NUMERIC(14,2) na BD e Decimal em Python. Nunca float.
-- Regras de negócio em backend/app/domain e services, nunca em routers ou modelos.
-- Toda query filtra por user_id. Cada endpoint novo precisa de teste de isolamento.
-- Soft delete (deleted_at) em vez de DELETE. Escritas geram audit_log.
-- Transferências são sempre pares atómicos com o mesmo transfer_id.
-- Mês fechado rejeita escritas.
-- Consumers RabbitMQ têm de ser idempotentes.
-- Escrever testes antes de dar a tarefa por concluída.
-
-## Comandos
-- Subir stack: docker compose -f deploy/docker-compose.yml up
-- Testes backend: cd backend && pytest
-- Lint: ruff check . && mypy app
-- Testes E2E: cd frontend && npx playwright test
-```
-
-## 10. Ordem resumida
-
-| Bloco | Fases | Resultado |
+| Block | Phases | Result |
 |---|---|---|
-| Produto funcional | 0 a 5 | App completa a funcionar em local |
-| Qualidade | 6 | Testes E2E e CI sérios |
-| Arquitetura avançada | 7 a 9 | Eventos, cache, limites, metas, anexos, exportações |
-| Diferenciais | 10 a 11 | Google, modo demo, IA |
-| Plataforma | 12 a 14 | Observabilidade, Kubernetes, Azure, CD |
-| Apresentação | 15 | Landing, README, ADRs |
+| Working product | 0 to 5 | Complete app running locally |
+| Quality | 6 | Serious E2E tests and CI |
+| Advanced architecture | 7 to 9 | Events, cache, limits, goals, attachments, exports |
+| Differentiators | 10 to 11 | Google, demo mode, AI |
+| Platform | 12 to 14 | Observability, Kubernetes, Azure, CD |
+| Presentation | 15 | Landing page, README, ADRs |
 
-A aplicação fica utilizável ao fim da Fase 5, e tudo o que vem depois acrescenta profundidade técnica sem bloquear o produto.
-
+The application is usable at the end of Phase 5; everything after that adds technical depth without blocking the product.

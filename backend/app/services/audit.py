@@ -12,7 +12,7 @@ _EXCLUDED = {"password_hash"}
 
 
 def snapshot(obj: Base) -> dict[str, Any]:
-    """Estado das colunas de um modelo, serializável para JSONB."""
+    """Column state of a model, serializable to JSONB."""
     state = inspect(obj)
     data: dict[str, Any] = {}
     for column in state.mapper.column_attrs:
@@ -42,4 +42,27 @@ def record(
             before=before,
             after=after,
         )
+    )
+
+
+def log(
+    session: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    entity: str,
+    obj: Base,
+    action: AuditAction,
+    before: dict[str, Any] | None = None,
+) -> None:
+    """Record a write; the "after" state is taken from the object (except on DELETE)."""
+    after = None if action is AuditAction.DELETE else snapshot(obj)
+    entity_id = getattr(obj, "id")  # noqa: B009  (every audited model has an id)
+    record(
+        session,
+        user_id=user_id,
+        entity=entity,
+        entity_id=entity_id,
+        action=action,
+        before=before,
+        after=after,
     )

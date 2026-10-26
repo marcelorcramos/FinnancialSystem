@@ -39,3 +39,15 @@ async def name_taken(
 async def count_active_entries(session: AsyncSession, label_id: uuid.UUID) -> int:
     stmt = select(func.count()).where(Entry.label_id == label_id, Entry.deleted_at.is_(None))
     return await session.scalar(stmt) or 0
+
+
+async def used_colors(
+    session: AsyncSession, user_id: uuid.UUID, *, exclude_id: uuid.UUID | None = None
+) -> set[str]:
+    """Colors of the user's labels that are not deleted (archived labels keep theirs)."""
+    stmt = select(func.upper(Label.color)).where(
+        Label.user_id == user_id, Label.deleted_at.is_(None)
+    )
+    if exclude_id is not None:
+        stmt = stmt.where(Label.id != exclude_id)
+    return set(await session.scalars(stmt))

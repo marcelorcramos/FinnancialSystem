@@ -1,4 +1,4 @@
-# Só configuração de ferramentas. As dependências estão em requirements*.txt.
+# Tool configuration only. Dependencies live in requirements*.txt.
 
 [tool.ruff]
 line-length = 100
@@ -29,5 +29,5 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
-markers = ["integration: precisa de Docker (PostgreSQL via testcontainers)"]
+markers = ["integration: needs Docker (PostgreSQL via testcontainers)"]
 addopts = "-ra"
