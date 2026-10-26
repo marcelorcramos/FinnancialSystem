@@ -67,6 +67,7 @@ export const pt = {
     email: 'Introduz um email válido.',
     minLength: 'Mínimo de {{min}} caracteres.',
     maxLength: 'Máximo de {{max}} caracteres.',
+    passwordPolicy: 'Usa pelo menos 8 caracteres, com maiúscula, minúscula, número e símbolo.',
     passwordMismatch: 'As passwords não coincidem.',
   },
 };

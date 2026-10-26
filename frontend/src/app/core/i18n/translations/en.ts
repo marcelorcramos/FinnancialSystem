@@ -69,6 +69,8 @@ export const en: Translation = {
     email: 'Enter a valid email.',
     minLength: 'At least {{min}} characters.',
     maxLength: 'At most {{max}} characters.',
+    passwordPolicy:
+      'Use at least 8 characters with an uppercase, a lowercase, a number and a symbol.',
     passwordMismatch: 'Passwords do not match.',
   },
 };

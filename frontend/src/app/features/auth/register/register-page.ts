@@ -18,6 +18,7 @@ import { finalize } from 'rxjs';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { safeReturnUrl } from '../../../core/auth/auth.guards';
 import { fieldError } from '../../../shared/forms/field-error';
+import { passwordPolicy } from '../../../shared/forms/password-policy';
 import { authErrorKey } from '../auth-errors';
 
 export const PASSWORD_MIN_LENGTH = 8;
@@ -71,6 +72,7 @@ export default class RegisterPage {
           Validators.required,
           Validators.minLength(PASSWORD_MIN_LENGTH),
           Validators.maxLength(PASSWORD_MAX_LENGTH),
+          passwordPolicy,
         ],
       ],
       confirmPassword: ['', [Validators.required]],
