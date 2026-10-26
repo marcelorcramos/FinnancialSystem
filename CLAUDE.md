@@ -1,6 +1,6 @@
 # FinnancialSystem
 
-Read docs/ARCHITECTURE.md and docs/DECISIONS.md before any task. DECISIONS.md wins when they disagree. Implement one phase at a time.
+Read docs/ARCHITECTURE.md and docs/DECISIONS.md before any task; docs/API.md is the API contract. DECISIONS.md wins when they disagree. Implement one phase at a time.
 
 ## Rules
 - Everything in the repository is in English: code, comments, docs, API messages, seed data, commits.
