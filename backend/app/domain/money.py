@@ -1,4 +1,4 @@
-"""Valores monetários: sempre Decimal com 2 casas. Nunca float."""
+"""Money: always Decimal with 2 decimal places. Never float."""
 
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
@@ -6,23 +6,23 @@ from app.domain.errors import ValidationError
 
 CENT = Decimal("0.01")
 ZERO = Decimal("0.00")
-MAX_AMOUNT = Decimal("999999999999.99")  # limite de NUMERIC(14,2)
+MAX_AMOUNT = Decimal("999999999999.99")  # NUMERIC(14,2) limit
 
 
 def money(value: Decimal | int | str) -> Decimal:
     if isinstance(value, float):
-        raise TypeError("Valores monetários não podem ser float; usar Decimal ou str")
+        raise TypeError("Money cannot be a float; use Decimal or str")
     try:
         result = Decimal(value).quantize(CENT, rounding=ROUND_HALF_UP)
     except InvalidOperation as exc:
-        raise ValidationError(f"Valor monetário inválido: {value!r}") from exc
+        raise ValidationError(f"Invalid amount: {value!r}") from exc
     if abs(result) > MAX_AMOUNT:
-        raise ValidationError("Valor monetário demasiado grande")
+        raise ValidationError("Amount is too large")
     return result
 
 
 def positive_money(value: Decimal | int | str) -> Decimal:
     result = money(value)
     if result <= ZERO:
-        raise ValidationError("O valor tem de ser maior que zero")
+        raise ValidationError("Amount must be greater than zero")
     return result

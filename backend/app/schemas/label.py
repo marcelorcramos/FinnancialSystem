@@ -21,7 +21,7 @@ class LabelCreate(BaseModel):
 class LabelUpdate(BaseModel):
     name: LabelName | None = None
     kind: LabelKind | None = Field(
-        default=None, description="Mudar o tipo altera retroativamente os relatórios."
+        default=None, description="Changing the kind retroactively changes reports."
     )
     color: HexColor | None = None
     icon: IconName | None = None

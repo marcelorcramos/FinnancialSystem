@@ -11,8 +11,8 @@ from app.repositories import users
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
-# OAuth2 password flow só para o botão Authorize do Swagger (/docs) pedir email e password.
-# A app usa POST /auth/login (JSON); ambos devolvem o mesmo access token.
+# OAuth2 password flow only so the Swagger (/docs) Authorize button asks for email and password.
+# The app uses POST /auth/login (JSON); both return the same access token.
 _oauth2 = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token", auto_error=False)
 
 
@@ -24,7 +24,7 @@ async def get_current_user(
     if user is None:
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED,
-            "Credenciais inválidas",
+            "Invalid credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
     return user

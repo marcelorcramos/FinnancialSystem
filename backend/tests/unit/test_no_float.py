@@ -1,4 +1,4 @@
-"""Nenhum cálculo monetário usa float: garantido por análise do código."""
+"""No money calculation uses float: enforced by static analysis of the code."""
 
 import ast
 from pathlib import Path
@@ -16,6 +16,6 @@ def test_money_code_never_uses_float() -> None:
                     offenders.append(f"{path.relative_to(APP)}:{node.lineno}")
                 if isinstance(node, ast.Constant) and type(node.value) is float:
                     offenders.append(f"{path.relative_to(APP)}:{node.lineno}")
-    # money.py menciona float só para o rejeitar.
+    # money.py mentions float only to reject it.
     offenders = [o for o in offenders if not o.startswith("domain/money.py")]
     assert offenders == []

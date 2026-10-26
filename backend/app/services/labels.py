@@ -1,4 +1,4 @@
-"""Casos de uso das etiquetas (secção 2.1)."""
+"""Label use cases (section 2.1)."""
 
 import uuid
 from datetime import UTC, datetime
@@ -20,7 +20,7 @@ ENTITY = "label"
 async def get(session: AsyncSession, user: User, label_id: uuid.UUID) -> Label:
     label = await labels_repo.get_for_user(session, user.id, label_id)
     if label is None:
-        raise NotFoundError("Etiqueta não encontrada")
+        raise NotFoundError("Label not found")
     return label
 
 
@@ -71,16 +71,16 @@ async def set_archived(
 async def delete(
     session: AsyncSession, user: User, label_id: uuid.UUID, reassign_to: uuid.UUID | None
 ) -> None:
-    """Etiqueta com entradas não se elimina sem reatribuir as entradas a outra etiqueta."""
+    """A label with entries cannot be deleted without reassigning its entries to another label."""
     label = await get(session, user, label_id)
     if await labels_repo.count_active_entries(session, label.id):
         if reassign_to is None:
             raise ConflictError(
-                "A etiqueta tem entradas: arquiva-a ou reatribui as entradas a outra etiqueta"
+                "The label has entries: archive it or reassign its entries to another label"
             )
         target = await get_usable(session, user, reassign_to)
         if target.id == label.id:
-            raise ValidationError("Escolhe outra etiqueta para receber as entradas")
+            raise ValidationError("Choose a different label to receive the entries")
         await _reassign_entries(session, user, label, target)
 
     before = audit.snapshot(label)
@@ -93,7 +93,7 @@ async def delete(
 async def restore(session: AsyncSession, user: User, label_id: uuid.UUID) -> Label:
     label = await labels_repo.get_for_user(session, user.id, label_id, deleted=True)
     if label is None:
-        raise NotFoundError("Etiqueta não encontrada")
+        raise NotFoundError("Label not found")
     await _ensure_name_free(session, user, label.name)
     label.deleted_at = None
     await session.flush()
@@ -106,16 +106,14 @@ async def _reassign_entries(
     session: AsyncSession, user: User, source: Label, target: Label
 ) -> None:
     if await entries_repo.closed_months_with_label_entries(session, source.id):
-        raise ConflictError(
-            "A etiqueta tem entradas em meses fechados: reabre esses meses para reatribuir"
-        )
+        raise ConflictError("The label has entries in closed months: reopen them to reassign")
     now = datetime.now(UTC)
     for entry in await entries_repo.list_active_for_label(session, source.id):
         before = audit.snapshot(entry)
         if entry.movement_type is MovementType.ALLOCATION:
             existing = await entries_repo.active_allocation(session, entry.month_id, target.id)
             if existing is not None:
-                # O destino já tem distribuição neste mês: somam-se as duas.
+                # The target already has an allocation this month: add the two together.
                 existing_before = audit.snapshot(existing)
                 existing.amount += entry.amount
                 entry.deleted_at = now
@@ -125,8 +123,8 @@ async def _reassign_entries(
         elif entry.transfer_id is not None:
             legs = await entries_repo.transfer_legs(session, entry.transfer_id)
             if any(leg.label_id == target.id for leg in legs if leg.id != entry.id):
-                # Transferência entre origem e destino: passaria a ser da etiqueta para ela
-                # própria e o efeito líquido é zero, por isso desaparece.
+                # Transfer between source and target: it would become a transfer from the label
+                # to itself with a net effect of zero, so it is dropped.
                 for leg in legs:
                     leg_before = audit.snapshot(leg)
                     leg.deleted_at = now
@@ -141,7 +139,7 @@ async def _ensure_name_free(
     session: AsyncSession, user: User, name: str, *, exclude_id: uuid.UUID | None = None
 ) -> None:
     if await labels_repo.name_taken(session, user.id, name, exclude_id=exclude_id):
-        raise ConflictError(f"Já existe uma etiqueta chamada {name!r}")
+        raise ConflictError(f"A label named {name!r} already exists")
 
 
 def _audit(

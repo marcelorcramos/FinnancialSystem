@@ -20,6 +20,6 @@ async def get_for_user(
 
 
 async def ids_backing_additions(session: AsyncSession, month_id: uuid.UUID) -> set[uuid.UUID]:
-    """Rendimentos criados por um `addition`: só se gerem através da entrada."""
+    """Incomes created by an `addition`: they are managed only through that entry."""
     stmt = select(Entry.income_id).where(Entry.month_id == month_id, Entry.income_id.is_not(None))
     return {i for i in await session.scalars(stmt) if i is not None}

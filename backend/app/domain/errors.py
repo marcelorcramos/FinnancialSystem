@@ -1,4 +1,4 @@
-"""Erros de domínio. Os routers não os conhecem: são traduzidos para HTTP em app/api/errors.py."""
+"""Domain errors. Routers do not know them: they are mapped to HTTP in app/api/errors.py."""
 
 
 class DomainError(Exception):
@@ -29,4 +29,4 @@ class MonthClosedError(ConflictError):
     code = "month_closed"
 
     def __init__(self) -> None:
-        super().__init__("O mês está fechado. Reabre-o para fazer alterações.")
+        super().__init__("The month is closed. Reopen it to make changes.")

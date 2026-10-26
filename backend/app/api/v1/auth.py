@@ -47,7 +47,7 @@ async def login(data: LoginRequest, session: SessionDep, response: Response) -> 
 async def token_for_docs(
     form: Annotated[OAuth2PasswordRequestForm, Depends()], session: SessionDep
 ) -> AccessToken:
-    """Login por formulário, usado pelo botão Authorize do Swagger. O username é o email."""
+    """Form login used by the Swagger Authorize button. The username is the email."""
     tokens = await auth.login(session, form.username.strip().lower(), form.password)
     return AccessToken(access_token=tokens.access_token, expires_in=tokens.expires_in)
 

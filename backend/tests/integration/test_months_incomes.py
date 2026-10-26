@@ -26,7 +26,7 @@ async def create_month(
 async def add_income(
     client: AsyncClient, user: ApiUser, month_id: str, **overrides: Any
 ) -> dict[str, Any]:
-    payload = {"source": "Salário", "amount": "1500.00", "received_on": "2026-10-05"}
+    payload = {"source": "Salary", "amount": "1500.00", "received_on": "2026-10-05"}
     response = await client.post(
         f"/api/v1/months/{month_id}/incomes", headers=user.headers, json={**payload, **overrides}
     )
@@ -45,7 +45,7 @@ async def label_id(client: AsyncClient, user: ApiUser, name: str) -> uuid.UUID:
 
 async def test_create_list_and_get_month(client: AsyncClient) -> None:
     user = await new_user(client)
-    october = await create_month(client, user, note="Mês com férias")
+    october = await create_month(client, user, note="Holiday month")
     await create_month(client, user, month=9)
     await create_month(client, user, year=2025, month=12)
 
@@ -55,7 +55,7 @@ async def test_create_list_and_get_month(client: AsyncClient) -> None:
     assert len(only_2026) == 2
 
     got = await client.get(f"/api/v1/months/{october['id']}", headers=user.headers)
-    assert got.json()["note"] == "Mês com férias"
+    assert got.json()["note"] == "Holiday month"
     assert got.json()["closed_at"] is None
 
 
@@ -66,7 +66,7 @@ async def test_month_is_unique_per_user(client: AsyncClient) -> None:
         "/api/v1/months", headers=alice.headers, json={"year": 2026, "month": 10}
     )
     assert duplicate.status_code == 409
-    await create_month(client, bob)  # outro utilizador tem o seu próprio outubro
+    await create_month(client, bob)  # another user has their own October
 
 
 async def test_month_validation(client: AsyncClient) -> None:
@@ -80,20 +80,20 @@ async def test_copy_previous_month_allocations_and_incomes(
     client: AsyncClient, session: AsyncSession
 ) -> None:
     user = await new_user(client)
-    mercado = await label_id(client, user, "Mercado")
+    food = await label_id(client, user, "Food")
     september = await create_month(client, user, month=9)
     await add_income(client, user, september["id"], received_on="2026-09-30")
     session.add(
         Entry(
             user_id=user.id,
             month_id=uuid.UUID(september["id"]),
-            label_id=mercado,
+            label_id=food,
             amount=Decimal("200.00"),
             movement_type=MovementType.ALLOCATION,
             occurred_on=date(2026, 9, 1),
         )
     )
-    # Um rendimento de "acrescentar dinheiro" é pontual e não deve ser copiado.
+    # An "add money" income is a one-off and must not be copied.
     extra = Income(
         user_id=user.id,
         month_id=uuid.UUID(september["id"]),
@@ -107,7 +107,7 @@ async def test_copy_previous_month_allocations_and_incomes(
         Entry(
             user_id=user.id,
             month_id=uuid.UUID(september["id"]),
-            label_id=mercado,
+            label_id=food,
             amount=Decimal("50.00"),
             movement_type=MovementType.ADDITION,
             income_id=extra.id,
@@ -122,7 +122,7 @@ async def test_copy_previous_month_allocations_and_incomes(
         await client.get(f"/api/v1/months/{october['id']}/incomes", headers=user.headers)
     ).json()
     assert [(i["source"], i["amount"], i["received_on"]) for i in incomes] == [
-        ("Salário", "1500.00", "2026-10-30")
+        ("Salary", "1500.00", "2026-10-30")
     ]
     allocations = [
         e
@@ -130,7 +130,7 @@ async def test_copy_previous_month_allocations_and_incomes(
         if e.movement_type is MovementType.ALLOCATION
     ]
     assert [(a.label_id, a.amount, a.occurred_on) for a in allocations] == [
-        (mercado, Decimal("200.00"), date(2026, 10, 1))
+        (food, Decimal("200.00"), date(2026, 10, 1))
     ]
 
 
@@ -167,9 +167,9 @@ async def test_closed_month_blocks_writes_until_reopened(client: AsyncClient) ->
     assert all(r.json()["code"] == "month_closed" for r in blocked)
 
     await client.post(f"{url}/reopen", headers=user.headers)
-    edited = await client.patch(url, headers=user.headers, json={"note": "Revisto"})
+    edited = await client.patch(url, headers=user.headers, json={"note": "Reviewed"})
     assert edited.status_code == 200
-    assert edited.json()["note"] == "Revisto"
+    assert edited.json()["note"] == "Reviewed"
 
 
 async def test_delete_and_restore_month(client: AsyncClient) -> None:
@@ -205,7 +205,7 @@ async def test_income_crud_and_restore(client: AsyncClient) -> None:
     updated = await client.patch(
         f"/api/v1/incomes/{income['id']}",
         headers=user.headers,
-        json={"amount": "1550.50", "source": "Salário + bónus"},
+        json={"amount": "1550.50", "source": "Salary + bonus"},
     )
     assert updated.json()["amount"] == "1550.50"
 
@@ -224,13 +224,13 @@ async def test_income_validation(client: AsyncClient) -> None:
     user = await new_user(client)
     month = await create_month(client, user)
     url = f"/api/v1/months/{month['id']}/incomes"
-    base = {"source": "Salário", "amount": "10.00", "received_on": "2026-10-05"}
+    base = {"source": "Salary", "amount": "10.00", "received_on": "2026-10-05"}
     cases = [
         ({"amount": "0"}, 422),
         ({"amount": "-5.00"}, 422),
         ({"amount": "10.555"}, 422),
         ({"source": ""}, 422),
-        ({"received_on": "2026-11-01"}, 422),  # fora do mês
+        ({"received_on": "2026-11-01"}, 422),  # outside the month
     ]
     for override, expected in cases:
         response = await client.post(url, headers=user.headers, json={**base, **override})
@@ -255,7 +255,7 @@ async def test_income_from_addition_is_read_only(
         Entry(
             user_id=user.id,
             month_id=uuid.UUID(month["id"]),
-            label_id=await label_id(client, user, "Investimento"),
+            label_id=await label_id(client, user, "Investments"),
             amount=Decimal("50.00"),
             movement_type=MovementType.ADDITION,
             income_id=income.id,

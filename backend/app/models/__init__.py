@@ -1,4 +1,4 @@
-"""Modelos SQLAlchemy. Cada modelo tem de ser importado aqui para o Alembic o ver."""
+"""SQLAlchemy models. Every model must be imported here so Alembic can see it."""
 
 from app.models.audit import AuditLog
 from app.models.entry import Entry

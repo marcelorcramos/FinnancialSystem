@@ -1,4 +1,4 @@
-"""Regras de validação do domínio. Funções puras: recebem valores, levantam DomainError."""
+"""Domain validation rules. Pure functions: they take values and raise DomainError."""
 
 import uuid
 from datetime import date, datetime
@@ -13,17 +13,17 @@ def ensure_month_open(closed_at: datetime | None) -> None:
 
 def ensure_date_in_month(occurred_on: date, year: int, month: int) -> None:
     if (occurred_on.year, occurred_on.month) != (year, month):
-        raise ValidationError(f"A data tem de pertencer ao mês {month:02d}/{year}")
+        raise ValidationError(f"The date must fall within {year}-{month:02d}")
 
 
 def ensure_distinct_labels(from_label_id: uuid.UUID, to_label_id: uuid.UUID) -> None:
     if from_label_id == to_label_id:
-        raise ValidationError("Uma transferência tem de ser entre etiquetas diferentes")
+        raise ValidationError("A transfer must be between two different labels")
 
 
 def ensure_label_usable(archived_at: datetime | None) -> None:
     if archived_at is not None:
-        raise ValidationError("A etiqueta está arquivada; desarquiva-a para a usar")
+        raise ValidationError("The label is archived; unarchive it to use it")
 
 
 def previous_month(year: int, month: int) -> tuple[int, int]:

@@ -49,7 +49,7 @@ async def engine(database_url: str) -> AsyncIterator[AsyncEngine]:
 
 @pytest.fixture
 async def session(engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
-    """Sessão dentro de uma transação que é desfeita no fim de cada teste."""
+    """Session inside a transaction that is rolled back after each test."""
     async with engine.connect() as connection:
         transaction = await connection.begin()
         session = AsyncSession(
@@ -64,7 +64,7 @@ async def session(engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
 
 @pytest.fixture
 async def client(session: AsyncSession) -> AsyncIterator[AsyncClient]:
-    """Cliente HTTP da API a usar a sessão do teste (tudo é desfeito no fim)."""
+    """API HTTP client using the test session (everything is rolled back at the end)."""
 
     async def _session_override() -> AsyncIterator[AsyncSession]:
         yield session

@@ -11,13 +11,11 @@ from app.models import Entry, Income, Label, Month, User
 
 
 async def _user_with_month_and_label(session: AsyncSession) -> tuple[User, Month, Label]:
-    user = User(email=f"{uuid.uuid4()}@example.com", name="Ana", password_hash="x")
+    user = User(email=f"{uuid.uuid4()}@example.com", name="Alice", password_hash="x")
     session.add(user)
     await session.flush()
     month = Month(user_id=user.id, year=2026, month=10)
-    label = Label(
-        user_id=user.id, name="Mercado", kind=LabelKind.EXPENSE, color="#FFB74D", icon="x"
-    )
+    label = Label(user_id=user.id, name="Food", kind=LabelKind.EXPENSE, color="#FFB74D", icon="x")
     session.add_all([month, label])
     await session.flush()
     return user, month, label

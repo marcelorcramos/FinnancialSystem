@@ -1,4 +1,4 @@
-"""Rendimentos do mês. Os que nasceram de um `addition` só se gerem pela entrada."""
+"""Month incomes. Those created by an `addition` are managed only through their entry."""
 
 import uuid
 from datetime import UTC, datetime
@@ -86,7 +86,7 @@ async def delete(session: AsyncSession, user: User, income_id: uuid.UUID) -> Non
 async def restore(session: AsyncSession, user: User, income_id: uuid.UUID) -> Income:
     income = await incomes_repo.get_for_user(session, user.id, income_id, deleted=True)
     if income is None:
-        raise NotFoundError("Rendimento não encontrado")
+        raise NotFoundError("Income not found")
     await _ensure_writable(session, user, income)
     income.deleted_at = None
     await session.flush()
@@ -100,15 +100,15 @@ async def _get_editable(
 ) -> tuple[Income, Month]:
     income = await incomes_repo.get_for_user(session, user.id, income_id)
     if income is None:
-        raise NotFoundError("Rendimento não encontrado")
+        raise NotFoundError("Income not found")
     return income, await _ensure_writable(session, user, income)
 
 
 async def _ensure_writable(session: AsyncSession, user: User, income: Income) -> Month:
     month = await months_repo.get_for_user(session, user.id, income.month_id)
     if month is None:
-        raise NotFoundError("Rendimento não encontrado")
+        raise NotFoundError("Income not found")
     ensure_month_open(month.closed_at)
     if income.id in await incomes_repo.ids_backing_additions(session, month.id):
-        raise ConflictError("Este rendimento veio de 'acrescentar dinheiro': edita-o pela entrada")
+        raise ConflictError("This income came from 'add money': edit it through its entry")
     return month

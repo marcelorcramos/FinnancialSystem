@@ -13,10 +13,10 @@ class MonthCreate(BaseModel):
     month: int = Field(ge=1, le=12)
     note: Note | None = None
     copy_allocations: bool = Field(
-        default=False, description="Copia a distribuição inicial do último mês existente"
+        default=False, description="Copy the allocations of the latest existing month"
     )
     copy_incomes: bool = Field(
-        default=False, description="Copia os rendimentos do último mês existente"
+        default=False, description="Copy the incomes of the latest existing month"
     )
 
 
@@ -61,5 +61,5 @@ class IncomeRead(BaseModel):
     received_on: date
     note: str | None
     from_addition: bool = Field(
-        default=False, description="Criado por 'acrescentar dinheiro'; edita-se pela entrada"
+        default=False, description="Created by 'add money'; edit it through its entry"
     )

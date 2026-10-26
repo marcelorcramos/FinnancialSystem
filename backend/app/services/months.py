@@ -1,4 +1,4 @@
-"""Casos de uso dos meses (secção 2.3)."""
+"""Month use cases (section 2.3)."""
 
 import calendar
 import uuid
@@ -22,7 +22,7 @@ ENTITY = "month"
 async def get(session: AsyncSession, user: User, month_id: uuid.UUID) -> Month:
     month = await months_repo.get_for_user(session, user.id, month_id)
     if month is None:
-        raise NotFoundError("Mês não encontrado")
+        raise NotFoundError("Month not found")
     return month
 
 
@@ -78,7 +78,7 @@ async def set_closed(
 
 
 async def delete(session: AsyncSession, user: User, month_id: uuid.UUID) -> None:
-    """Soft delete: as entradas e rendimentos ficam escondidos com o mês e voltam no restauro."""
+    """Soft delete: entries and incomes are hidden with the month and come back on restore."""
     month = await get_open(session, user, month_id)
     before = audit.snapshot(month)
     month.deleted_at = datetime.now(UTC)
@@ -90,7 +90,7 @@ async def delete(session: AsyncSession, user: User, month_id: uuid.UUID) -> None
 async def restore(session: AsyncSession, user: User, month_id: uuid.UUID) -> Month:
     month = await months_repo.get_for_user(session, user.id, month_id, deleted=True)
     if month is None:
-        raise NotFoundError("Mês não encontrado")
+        raise NotFoundError("Month not found")
     await _ensure_free(session, user, month.year, month.month)
     month.deleted_at = None
     await session.flush()
@@ -129,7 +129,7 @@ async def _copy_allocations(
 
 
 async def _copy_incomes(session: AsyncSession, user: User, source: Month, target: Month) -> None:
-    # Rendimentos de "acrescentar dinheiro" são pontuais: não se copiam.
+    # Incomes from "add money" are one-offs: they are not copied.
     from_additions = await incomes_repo.ids_backing_additions(session, source.id)
     last_day = calendar.monthrange(target.year, target.month)[1]
     for previous in await incomes_repo.list_for_month(session, source.id):
@@ -150,7 +150,7 @@ async def _copy_incomes(session: AsyncSession, user: User, source: Month, target
 
 async def _ensure_free(session: AsyncSession, user: User, year: int, month: int) -> None:
     if await months_repo.find_active(session, user.id, year, month):
-        raise ConflictError(f"O mês {month:02d}/{year} já existe")
+        raise ConflictError(f"Month {year}-{month:02d} already exists")
 
 
 def _log(

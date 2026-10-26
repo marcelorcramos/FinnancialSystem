@@ -10,13 +10,13 @@ from app.domain.passwords import MAX_LENGTH, password_problems
 
 def _strong_password(value: str) -> str:
     if problems := password_problems(value):
-        raise ValueError("A password precisa de " + ", ".join(problems))
+        raise ValueError("Password needs " + ", ".join(problems))
     return value
 
 
-# A política só se aplica a passwords novas (registo e mudança); o login aceita qualquer uma.
+# The policy applies only to new passwords (sign-up and change); login accepts any password.
 NewPassword = Annotated[str, Field(max_length=MAX_LENGTH), AfterValidator(_strong_password)]
-SupportedCurrency = Literal["EUR"]  # só EUR no MVP (docs/DECISIONS.md)
+SupportedCurrency = Literal["EUR"]  # EUR only in the MVP (docs/DECISIONS.md)
 SupportedLocale = Literal["pt-PT", "en"]
 
 
@@ -62,7 +62,7 @@ class UserUpdate(BaseModel):
     @classmethod
     def _known_timezone(cls, value: str | None) -> str | None:
         if value is not None and value not in available_timezones():
-            raise ValueError("Fuso horário desconhecido")
+            raise ValueError("Unknown time zone")
         return value
 
 

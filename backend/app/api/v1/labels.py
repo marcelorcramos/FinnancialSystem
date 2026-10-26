@@ -55,7 +55,7 @@ async def delete_label(
     session: SessionDep,
     reassign_to: Annotated[
         uuid.UUID | None,
-        Query(description="Etiqueta que recebe as entradas da etiqueta eliminada"),
+        Query(description="Label that receives the entries of the deleted label"),
     ] = None,
 ) -> None:
     await labels.delete(session, user, label_id, reassign_to)

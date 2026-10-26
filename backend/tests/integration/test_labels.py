@@ -10,7 +10,7 @@ from app.domain.enums import MovementType
 from app.models import AuditLog, Entry, Month
 from tests.integration.helpers import ApiUser, new_user
 
-NEW_LABEL = {"name": "Ginásio", "kind": "expense", "color": "#AB47BC", "icon": "fitness_center"}
+NEW_LABEL = {"name": "Gym", "kind": "expense", "color": "#AB47BC", "icon": "fitness_center"}
 
 
 async def create_label(client: AsyncClient, user: ApiUser, **overrides: str) -> dict[str, str]:
@@ -31,9 +31,9 @@ async def labels_by_name(client: AsyncClient, user: ApiUser, **params: str) -> d
 async def test_list_starts_with_default_labels(client: AsyncClient) -> None:
     user = await new_user(client)
     labels = await labels_by_name(client, user)
-    assert len(labels) == 8
-    assert labels["Mercado"]["kind"] == "expense"
-    assert labels["Investimento"]["kind"] == "investment"
+    assert len(labels) == 7
+    assert labels["Food"]["kind"] == "expense"
+    assert labels["Investments"]["kind"] == "investment"
 
 
 async def test_create_update_and_change_kind(client: AsyncClient, session: AsyncSession) -> None:
@@ -44,10 +44,10 @@ async def test_create_update_and_change_kind(client: AsyncClient, session: Async
     response = await client.patch(
         f"/api/v1/labels/{label['id']}",
         headers=user.headers,
-        json={"name": "Desporto", "kind": "investment", "color": "#000000"},
+        json={"name": "Sports", "kind": "investment", "color": "#000000"},
     )
     assert response.status_code == 200
-    assert (response.json()["name"], response.json()["kind"]) == ("Desporto", "investment")
+    assert (response.json()["name"], response.json()["kind"]) == ("Sports", "investment")
 
     actions = (
         await session.scalars(
@@ -70,20 +70,20 @@ async def test_label_names_are_unique_per_user_case_insensitive(client: AsyncCli
     alice, bob = await new_user(client), await new_user(client)
     await create_label(client, alice)
     duplicate = await client.post(
-        "/api/v1/labels", headers=alice.headers, json={**NEW_LABEL, "name": "GINÁSIO"}
+        "/api/v1/labels", headers=alice.headers, json={**NEW_LABEL, "name": "GYM"}
     )
     assert duplicate.status_code == 409
-    await create_label(client, bob)  # outro utilizador pode usar o mesmo nome
+    await create_label(client, bob)  # another user may use the same name
 
 
 async def test_archive_hides_label_until_unarchived(client: AsyncClient) -> None:
     user = await new_user(client)
     label = await create_label(client, user)
     await client.post(f"/api/v1/labels/{label['id']}/archive", headers=user.headers)
-    assert "Ginásio" not in await labels_by_name(client, user)
-    assert "Ginásio" in await labels_by_name(client, user, include_archived="true")
+    assert "Gym" not in await labels_by_name(client, user)
+    assert "Gym" in await labels_by_name(client, user, include_archived="true")
     await client.post(f"/api/v1/labels/{label['id']}/unarchive", headers=user.headers)
-    assert "Ginásio" in await labels_by_name(client, user)
+    assert "Gym" in await labels_by_name(client, user)
 
 
 async def test_delete_without_entries_and_restore(client: AsyncClient) -> None:
@@ -91,11 +91,11 @@ async def test_delete_without_entries_and_restore(client: AsyncClient) -> None:
     label = await create_label(client, user)
     response = await client.delete(f"/api/v1/labels/{label['id']}", headers=user.headers)
     assert response.status_code == 204
-    assert "Ginásio" not in await labels_by_name(client, user, include_archived="true")
+    assert "Gym" not in await labels_by_name(client, user, include_archived="true")
 
     restored = await client.post(f"/api/v1/labels/{label['id']}/restore", headers=user.headers)
     assert restored.status_code == 200
-    assert "Ginásio" in await labels_by_name(client, user)
+    assert "Gym" in await labels_by_name(client, user)
 
 
 async def _month(session: AsyncSession, user: ApiUser, *, closed: bool = False) -> Month:
@@ -139,7 +139,7 @@ async def test_reassign_moves_entries_and_merges_allocations(
     user = await new_user(client)
     labels = await labels_by_name(client, user)
     source = await create_label(client, user)
-    target_id = labels["Mercado"]["id"]
+    target_id = labels["Food"]["id"]
     month = await _month(session, user)
     session.add_all(
         [
@@ -170,7 +170,7 @@ async def test_reassign_drops_transfers_between_source_and_target(
     user = await new_user(client)
     labels = await labels_by_name(client, user)
     source = await create_label(client, user)
-    target_id = labels["Poupança"]["id"]
+    target_id = labels["Savings"]["id"]
     month = await _month(session, user)
     transfer_id = uuid.uuid4()
     session.add_all(
@@ -203,7 +203,7 @@ async def test_reassign_is_blocked_by_closed_months(
     response = await client.delete(
         f"/api/v1/labels/{source['id']}",
         headers=user.headers,
-        params={"reassign_to": labels["Mercado"]["id"]},
+        params={"reassign_to": labels["Food"]["id"]},
     )
     assert response.status_code == 409
 
@@ -216,15 +216,15 @@ async def test_users_cannot_touch_each_others_labels(
     url = f"/api/v1/labels/{label['id']}"
     attempts = [
         await client.get(url, headers=bob.headers),
-        await client.patch(url, headers=bob.headers, json={"name": "Roubada"}),
+        await client.patch(url, headers=bob.headers, json={"name": "Stolen"}),
         await client.post(f"{url}/archive", headers=bob.headers),
         await client.post(f"{url}/restore", headers=bob.headers),
         await client.delete(url, headers=bob.headers),
     ]
     assert [r.status_code for r in attempts] == [404] * 5
-    assert "Ginásio" not in await labels_by_name(client, bob)
+    assert "Gym" not in await labels_by_name(client, bob)
 
-    # Também não pode reatribuir as suas entradas para uma etiqueta de outra pessoa.
+    # Nor can they reassign their entries to someone else's label.
     own = await create_label(client, bob, name="Bob")
     session.add(_entry(bob, await _month(session, bob), own["id"]))
     await session.flush()
