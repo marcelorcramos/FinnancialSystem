@@ -29,7 +29,7 @@ Everything in the repository is in **English**: code, identifiers, comments, doc
 | Delete month | Soft delete of the month; its entries are hidden with it and come back with "undo". |
 | Add money | Money that arrives mid-month (e.g. +€50 to Investments) is an `addition`: it adds to the label and to the month's income. |
 | Negative unallocated | Allowed; the UI only warns. |
-| Report filters | Two independent, optional filters: **category** (one or more labels and/or kinds) and **time**. Time is a rolling window counted back from the current month, which is included: **last month** (the current month), **last 6 months**, **last 12 months**. No time filter = since the first record. No category filter = all labels together. Custom ranges come later (see Future ideas). |
+| Report filters | Two independent, optional filters: **category** (one or more labels and/or kinds) and **time**. Time is a rolling window counted back from the current month, which is included: **last month** (the current month), **last 6 months**, **last 12 months**. No time filter = since the first record. No category filter = all labels together. Custom ranges come later (see `FUTURE_IMPLEMENTATIONS.md`). |
 | Multi-category filter | The category filter accepts several labels and/or kinds in one query (e.g. Food + Investments over the last 6 months), returning the combined total and the per-label split. |
 | Charts | **Donut** (pie with an empty center) for the overview: how the money was distributed, as a share (%) per kind (expense / saving / investment) and per label, for the selected period and categories. It shows the distribution only; it does not judge positive or negative balances. A label whose net total in the period is zero or below (money moved out of it) gets no slice but is still listed with its amount. **Line chart** for the evolution of one label across months (e.g. Food €200 three months ago vs €250 now). Both read from the Phase 3 report endpoints. |
 
@@ -60,15 +60,9 @@ Icon names are Material Symbols for now; they will change with the frontend rede
 - `GET /labels/color-suggestions` returns 8 colors not used by any of the user's labels: a curated palette first, then generated hues.
 - Color picker (frontend): when creating or editing a label, a small pop-up shows the 8 suggestions as square swatches, plus a field to type any `#RRGGBB` code. A full-spectrum picker may come later.
 
-## Future ideas (backlog)
+## Future ideas
 
-Not in scope now; recorded so they are not lost.
-
-| Idea | Notes |
-|---|---|
-| Custom time ranges | User-editable report periods: last N days (e.g. 60 or 40 days), a specific year (only 2024, only 2023), any start/end range. |
-| Category limits with alerts | When signing up or editing the profile, the user sets a maximum per category (e.g. Food at most €300/month). When a month reaches it, the app **warns but never blocks**: the user is free to distribute money however they want. Fits Phase 8 (limits and alerts). |
-| Full-spectrum color picker | Beyond the 8 suggested swatches and the `#RRGGBB` field. |
+Ideas left for later live in [`docs/FUTURE_IMPLEMENTATIONS.md`](FUTURE_IMPLEMENTATIONS.md).
 
 ## Frontend: visual identity (2026-10-26)
 
