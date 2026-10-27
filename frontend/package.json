@@ -8,7 +8,8 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
-    "test:ci": "ng test --watch=false"
+    "test:ci": "ng test --watch=false",
+    "api:types": "npx --yes openapi-typescript@7.13.0 http://localhost:8000/openapi.json -o src/app/core/api/schema.ts && prettier --write src/app/core/api/schema.ts"
   },
   "private": true,
   "packageManager": "npm@11.19.1",
