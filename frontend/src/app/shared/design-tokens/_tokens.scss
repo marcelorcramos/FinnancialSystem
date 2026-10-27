@@ -1,26 +1,55 @@
-// Design tokens as CSS custom properties.
+// Vault design tokens as CSS custom properties (see "Frontend: visual identity" in
+// docs/DECISIONS.md).
+//
+// Dark is the default theme. Every colour is a `light-dark()` pair, so the
+// active one follows `color-scheme`, which ThemeService sets through
+// `data-theme` on <html> (dark, light, or system).
 //
 // Kind colours are the semantic colour of *values* (never the label's own
-// colour). Each has a light and a dark version; the active one is picked by
-// `light-dark()` from the current `color-scheme` (see ThemeService). Colour is
-// never the only signal: MoneyAmount always pairs it with an icon and text.
-// Contrast of each foreground against the M3 surface is >= 4.5:1.
+// colour). Colour is never the only signal: values always come with an icon
+// and text. Text colours keep >= 4.5:1 against their surface in both themes.
 
 :root {
-  --kind-expense-light: #b3403a;
-  --kind-expense-dark: #ff9e97;
-  --kind-saving-light: #2e7d32;
-  --kind-saving-dark: #8bd38e;
-  --kind-investment-light: #1a62b8;
-  --kind-investment-dark: #8cc4ff;
+  color-scheme: dark;
 
-  --kind-expense: light-dark(var(--kind-expense-light), var(--kind-expense-dark));
-  --kind-saving: light-dark(var(--kind-saving-light), var(--kind-saving-dark));
-  --kind-investment: light-dark(var(--kind-investment-light), var(--kind-investment-dark));
+  // Surfaces
+  --color-bg: light-dark(#f4f6f8, #111417);
+  --color-bg-deep: light-dark(#e8ecef, #0b0d0f);
+  --color-surface: light-dark(#ffffff, #1a1f24);
+  --color-surface-raised: light-dark(#eef2f5, #232a31);
+  --color-border: light-dark(#d5dce2, #2a3138);
+  --color-border-strong: light-dark(#a9b4be, #3a434c);
 
-  --kind-expense-container: light-dark(#fdeceb, #4a2220);
-  --kind-saving-container: light-dark(#e6f4e6, #1e3a20);
-  --kind-investment-container: light-dark(#e5effb, #1b3352);
+  // Text
+  --color-text: light-dark(#111417, #e6eaee);
+  --color-text-muted: light-dark(#3d4853, #b9c1c9);
+  --color-text-subtle: light-dark(#53606c, #9aa4ae);
+
+  // Signal accent: a fill with dark text on top, and a text-safe shade.
+  --color-accent: light-dark(#c4e54a, #d4f06a);
+  --color-on-accent: #111417;
+  --color-accent-text: light-dark(#4a5e00, #d4f06a);
+  --color-focus: light-dark(#4a5e00, #d4f06a);
+
+  // Kinds
+  --kind-expense: light-dark(#b3403a, #ff8a73);
+  --kind-saving: light-dark(#2b7a3f, #5fd39a);
+  --kind-investment: light-dark(#1a62b8, #7ab3ff);
+  --kind-expense-container: light-dark(#fbe9e7, #3a2320);
+  --kind-saving-container: light-dark(#e3f4e8, #1c3326);
+  --kind-investment-container: light-dark(#e3eefb, #1c2c42);
+
+  --color-danger: var(--kind-expense);
+
+  // Type: system fonts only, monospace for money and dates.
+  --font-sans: ui-sans-serif, -apple-system, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --text-xs: 0.75rem;
+  --text-s: 0.8125rem;
+  --text-m: 0.9375rem;
+  --text-l: 1.125rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -30,11 +59,24 @@
   --space-6: 32px;
   --space-7: 48px;
 
-  --radius-s: 8px;
-  --radius-m: 12px;
-  --radius-l: 16px;
+  --radius-s: 4px;
+  --radius-m: 6px;
 
-  --content-max-width: 1200px;
-  --sidenav-width: 248px;
-  --sidenav-rail-width: 80px;
+  --control-height: 44px;
+  --content-max-width: 1360px;
+  --motion: 160ms ease;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='system'] {
+  color-scheme: light dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion: 0ms linear;
+  }
 }

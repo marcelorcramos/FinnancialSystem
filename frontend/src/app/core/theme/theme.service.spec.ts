@@ -10,20 +10,20 @@ describe('ThemeService', () => {
     root.removeAttribute('data-theme');
   });
 
-  it('follows the system by default', () => {
+  it('is dark by default', () => {
     const service = TestBed.inject(ThemeService);
     service.init();
 
-    expect(service.mode()).toBe('system');
-    expect(root.hasAttribute('data-theme')).toBe(false);
+    expect(service.mode()).toBe('dark');
+    expect(root.getAttribute('data-theme')).toBe('dark');
   });
 
   it('applies and remembers an explicit mode', () => {
     const service = TestBed.inject(ThemeService);
-    service.setMode('dark');
+    service.setMode('system');
 
-    expect(root.getAttribute('data-theme')).toBe('dark');
-    expect(localStorage.getItem('fs.theme')).toBe('dark');
+    expect(root.getAttribute('data-theme')).toBe('system');
+    expect(localStorage.getItem('fs.theme')).toBe('system');
   });
 
   it('restores the stored mode on init', () => {
@@ -35,15 +35,15 @@ describe('ThemeService', () => {
     expect(root.getAttribute('data-theme')).toBe('light');
   });
 
-  it('ignores invalid stored values and forgets the choice when back to system', () => {
+  it('ignores invalid stored values and forgets the choice when back to dark', () => {
     localStorage.setItem('fs.theme', 'neon');
     const service = TestBed.inject(ThemeService);
     service.init();
-    expect(service.mode()).toBe('system');
+    expect(service.mode()).toBe('dark');
 
+    service.setMode('light');
     service.setMode('dark');
-    service.setMode('system');
-    expect(root.hasAttribute('data-theme')).toBe(false);
+    expect(root.getAttribute('data-theme')).toBe('dark');
     expect(localStorage.getItem('fs.theme')).toBeNull();
   });
 });

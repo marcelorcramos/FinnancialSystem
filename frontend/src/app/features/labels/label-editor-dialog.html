@@ -1,0 +1,126 @@
+<section class="dialog" role="dialog" aria-modal="true" aria-labelledby="editor-title">
+  <header class="head">
+    <h2 id="editor-title">{{ editing ? 'Edit label' : 'New label' }}</h2>
+    <button type="button" class="btn btn--icon btn--quiet" aria-label="Close" (click)="ref.close()">
+      <app-icon name="close" />
+    </button>
+  </header>
+
+  @if (error(); as message) {
+    <div class="alert" role="alert">
+      <app-icon name="alert" [size]="18" />
+      <span>{{ message }}</span>
+    </div>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+    <div class="field">
+      <label for="label-name">Name</label>
+      @let nameError = visibleError(form.controls.name);
+      <input
+        id="label-name"
+        class="field__input"
+        formControlName="name"
+        maxlength="50"
+        autocomplete="off"
+        [attr.aria-invalid]="!!nameError"
+        [attr.aria-describedby]="nameError ? 'label-name-error' : null"
+      />
+      @if (nameError) {
+        <span id="label-name-error" class="field__error">{{ nameError }}</span>
+      }
+    </div>
+
+    <fieldset class="group">
+      <legend>What kind of money goes here?</legend>
+      <div class="kinds">
+        @for (option of kinds; track option.kind) {
+          <label class="choice" [attr.data-kind]="option.kind">
+            <input type="radio" formControlName="kind" [value]="option.kind" />
+            <span class="choice__title">
+              <app-icon [name]="option.kind" [size]="18" />
+              {{ option.name }}
+            </span>
+            <span class="choice__help">{{ option.help }}</span>
+          </label>
+        }
+      </div>
+      @if (kindChanged()) {
+        <p class="warning" role="note">
+          Changing the kind also changes how this label counts in past reports.
+        </p>
+      }
+    </fieldset>
+
+    <fieldset class="group">
+      <legend>
+        Color <span class="muted">· colors your other labels use are not offered</span>
+      </legend>
+      <div class="swatches">
+        @for (color of swatches(); track color) {
+          <label class="swatch" [style.background]="color">
+            <input
+              type="radio"
+              formControlName="color"
+              [value]="color"
+              [attr.aria-label]="'Color ' + color"
+            />
+          </label>
+        }
+        <div class="field hex">
+          <label for="label-color">Custom color</label>
+          @let colorInvalid = form.controls.color.touched && form.controls.color.invalid;
+          <input
+            id="label-color"
+            class="field__input num"
+            formControlName="color"
+            placeholder="#AB47BC"
+            maxlength="7"
+            [attr.aria-invalid]="colorInvalid"
+            [attr.aria-describedby]="colorInvalid ? 'label-color-error' : null"
+          />
+        </div>
+      </div>
+      @if (form.controls.color.touched && form.controls.color.invalid) {
+        <span id="label-color-error" class="field__error"
+          >Use the #RRGGBB format, e.g. #AB47BC.</span
+        >
+      }
+    </fieldset>
+
+    <fieldset class="group">
+      <legend>Icon</legend>
+      <div class="icons">
+        @for (icon of icons; track icon) {
+          <label class="icon-choice">
+            <input
+              type="radio"
+              formControlName="icon"
+              [value]="icon"
+              [attr.aria-label]="icon.replace('_', ' ')"
+            />
+            <app-icon [name]="icon" />
+          </label>
+        }
+      </div>
+    </fieldset>
+
+    <footer class="foot">
+      <div class="preview" aria-label="Preview">
+        <span class="preview__swatch" [style.background]="preview().color">
+          <app-icon [name]="preview().icon" />
+        </span>
+        <span class="preview__text">
+          <strong>{{ preview().name }}</strong>
+          <span>{{ preview().kind }}</span>
+        </span>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn" (click)="ref.close()">Cancel</button>
+        <button type="submit" class="btn btn--primary" [disabled]="pending()">
+          {{ editing ? 'Save changes' : 'Create label' }}
+        </button>
+      </div>
+    </footer>
+  </form>
+</section>

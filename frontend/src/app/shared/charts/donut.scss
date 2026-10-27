@@ -1,0 +1,75 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.donut {
+  width: 100%;
+  max-width: 300px;
+}
+
+.track {
+  stroke: var(--color-surface-raised);
+}
+
+.arc {
+  transition:
+    stroke-width var(--motion),
+    opacity var(--motion);
+  cursor: pointer;
+}
+
+.center__label,
+.center__hint {
+  fill: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.center__value {
+  fill: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: 0 var(--space-2);
+  border: none;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--text-s);
+  cursor: default;
+
+  &:hover {
+    background: var(--color-surface-raised);
+  }
+}
+
+.legend__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.legend__share {
+  font-family: var(--font-mono);
+}

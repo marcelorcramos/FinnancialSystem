@@ -5,7 +5,6 @@
   align-items: center;
   gap: var(--space-1);
   color: var(--money-amount-color);
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
@@ -21,17 +20,13 @@
   --money-amount-color: var(--kind-investment);
 }
 
-.money-amount__icon {
-  width: 1.25em;
-  height: 1.25em;
-  font-size: 1.25em;
-}
-
 .money-amount__value {
-  font-weight: 500;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
 }
 
 .money-amount__kind {
-  font: var(--mat-sys-label-small);
+  font-size: var(--text-xs);
   opacity: 0.85;
 }

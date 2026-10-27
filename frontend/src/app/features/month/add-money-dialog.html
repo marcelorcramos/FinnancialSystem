@@ -1,0 +1,135 @@
+<section class="dialog" role="dialog" aria-modal="true" aria-labelledby="add-money-title">
+  <header class="head">
+    <h2 id="add-money-title">Add money</h2>
+    <button type="button" class="btn btn--icon btn--quiet" aria-label="Close" (click)="ref.close()">
+      <app-icon name="close" />
+    </button>
+  </header>
+
+  @if (error(); as message) {
+    <div class="alert" role="alert">
+      <app-icon name="alert" [size]="18" />
+      <span>{{ message }}</span>
+    </div>
+  }
+
+  <div class="grid">
+    <div class="field">
+      <label for="add-target">To</label>
+      <select
+        id="add-target"
+        class="field__input"
+        [value]="targetId()"
+        (change)="setTarget($any($event.target).value)"
+      >
+        @for (label of labels; track label.label_id) {
+          <option [value]="label.label_id">{{ label.name }}</option>
+        }
+      </select>
+    </div>
+    <div class="field">
+      <label for="add-amount">Amount (€)</label>
+      <input
+        id="add-amount"
+        class="field__input num"
+        inputmode="decimal"
+        placeholder="20.00"
+        [value]="amountText()"
+        [attr.aria-invalid]="amountText() !== '' && !cents()"
+        (input)="amountText.set($any($event.target).value)"
+      />
+    </div>
+    <div class="field">
+      <label for="add-date">Date</label>
+      <input
+        id="add-date"
+        class="field__input num"
+        type="date"
+        [value]="date()"
+        (input)="date.set($any($event.target).value)"
+      />
+    </div>
+  </div>
+
+  <fieldset class="group">
+    <legend>Where does this money come from?</legend>
+    <div class="origins">
+      <label class="choice">
+        <input
+          type="radio"
+          name="origin"
+          [checked]="origin() === 'outside'"
+          (change)="origin.set('outside')"
+        />
+        <strong>From outside the app</strong>
+        <span>Extra income: a bonus, a refund, a side job. The month's income goes up too.</span>
+      </label>
+      <label class="choice">
+        <input
+          type="radio"
+          name="origin"
+          [checked]="origin() === 'label'"
+          [disabled]="!sources().length"
+          (change)="origin.set('label')"
+        />
+        <strong>From another label</strong>
+        <span>A transfer: the money leaves that label and lands here. Income stays the same.</span>
+      </label>
+    </div>
+
+    @if (origin() === 'outside') {
+      <div class="field">
+        <label for="add-source">Source (optional)</label>
+        <input
+          id="add-source"
+          class="field__input"
+          placeholder="Extra income"
+          maxlength="100"
+          [value]="source()"
+          (input)="source.set($any($event.target).value)"
+        />
+      </div>
+    } @else {
+      <div class="field">
+        <label for="add-from">Take it from</label>
+        <select
+          id="add-from"
+          class="field__input"
+          [value]="fromId()"
+          (change)="fromId.set($any($event.target).value)"
+        >
+          @for (label of sources(); track label.label_id) {
+            <option [value]="label.label_id">{{ label.name }}</option>
+          }
+        </select>
+      </div>
+    }
+  </fieldset>
+
+  <div class="impact" aria-live="polite">
+    <span class="muted">After this</span>
+    @for (line of impact(); track line.name) {
+      <div class="impact__line">
+        <span aria-hidden="true">{{ line.name }}</span>
+        <span class="num muted" aria-hidden="true">{{ line.before }}</span>
+        <span class="muted" aria-hidden="true">→</span>
+        <span class="num impact__after" aria-hidden="true" [attr.data-tone]="line.tone">{{
+          line.after
+        }}</span>
+        <span class="visually-hidden">{{ line.sentence }}</span>
+      </div>
+    }
+  </div>
+
+  <footer class="actions">
+    <button type="button" class="btn" (click)="ref.close()">Cancel</button>
+    <button
+      type="button"
+      class="btn btn--primary"
+      [disabled]="pending() || !valid()"
+      (click)="submit()"
+    >
+      {{ submitLabel() }}
+    </button>
+  </footer>
+</section>

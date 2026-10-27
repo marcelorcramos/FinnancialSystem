@@ -1,64 +1,69 @@
-<section class="card">
-  <h1>{{ 'auth.login.title' | transloco }}</h1>
-  <p class="subtitle">{{ 'auth.login.subtitle' | transloco }}</p>
+@if (error(); as message) {
+  <div class="alert" role="alert">
+    <app-icon name="alert" [size]="18" />
+    <span>{{ message }}</span>
+  </div>
+} @else if (sessionExpired()) {
+  <div class="alert alert--info" role="status">
+    <app-icon name="info" [size]="18" />
+    <span>Your session has expired. Please sign in again.</span>
+  </div>
+}
 
-  @if (errorKey(); as key) {
-    <div class="alert" role="alert">
-      <mat-icon aria-hidden="true">error</mat-icon>
-      <span>{{ key | transloco }}</span>
-    </div>
-  } @else if (sessionExpired()) {
-    <div class="alert alert--info" role="status">
-      <mat-icon aria-hidden="true">info</mat-icon>
-      <span>{{ 'auth.errors.sessionExpired' | transloco }}</span>
-    </div>
-  }
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <div class="field">
+    <label for="login-email">Email</label>
+    @let emailError = visibleError(form.controls.email);
+    <input
+      id="login-email"
+      class="field__input"
+      type="email"
+      formControlName="email"
+      autocomplete="email"
+      inputmode="email"
+      [attr.aria-invalid]="!!emailError"
+      [attr.aria-describedby]="emailError ? 'login-email-error' : null"
+    />
+    @if (emailError) {
+      <span id="login-email-error" class="field__error">{{ emailError }}</span>
+    }
+  </div>
 
-  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-    <mat-form-field appearance="outline">
-      <mat-label>{{ 'auth.email' | transloco }}</mat-label>
-      <input matInput type="email" formControlName="email" autocomplete="email" inputmode="email" />
-      @if (fieldError(form.controls.email); as error) {
-        <mat-error>{{ error.key | transloco: error.params }}</mat-error>
-      }
-    </mat-form-field>
-
-    <mat-form-field appearance="outline">
-      <mat-label>{{ 'auth.password' | transloco }}</mat-label>
+  <div class="field">
+    <label for="login-password">Password</label>
+    @let passwordError = visibleError(form.controls.password);
+    <div class="field__control">
       <input
-        matInput
+        id="login-password"
+        class="field__input field__input--with-action"
         [type]="showPassword() ? 'text' : 'password'"
         formControlName="password"
         autocomplete="current-password"
+        [attr.aria-invalid]="!!passwordError"
+        [attr.aria-describedby]="passwordError ? 'login-password-error' : null"
       />
       <button
-        mat-icon-button
-        matSuffix
         type="button"
-        [attr.aria-label]="(showPassword() ? 'auth.hidePassword' : 'auth.showPassword') | transloco"
+        class="btn btn--icon btn--quiet field__action"
+        [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
         [attr.aria-pressed]="showPassword()"
         (click)="showPassword.set(!showPassword())"
       >
-        <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        <app-icon [name]="showPassword() ? 'eye-off' : 'eye'" />
       </button>
-      @if (fieldError(form.controls.password); as error) {
-        <mat-error>{{ error.key | transloco: error.params }}</mat-error>
-      }
-    </mat-form-field>
+    </div>
+    @if (passwordError) {
+      <span id="login-password-error" class="field__error">{{ passwordError }}</span>
+    }
+  </div>
 
-    <button mat-flat-button class="submit" type="submit" [disabled]="pending()">
-      @if (pending()) {
-        <mat-progress-spinner mode="indeterminate" diameter="20" aria-hidden="true" />
-      } @else {
-        {{ 'auth.login.submit' | transloco }}
-      }
-    </button>
-  </form>
-
-  <p class="switch">
-    {{ 'auth.login.noAccount' | transloco }}
-    <a routerLink="/auth/register" [queryParams]="returnUrl() ? { returnUrl: returnUrl() } : {}">
-      {{ 'auth.login.goToRegister' | transloco }}
-    </a>
-  </p>
-</section>
+  <button class="btn btn--primary btn--block" type="submit" [disabled]="pending()">
+    @if (pending()) {
+      <span class="spinner" aria-hidden="true"></span>
+      <span class="visually-hidden">Signing in</span>
+    } @else {
+      Sign in
+    }
+  </button>
+  <p class="note">Forgot your password? Recovery by email comes later.</p>
+</form>

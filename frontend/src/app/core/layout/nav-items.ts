@@ -1,10 +1,14 @@
+import { IconName } from '../../shared/ui/icon';
+
 export interface NavItem {
   path: string;
-  /** Translation key. */
   label: string;
-  icon: string;
+  icon: IconName;
   exact?: boolean;
 }
 
 /** Main navigation. Features add their entries here as they land. */
-export const NAV_ITEMS: NavItem[] = [{ path: '/', label: 'nav.home', icon: 'home', exact: true }];
+export const NAV_ITEMS: NavItem[] = [
+  { path: '/month', label: 'Month', icon: 'month' },
+  { path: '/labels', label: 'Labels', icon: 'labels' },
+];

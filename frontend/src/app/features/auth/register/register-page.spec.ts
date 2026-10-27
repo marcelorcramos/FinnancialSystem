@@ -3,7 +3,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 
-import { provideTestI18n } from '../../../../testing/i18n';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { UserRead } from '../../../core/auth/auth.models';
 import { USER } from '../../../core/auth/testing';
@@ -20,7 +19,7 @@ describe('RegisterPage', () => {
     register$ = new Subject<UserRead>();
     store = { register: vi.fn(() => register$) };
     TestBed.configureTestingModule({
-      imports: [RegisterPage, provideTestI18n()],
+      imports: [RegisterPage],
       providers: [provideRouter([]), { provide: AuthStore, useValue: store }],
     });
     navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
@@ -48,7 +47,7 @@ describe('RegisterPage', () => {
     await fixture.whenStable();
   }
 
-  const errors = () => [...el.querySelectorAll('mat-error')].map((e) => e.textContent?.trim());
+  const errors = () => [...el.querySelectorAll('.field__error')].map((e) => e.textContent?.trim());
 
   it('registers with the trimmed name and goes home', async () => {
     await fill();
@@ -67,7 +66,9 @@ describe('RegisterPage', () => {
     await fill({ password: 'short', confirmPassword: 'short' });
 
     expect(store.register).not.toHaveBeenCalled();
-    expect(errors()).toContain('Mínimo de 8 caracteres.');
+    expect(errors()).toContain(
+      'Use at least 8 characters with an uppercase, a lowercase, a number and a symbol.',
+    );
   });
 
   it('requires upper, lower, digit and symbol in the password', async () => {
@@ -75,7 +76,7 @@ describe('RegisterPage', () => {
 
     expect(store.register).not.toHaveBeenCalled();
     expect(errors()).toContain(
-      'Usa pelo menos 8 caracteres, com maiúscula, minúscula, número e símbolo.',
+      'Use at least 8 characters with an uppercase, a lowercase, a number and a symbol.',
     );
   });
 
@@ -83,14 +84,24 @@ describe('RegisterPage', () => {
     await fill({ confirmPassword: 'different1' });
 
     expect(store.register).not.toHaveBeenCalled();
-    expect(errors()).toContain('As passwords não coincidem.');
+    expect(errors()).toContain('Passwords do not match.');
+  });
+
+  it('ticks the password rules while typing', async () => {
+    type('password', 'secure2026');
+    await fixture.whenStable();
+
+    const met = [...el.querySelectorAll('.rule')].map((rule) =>
+      rule.classList.contains('rule--met'),
+    );
+    expect(met).toEqual([true, true, false, true, false]);
   });
 
   it('validates the email', async () => {
     await fill({ email: 'not-an-email' });
 
     expect(store.register).not.toHaveBeenCalled();
-    expect(errors()).toContain('Introduz um email válido.');
+    expect(errors()).toContain('Enter a valid email.');
   });
 
   it('explains when the email is already registered', async () => {
@@ -99,7 +110,7 @@ describe('RegisterPage', () => {
     await fixture.whenStable();
 
     expect(el.querySelector('[role=alert]')?.textContent).toContain(
-      'Já existe uma conta com este email.',
+      'An account with this email already exists.',
     );
   });
 });

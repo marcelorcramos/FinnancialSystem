@@ -1,0 +1,206 @@
+<section class="dialog" role="dialog" aria-modal="true" aria-labelledby="new-month-title">
+  <header class="head">
+    <h2 id="new-month-title">New month · {{ title }}</h2>
+    <button type="button" class="btn btn--icon btn--quiet" aria-label="Close" (click)="ref.close()">
+      <app-icon name="close" />
+    </button>
+  </header>
+
+  @if (error(); as message) {
+    <div class="alert" role="alert">
+      <app-icon name="alert" [size]="18" />
+      <span>{{ message }}</span>
+    </div>
+  }
+
+  @if (loading()) {
+    <p class="muted" role="status">Looking for the previous month…</p>
+  } @else if (previous(); as prev) {
+    <fieldset class="group">
+      <legend>Start from {{ prev.title }}</legend>
+
+      <div class="option" [class.option--on]="copyAllocations()">
+        <input
+          id="copy-allocations"
+          type="checkbox"
+          [checked]="copyAllocations()"
+          [disabled]="!allocations().length"
+          (change)="copyAllocations.set(!copyAllocations())"
+        />
+        <label for="copy-allocations" class="option__text">
+          <strong>Copy the initial distribution</strong>
+          @if (allocations().length) {
+            <span>
+              {{ allocations().length }} labels ·
+              <span class="num">{{ previousTotalText() }}</span>
+              in {{ prev.title }}
+              @if (changedCount()) {
+                · {{ changedCount() }} changed
+              }
+            </span>
+          } @else {
+            <span>Nothing to copy: {{ prev.title }} has no initial distribution.</span>
+          }
+        </label>
+        @if (copyAllocations() && allocations().length) {
+          <button
+            type="button"
+            class="btn"
+            [class.btn--primary]="reviewing()"
+            [attr.aria-expanded]="reviewing()"
+            aria-controls="review"
+            (click)="reviewing.set(!reviewing())"
+          >
+            {{ reviewing() ? 'Hide amounts' : 'Review amounts' }}
+          </button>
+        }
+      </div>
+
+      @if (copyAllocations() && reviewing()) {
+        <div id="review" class="review">
+          <div class="review__bar">
+            <span class="muted">Based on {{ prev.title }}</span>
+            <button type="button" class="btn btn--quiet" (click)="reset()">
+              Reset to {{ prev.title }}
+            </button>
+          </div>
+          <div class="review__head" aria-hidden="true">
+            <span>Label</span><span>Before</span><span>New</span><span></span>
+          </div>
+          @for (row of allocations(); track row.id) {
+            @let change = delta(row);
+            <div class="review__row" [class.review__row--skipped]="row.skipped">
+              <span class="review__label">
+                <span class="swatch" [style.background]="row.color" aria-hidden="true">
+                  @if (row.icon) {
+                    <app-icon [name]="row.icon" [size]="14" />
+                  }
+                </span>
+                <span class="review__name">
+                  <span>{{ row.name }}</span>
+                  <span class="num review__delta" [attr.data-tone]="change.tone">{{
+                    change.text
+                  }}</span>
+                </span>
+              </span>
+              <span class="num muted">{{ previousOf(row) }}</span>
+              <span class="stepper">
+                <button
+                  type="button"
+                  class="btn btn--icon"
+                  [attr.aria-label]="'Decrease ' + row.name + ' by €10'"
+                  (click)="step('allocations', row.id, -1)"
+                >
+                  −
+                </button>
+                <input
+                  class="field__input num"
+                  inputmode="decimal"
+                  [attr.aria-label]="row.name + ' amount for ' + title"
+                  [attr.aria-invalid]="change.tone === 'removed' && !row.skipped"
+                  [value]="row.text"
+                  [disabled]="row.skipped"
+                  (input)="type('allocations', row.id, $any($event.target).value)"
+                />
+                <button
+                  type="button"
+                  class="btn btn--icon"
+                  [attr.aria-label]="'Increase ' + row.name + ' by €10'"
+                  (click)="step('allocations', row.id, 1)"
+                >
+                  +
+                </button>
+              </span>
+              <button
+                type="button"
+                class="btn btn--icon btn--quiet"
+                [attr.aria-pressed]="row.skipped"
+                [attr.aria-label]="(row.skipped ? 'Bring back ' : 'Remove ') + row.name"
+                (click)="toggleSkip(row.id)"
+              >
+                <app-icon [name]="row.skipped ? 'plus' : 'close'" [size]="18" />
+              </button>
+            </div>
+          }
+          <p class="muted small">
+            − and + change by €10. Removed labels start at €0; you can still add money to them
+            later.
+          </p>
+        </div>
+      }
+
+      <div class="option" [class.option--on]="copyIncomes()">
+        <input
+          id="copy-incomes"
+          type="checkbox"
+          [checked]="copyIncomes()"
+          [disabled]="!incomes().length"
+          (change)="copyIncomes.set(!copyIncomes())"
+        />
+        <label for="copy-incomes" class="option__text">
+          <strong>Copy recurring incomes</strong>
+          @if (incomes().length) {
+            <span>One-off extra income is not copied.</span>
+          } @else {
+            <span>Nothing to copy: {{ prev.title }} has no recurring income.</span>
+          }
+        </label>
+      </div>
+      @if (copyIncomes()) {
+        @for (row of incomes(); track row.id) {
+          <div class="income">
+            <label class="income__label" [for]="'income-' + row.id">{{ row.name }}</label>
+            <span class="num muted">before {{ previousOf(row) }}</span>
+            <input
+              [id]="'income-' + row.id"
+              class="field__input num income__input"
+              inputmode="decimal"
+              [value]="row.text"
+              (input)="type('incomes', row.id, $any($event.target).value)"
+            />
+          </div>
+        }
+      }
+    </fieldset>
+  } @else {
+    <p class="muted">This is your first month: it starts empty.</p>
+  }
+
+  <div class="field">
+    <label for="new-month-note">Note (optional)</label>
+    <input
+      id="new-month-note"
+      class="field__input"
+      placeholder="e.g. Holiday month"
+      maxlength="1000"
+      [value]="note()"
+      (input)="note.set($any($event.target).value)"
+    />
+  </div>
+
+  <div class="summary" aria-live="polite">
+    <span
+      ><span class="muted">Income</span><span class="num">{{ totals().income }}</span></span
+    >
+    <span
+      ><span class="muted">Distributed</span
+      ><span class="num">{{ totals().distributed }}</span></span
+    >
+    <span>
+      <span class="muted">Unallocated</span>
+      <span class="num" [class.negative]="totals().negative">{{ totals().unallocated }}</span>
+    </span>
+  </div>
+
+  <footer class="actions">
+    <button type="button" class="btn" (click)="ref.close()">Cancel</button>
+    <button
+      type="button"
+      class="btn btn--primary"
+      [disabled]="pending() || loading() || invalid()"
+      (click)="create()"
+    >
+      Create {{ title }}
+    </button>
+  </footer>
+</section>

@@ -1,78 +1,58 @@
-<a class="skip-link" href="#main">{{ 'app.skipToContent' | transloco }}</a>
+<a class="skip-link" href="#main">Skip to content</a>
 
-<mat-sidenav-container class="shell" [class.shell--rail]="screen.isTablet()">
-  <mat-sidenav
-    #sidenav
-    class="shell__nav"
-    [mode]="screen.isPhone() ? 'over' : 'side'"
-    [opened]="!screen.isPhone()"
-    [disableClose]="!screen.isPhone()"
-  >
-    <div class="shell__brand">
-      <mat-icon aria-hidden="true">account_balance_wallet</mat-icon>
-      @if (!screen.isTablet()) {
-        <span>{{ 'app.name' | transloco }}</span>
-      }
-    </div>
-    <mat-nav-list [attr.aria-label]="'nav.mainNavigation' | transloco">
-      @for (item of navItems; track item.path) {
-        <a
-          mat-list-item
-          [routerLink]="item.path"
-          routerLinkActive
-          #active="routerLinkActive"
-          [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
-          [activated]="active.isActive"
-          [attr.aria-current]="active.isActive ? 'page' : null"
-          [attr.aria-label]="screen.isTablet() ? (item.label | transloco) : null"
-          [matTooltip]="item.label | transloco"
-          [matTooltipDisabled]="!screen.isTablet()"
-          matTooltipPosition="right"
-          (click)="screen.isPhone() && sidenav.close()"
-        >
-          <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
-          @if (!screen.isTablet()) {
-            <span matListItemTitle>{{ item.label | transloco }}</span>
-          }
-        </a>
-      }
-    </mat-nav-list>
-  </mat-sidenav>
+<header class="top">
+  <a class="brand" routerLink="/">
+    <app-icon name="logo" [size]="28" />
+    <span>{{ appName }}</span>
+  </a>
 
-  <mat-sidenav-content class="shell__content">
-    <mat-toolbar class="shell__toolbar">
-      @if (screen.isPhone()) {
-        <button mat-icon-button [attr.aria-label]="'nav.openMenu' | transloco" (click)="sidenav.open()">
-          <mat-icon>menu</mat-icon>
-        </button>
-        <span class="shell__title">{{ 'app.name' | transloco }}</span>
-      }
-      <span class="shell__spacer"></span>
-      <app-language-menu />
-      <app-theme-menu />
-      <button
-        mat-icon-button
-        [matMenuTriggerFor]="userMenu"
-        [attr.aria-label]="'user.menu' | transloco"
+  <nav class="nav" aria-label="Main">
+    @for (item of navItems; track item.path) {
+      <a
+        class="nav__link"
+        [routerLink]="item.path"
+        routerLinkActive="nav__link--active"
+        #active="routerLinkActive"
+        [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
+        [attr.aria-current]="active.isActive ? 'page' : null"
       >
-        <mat-icon>account_circle</mat-icon>
-      </button>
-      <mat-menu #userMenu="matMenu" xPosition="before">
-        @if (auth.user(); as user) {
-          <div class="shell__user" role="presentation">
-            <strong>{{ user.name }}</strong>
-            <span>{{ user.email }}</span>
-          </div>
-        }
-        <button mat-menu-item (click)="logout()">
-          <mat-icon>logout</mat-icon>
-          <span>{{ 'user.logout' | transloco }}</span>
-        </button>
-      </mat-menu>
-    </mat-toolbar>
+        <app-icon [name]="item.icon" [size]="18" />
+        {{ item.label }}
+      </a>
+    }
+  </nav>
 
-    <main id="main" class="shell__main" tabindex="-1">
-      <router-outlet />
-    </main>
-  </mat-sidenav-content>
-</mat-sidenav-container>
+  <div class="actions">
+    <app-theme-toggle />
+    <button
+      type="button"
+      class="account"
+      [cdkMenuTriggerFor]="accountMenu"
+      aria-label="Account menu"
+    >
+      <span class="account__avatar" aria-hidden="true">{{ initials() }}</span>
+      <app-icon name="chevron-down" [size]="16" />
+    </button>
+  </div>
+</header>
+
+<ng-template #accountMenu>
+  <div class="menu" cdkMenu>
+    @if (auth.user(); as user) {
+      <div class="menu__user">
+        <strong>{{ user.name }}</strong>
+        <span>{{ user.email }}</span>
+      </div>
+    }
+    <button type="button" class="menu__item" cdkMenuItem (cdkMenuItemTriggered)="logout()">
+      <app-icon name="logout" [size]="18" />
+      Sign out
+    </button>
+  </div>
+</ng-template>
+
+<main id="main" class="main" tabindex="-1">
+  <router-outlet />
+</main>
+
+<app-toast-outlet />

@@ -9,10 +9,10 @@ export default [
     component: AuthLayout,
     canActivate: [guestGuard],
     children: [
-      { path: 'login', title: 'auth.login.title', loadComponent: () => import('./login/login-page') },
+      { path: 'login', title: 'Sign in', loadComponent: () => import('./login/login-page') },
       {
         path: 'register',
-        title: 'auth.register.title',
+        title: 'Create account',
         loadComponent: () => import('./register/register-page'),
       },
       { path: '', pathMatch: 'full', redirectTo: 'login' },
