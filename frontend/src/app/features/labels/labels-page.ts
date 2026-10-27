@@ -14,9 +14,10 @@ import { Observable } from 'rxjs';
 import { apiErrorMessage } from '../../core/api/api-errors';
 import { LabelRead } from '../../core/api/types';
 import { KIND_NAMES, KINDS } from '../../shared/money/kind';
-import { Icon } from '../../shared/ui/icon';
+import { Icon, IconName, isIconName } from '../../shared/ui/icon';
 import { ToastService } from '../../shared/ui/toast.service';
 import { DeleteLabelChoice, DeleteLabelData, DeleteLabelDialog } from './delete-label-dialog';
+import { LabelEditorData, LabelEditorDialog } from './label-editor-dialog';
 import { LabelsApi } from './labels-api';
 
 @Component({
@@ -47,6 +48,21 @@ export default class LabelsPage implements OnInit {
 
   ngOnInit(): void {
     this.reload();
+  }
+
+  protected iconOf(label: LabelRead): IconName {
+    return isIconName(label.icon) ? label.icon : 'labels';
+  }
+
+  /** Opens the editor; without a label it creates a new one. */
+  protected edit(label?: LabelRead): void {
+    this.dialog
+      .open<LabelRead, LabelEditorData>(LabelEditorDialog, { data: { label } })
+      .closed.subscribe((saved) => {
+        if (!saved) return;
+        this.reload();
+        this.toasts.show(label ? `“${saved.name}” saved` : `“${saved.name}” created`);
+      });
   }
 
   protected reload(): void {

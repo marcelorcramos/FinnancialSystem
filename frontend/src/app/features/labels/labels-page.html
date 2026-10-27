@@ -6,6 +6,10 @@
       counts in reports.
     </p>
   </div>
+  <button type="button" class="btn btn--primary" (click)="edit()">
+    <app-icon name="plus" [size]="18" />
+    New label
+  </button>
 </header>
 
 @if (loading()) {
@@ -27,7 +31,9 @@
         </h2>
         @for (label of group.labels; track label.id) {
           <div class="row">
-            <span class="swatch" [style.background]="label.color" aria-hidden="true"></span>
+            <span class="swatch" [style.background]="label.color" aria-hidden="true">
+              <app-icon [name]="iconOf(label)" [size]="18" />
+            </span>
             <span class="row__name">
               {{ label.name }}
               @if (label.is_default) {
@@ -70,6 +76,10 @@
 
 <ng-template #labelMenu let-label>
   <div class="menu" cdkMenu>
+    <button type="button" class="menu__item" cdkMenuItem (cdkMenuItemTriggered)="edit(label)">
+      <app-icon name="edit" [size]="18" />
+      Edit
+    </button>
     <button type="button" class="menu__item" cdkMenuItem (cdkMenuItemTriggered)="archive(label)">
       <app-icon name="archive" [size]="18" />
       Archive

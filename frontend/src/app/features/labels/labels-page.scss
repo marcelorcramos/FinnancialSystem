@@ -79,10 +79,14 @@
 }
 
 .swatch {
+  display: inline-flex;
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius-s);
+  color: #111417;
 }
 
 .badge {
