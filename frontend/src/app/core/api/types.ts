@@ -19,6 +19,7 @@ export type LabelSummary = Schemas['LabelSummary'];
 
 export type IncomeRead = Schemas['IncomeRead'];
 export type IncomeCreate = Schemas['IncomeCreate'];
+export type IncomeUpdate = Schemas['IncomeUpdate'];
 
 export type EntryRead = Schemas['EntryRead'];
 export type EntryListItem = Schemas['EntryListItem'];

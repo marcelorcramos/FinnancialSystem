@@ -19,6 +19,12 @@
   @if (sheet()?.closed_at) {
     <span class="chip">Closed</span>
   }
+  @if (state() === 'ready') {
+    <button type="button" class="btn new-month" (click)="newMonth('next')">
+      <app-icon name="plus" [size]="18" />
+      New month
+    </button>
+  }
 </header>
 
 @switch (state()) {
@@ -37,12 +43,7 @@
       <app-icon name="month" [size]="40" />
       <h2>No sheet for {{ title() }} yet</h2>
       <p>Create it to add your income and split it across labels.</p>
-      <button
-        type="button"
-        class="btn btn--primary"
-        [disabled]="creating()"
-        (click)="createMonth()"
-      >
+      <button type="button" class="btn btn--primary" (click)="newMonth('this')">
         Create {{ title() }}
       </button>
     </section>

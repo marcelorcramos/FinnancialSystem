@@ -11,6 +11,7 @@ import {
   EntryRead,
   IncomeCreate,
   IncomeRead,
+  IncomeUpdate,
   MonthCreate,
   MonthRead,
   MonthSummary,
@@ -61,6 +62,10 @@ export class MonthsApi {
 
   addIncome(id: string, body: IncomeCreate): Observable<IncomeRead> {
     return this.http.post<IncomeRead>(`${this.months}/${id}/incomes`, body);
+  }
+
+  updateIncome(incomeId: string, body: IncomeUpdate): Observable<IncomeRead> {
+    return this.http.patch<IncomeRead>(`${this.base}/incomes/${incomeId}`, body);
   }
 
   /** An amount of "0" removes the allocation (the API then answers 204 with no body). */

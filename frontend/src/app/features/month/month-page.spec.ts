@@ -1,3 +1,4 @@
+import { Dialog } from '@angular/cdk/dialog';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
@@ -40,6 +41,7 @@ describe('MonthPage', () => {
   let fixture: ComponentFixture<MonthPage>;
   let el: HTMLElement;
   let api: Record<string, ReturnType<typeof vi.fn>>;
+  let dialog: { open: ReturnType<typeof vi.fn> };
 
   async function render(find = vi.fn(() => of(OCTOBER))) {
     api = {
@@ -48,9 +50,14 @@ describe('MonthPage', () => {
       entries: vi.fn(() => of([])),
       create: vi.fn(() => of(OCTOBER)),
     };
+    dialog = { open: vi.fn(() => ({ closed: of(OCTOBER) })) };
     TestBed.configureTestingModule({
       imports: [MonthPage],
-      providers: [provideRouter([]), { provide: MonthsApi, useValue: api }],
+      providers: [
+        provideRouter([]),
+        { provide: MonthsApi, useValue: api },
+        { provide: Dialog, useValue: dialog },
+      ],
     });
     fixture = TestBed.createComponent(MonthPage);
     fixture.componentRef.setInput('year', '2026');
@@ -90,13 +97,16 @@ describe('MonthPage', () => {
     el.querySelector<HTMLButtonElement>('.empty button')!.click();
     await fixture.whenStable();
 
-    expect(api['create']).toHaveBeenCalledWith({
-      year: 2026,
-      month: 10,
-      copy_allocations: false,
-      copy_incomes: false,
-    });
+    expect(dialog.open.mock.calls[0]![1].data).toEqual({ year: 2026, month: 10 });
     expect(text('.total__value')[0]).toBe('€1,050.00');
+  });
+
+  it('opens the New month dialog for the following month', async () => {
+    await render();
+    [...el.querySelectorAll<HTMLButtonElement>('button')]
+      .find((b) => b.textContent?.includes('New month'))!
+      .click();
+    expect(dialog.open.mock.calls[0]![1].data).toEqual({ year: 2026, month: 11 });
   });
 
   it('reports a failure to load', async () => {

@@ -8,14 +8,15 @@ import {
   numberAttribute,
   signal,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Dialog } from '@angular/cdk/dialog';
+import { Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
-import { apiErrorMessage } from '../../core/api/api-errors';
 import { MonthRead } from '../../core/api/types';
 import { Donut } from '../../shared/charts/donut';
 import { Icon, IconName, isIconName } from '../../shared/ui/icon';
 import { ToastService } from '../../shared/ui/toast.service';
+import { NewMonthData, NewMonthDialog } from './new-month-dialog';
 import { monthPath, monthTitle, shiftMonth } from './month-route';
 import { buildMonthView, MonthView } from './month-view';
 import { MonthsApi } from './months-api';
@@ -31,6 +32,8 @@ type LoadState = 'loading' | 'ready' | 'missing' | 'error';
 })
 export default class MonthPage {
   private readonly api = inject(MonthsApi);
+  private readonly dialog = inject(Dialog);
+  private readonly router = inject(Router);
   private readonly toasts = inject(ToastService);
 
   /** Route params (withComponentInputBinding). */
@@ -41,7 +44,6 @@ export default class MonthPage {
   protected readonly sheet = signal<MonthRead | null>(null);
   protected readonly view = signal<MonthView | null>(null);
   protected readonly showAllLabels = signal(false);
-  protected readonly creating = signal(false);
 
   protected readonly title = computed(() => monthTitle(this.year(), this.month()));
   protected readonly previous = computed(() => this.link(-1));
@@ -63,25 +65,22 @@ export default class MonthPage {
     this.load(this.year(), this.month());
   }
 
-  /** Creates an empty sheet; copying the previous month comes with the New month dialog. */
-  protected createMonth(): void {
-    this.creating.set(true);
-    this.api
-      .create({
-        year: this.year(),
-        month: this.month(),
-        copy_allocations: false,
-        copy_incomes: false,
-      })
-      .subscribe({
-        next: () => {
-          this.creating.set(false);
+  /** Opens the New month dialog for this month, or for the one after it. */
+  protected newMonth(which: 'this' | 'next'): void {
+    const target =
+      which === 'this'
+        ? { year: this.year(), month: this.month() }
+        : shiftMonth(this.year(), this.month(), 1);
+    this.dialog
+      .open<MonthRead, NewMonthData>(NewMonthDialog, { data: target })
+      .closed.subscribe((created) => {
+        if (!created) return;
+        this.toasts.show(`${monthTitle(created.year, created.month)} created`);
+        if (created.year === this.year() && created.month === this.month()) {
           this.reload();
-        },
-        error: (error: unknown) => {
-          this.creating.set(false);
-          this.toasts.show(apiErrorMessage(error));
-        },
+        } else {
+          void this.router.navigateByUrl(monthPath(created.year, created.month));
+        }
       });
   }
 
