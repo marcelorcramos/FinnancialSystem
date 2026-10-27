@@ -10,6 +10,11 @@ export const routes: Routes = [
     canActivate: [authGuard],
     children: [
       { path: '', title: 'Month', loadComponent: () => import('./features/home/home-page') },
+      {
+        path: 'labels',
+        title: 'Labels',
+        loadComponent: () => import('./features/labels/labels-page'),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

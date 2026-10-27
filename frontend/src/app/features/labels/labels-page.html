@@ -1,0 +1,87 @@
+<header class="head">
+  <div class="head__text">
+    <h1>Labels</h1>
+    <p>
+      {{ active().length }} active · {{ archived().length }} archived. The kind decides how a label
+      counts in reports.
+    </p>
+  </div>
+</header>
+
+@if (loading()) {
+  <p class="muted" role="status">Loading labels…</p>
+} @else if (loadError()) {
+  <div class="alert" role="alert">
+    <app-icon name="alert" [size]="18" />
+    <span>Could not load your labels.</span>
+    <button type="button" class="btn" (click)="reload()">Try again</button>
+  </div>
+} @else {
+  <div class="groups">
+    @for (group of groups(); track group.kind) {
+      <section class="group panel" [attr.aria-labelledby]="'group-' + group.kind">
+        <h2 [id]="'group-' + group.kind" class="group__title" [attr.data-kind]="group.kind">
+          <app-icon [name]="group.kind" [size]="18" />
+          {{ group.title }}
+          <span class="num muted">{{ group.labels.length }}</span>
+        </h2>
+        @for (label of group.labels; track label.id) {
+          <div class="row">
+            <span class="swatch" [style.background]="label.color" aria-hidden="true"></span>
+            <span class="row__name">
+              {{ label.name }}
+              @if (label.is_default) {
+                <span class="badge">default</span>
+              }
+            </span>
+            <button
+              type="button"
+              class="btn btn--icon btn--quiet"
+              [cdkMenuTriggerFor]="labelMenu"
+              [cdkMenuTriggerData]="{ $implicit: label }"
+              [attr.aria-label]="'More actions for ' + label.name"
+            >
+              <app-icon name="chevron-down" />
+            </button>
+          </div>
+        } @empty {
+          <p class="muted empty">No {{ group.title.toLowerCase() }} labels.</p>
+        }
+      </section>
+    }
+  </div>
+
+  @if (archived().length) {
+    <details class="archived">
+      <summary>Archived ({{ archived().length }})</summary>
+      @for (label of archived(); track label.id) {
+        <div class="row">
+          <span class="swatch" [style.background]="label.color" aria-hidden="true"></span>
+          <span class="row__name"
+            >{{ label.name }} <span class="muted">· {{ label.kind }}</span></span
+          >
+          <button type="button" class="btn" (click)="unarchive(label)">Unarchive</button>
+          <button type="button" class="btn btn--danger" (click)="delete(label)">Delete</button>
+        </div>
+      }
+    </details>
+  }
+}
+
+<ng-template #labelMenu let-label>
+  <div class="menu" cdkMenu>
+    <button type="button" class="menu__item" cdkMenuItem (cdkMenuItemTriggered)="archive(label)">
+      <app-icon name="archive" [size]="18" />
+      Archive
+    </button>
+    <button
+      type="button"
+      class="menu__item menu__item--danger"
+      cdkMenuItem
+      (cdkMenuItemTriggered)="delete(label)"
+    >
+      <app-icon name="trash" [size]="18" />
+      Delete
+    </button>
+  </div>
+</ng-template>

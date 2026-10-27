@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { Icon } from '../../shared/ui/icon';
+import { ToastOutlet } from '../../shared/ui/toast-outlet';
 import { APP_NAME } from '../app-title-strategy';
 import { AuthStore } from '../auth/auth-store';
 import { NAV_ITEMS } from './nav-items';
@@ -24,6 +25,7 @@ import { ThemeToggle } from './theme-toggle';
     RouterLinkActive,
     RouterOutlet,
     ThemeToggle,
+    ToastOutlet,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shell.html',
