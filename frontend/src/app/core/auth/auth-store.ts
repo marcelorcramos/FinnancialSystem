@@ -13,9 +13,11 @@ import {
 } from 'rxjs';
 
 import { AuthApi } from './auth-api';
+import { withCrossTabLock } from './cross-tab-lock';
 import { LoginRequest, RegisterRequest, UserRead } from './auth.models';
 
 export const LOGIN_PATH = '/auth/login';
+const REFRESH_LOCK = 'finnancial.auth.refresh';
 
 /**
  * Session state. The access token lives only in memory; after a reload the
@@ -58,11 +60,12 @@ export class AuthStore {
 
   /**
    * Gets a new access token from the refresh cookie. Concurrent callers (e.g.
-   * several requests failing with 401 at once) share a single request, since
-   * the backend rotates the refresh token and reusing it revokes the family.
+   * several requests failing with 401 at once) share a single request, and
+   * other tabs wait for it, since the backend rotates the refresh token and
+   * reusing it revokes the family.
    */
   refresh(): Observable<string> {
-    this.refreshInFlight ??= this.api.refresh().pipe(
+    this.refreshInFlight ??= withCrossTabLock(REFRESH_LOCK, this.api.refresh()).pipe(
       map((tokens) => tokens.access_token),
       tap((token) => this._accessToken.set(token)),
       catchError((error: unknown) => {
