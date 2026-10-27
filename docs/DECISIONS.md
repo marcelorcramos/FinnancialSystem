@@ -79,7 +79,7 @@ The current look (Angular Material, Roboto, Material Symbols) feels like Google/
 
 Screens agreed in the mockups:
 
-- **Month**: income, spent, saved, invested and unallocated totals; a thick donut by kind with hover details; labels list ("base + adjustments"); a large evolution chart with a **category** and a **period** selector (last month by day, last 6 / 12 months, all time); recent entries.
+- **Month**: income, spent, saved, invested and unallocated totals; a thick donut with hover details and two views chosen with **Overview / Detailed** buttons (Overview = one slice per kind: Spent, Saved, Invested; Detailed = one slice per label in its own colour; the choice is remembered per browser); labels list ("base + adjustments"); a large evolution chart with a **category** and a **period** selector (last month by day, last 6 / 12 months, all time); recent entries.
 - **Sign in / create account** with live password rules; **Account** (name, email, EUR, time zone, password, sign out other devices); **Preferences & accessibility**.
 - **Labels** grouped by kind, archive, and delete with reassignment of entries; **Create label** with the kind question, the 8 suggested colors plus a `#RRGGBB` field, and icons.
 - **Add money**: from outside the app (raises income) or from another label (a transfer), showing the effect before confirming.
