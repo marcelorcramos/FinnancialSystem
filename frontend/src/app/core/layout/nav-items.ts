@@ -9,6 +9,6 @@ export interface NavItem {
 
 /** Main navigation. Features add their entries here as they land. */
 export const NAV_ITEMS: NavItem[] = [
-  { path: '/', label: 'Month', icon: 'month', exact: true },
+  { path: '/month', label: 'Month', icon: 'month' },
   { path: '/labels', label: 'Labels', icon: 'labels' },
 ];

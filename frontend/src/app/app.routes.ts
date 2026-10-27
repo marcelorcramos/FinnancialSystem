@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { authGuard } from './core/auth/auth.guards';
+import { currentMonthPath } from './features/month/month-route';
 
 export const routes: Routes = [
   { path: 'auth', loadChildren: () => import('./features/auth/auth.routes') },
@@ -9,7 +10,13 @@ export const routes: Routes = [
     loadComponent: () => import('./core/layout/shell').then((m) => m.Shell),
     canActivate: [authGuard],
     children: [
-      { path: '', title: 'Month', loadComponent: () => import('./features/home/home-page') },
+      { path: '', pathMatch: 'full', redirectTo: () => currentMonthPath() },
+      { path: 'month', pathMatch: 'full', redirectTo: () => currentMonthPath() },
+      {
+        path: 'month/:year/:month',
+        title: 'Month',
+        loadComponent: () => import('./features/month/month-page'),
+      },
       {
         path: 'labels',
         title: 'Labels',

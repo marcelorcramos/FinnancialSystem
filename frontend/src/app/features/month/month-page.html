@@ -1,0 +1,137 @@
+<header class="head">
+  <div class="picker" role="group" aria-label="Month">
+    <a
+      class="btn btn--icon btn--quiet"
+      [routerLink]="previous().path"
+      [attr.aria-label]="'Previous month: ' + previous().label"
+    >
+      <app-icon name="chevron-left" />
+    </a>
+    <h1>{{ title() }}</h1>
+    <a
+      class="btn btn--icon btn--quiet"
+      [routerLink]="next().path"
+      [attr.aria-label]="'Next month: ' + next().label"
+    >
+      <app-icon name="chevron-right" />
+    </a>
+  </div>
+  @if (sheet()?.closed_at) {
+    <span class="chip">Closed</span>
+  }
+</header>
+
+@switch (state()) {
+  @case ('loading') {
+    <p class="muted" role="status">Loading {{ title() }}…</p>
+  }
+  @case ('error') {
+    <div class="alert" role="alert">
+      <app-icon name="alert" [size]="18" />
+      <span>Could not load {{ title() }}.</span>
+      <button type="button" class="btn" (click)="reload()">Try again</button>
+    </div>
+  }
+  @case ('missing') {
+    <section class="empty panel">
+      <app-icon name="month" [size]="40" />
+      <h2>No sheet for {{ title() }} yet</h2>
+      <p>Create it to add your income and split it across labels.</p>
+      <button
+        type="button"
+        class="btn btn--primary"
+        [disabled]="creating()"
+        (click)="createMonth()"
+      >
+        Create {{ title() }}
+      </button>
+    </section>
+  }
+  @case ('ready') {
+    @if (view(); as v) {
+      <section class="totals" aria-label="Totals">
+        <div class="total panel">
+          <span class="total__label">Income</span>
+          <span class="total__value num">{{ v.income }}</span>
+        </div>
+        <div class="total panel" data-kind="expense">
+          <span class="total__label">Spent</span>
+          <span class="total__value num">{{ v.spent }}</span>
+        </div>
+        <div class="total panel" data-kind="saving">
+          <span class="total__label">Saved</span>
+          <span class="total__value num">{{ v.saved }}</span>
+        </div>
+        <div class="total panel" data-kind="investment">
+          <span class="total__label">Invested</span>
+          <span class="total__value num">{{ v.invested }}</span>
+        </div>
+        <div class="total panel total--accent" [class.total--warning]="v.overAllocated">
+          <span class="total__label">Unallocated</span>
+          <span class="total__value num">{{ v.unallocated }}</span>
+          <span class="total__hint">
+            @if (v.overAllocated) {
+              More was distributed than earned
+            } @else {
+              {{ v.distributedShare }} of income distributed
+            }
+          </span>
+        </div>
+      </section>
+
+      <section class="row-2">
+        <figure class="panel chart">
+          <figcaption>Distribution by kind</figcaption>
+          <app-donut
+            [segments]="v.segments"
+            centerLabel="DISTRIBUTED"
+            [centerValue]="v.distributed"
+            [centerHint]="'of ' + v.income"
+          />
+        </figure>
+
+        <section class="panel labels" aria-labelledby="labels-title">
+          <h2 id="labels-title">Labels this month</h2>
+          @for (label of visibleLabels(); track label.id) {
+            <div class="label-row">
+              <span class="swatch" [style.background]="label.color" aria-hidden="true">
+                <app-icon [name]="iconOf(label.icon)" [size]="16" />
+              </span>
+              <span class="label-row__text">
+                <span class="label-row__name">{{ label.name }}</span>
+                <span class="label-row__detail">{{ label.detail }}</span>
+              </span>
+              <span class="num label-row__total">{{ label.total }}</span>
+              <span class="num label-row__share">{{ label.share }}</span>
+            </div>
+          } @empty {
+            <p class="muted">No money distributed yet.</p>
+          }
+          @if (v.labels.length > 6 && !showAllLabels()) {
+            <button type="button" class="btn btn--quiet more" (click)="showAllLabels.set(true)">
+              + {{ v.labels.length - 6 }} more labels with money this month
+            </button>
+          }
+        </section>
+      </section>
+
+      <section class="panel recent" aria-labelledby="recent-title">
+        <h2 id="recent-title">Recent entries</h2>
+        @for (entry of v.recent; track entry.id) {
+          <div class="entry">
+            <span class="num entry__date">{{ entry.date }}</span>
+            <span class="entry__text">
+              <span>{{ entry.title }}</span>
+              <span class="entry__origin">{{ entry.origin }}</span>
+            </span>
+            <span class="num entry__amount" [class.entry__amount--in]="entry.incoming">{{
+              entry.amount
+            }}</span>
+          </div>
+        } @empty {
+          <p class="muted">No entries yet.</p>
+        }
+      </section>
+    }
+  }
+}
