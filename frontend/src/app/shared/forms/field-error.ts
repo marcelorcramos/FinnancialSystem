@@ -1,23 +1,21 @@
 import { AbstractControl } from '@angular/forms';
 
-export interface FieldError {
-  key: string;
-  params?: Record<string, unknown>;
-}
-
-/** Translation key (and params) for the first error of a control. */
-export function fieldError(control: AbstractControl): FieldError | null {
+/** Message for the first validation error of a control, or null when it is valid. */
+export function fieldError(control: AbstractControl): string | null {
   const errors = control.errors;
   if (!errors) return null;
-  if (errors['required']) return { key: 'validation.required' };
-  if (errors['email']) return { key: 'validation.email' };
-  if (errors['minlength']) {
-    return { key: 'validation.minLength', params: { min: errors['minlength'].requiredLength } };
+  if (errors['required']) return 'This field is required.';
+  if (errors['email']) return 'Enter a valid email.';
+  if (errors['minlength']) return `At least ${errors['minlength'].requiredLength} characters.`;
+  if (errors['maxlength']) return `At most ${errors['maxlength'].requiredLength} characters.`;
+  if (errors['passwordPolicy']) {
+    return 'Use at least 8 characters with an uppercase, a lowercase, a number and a symbol.';
   }
-  if (errors['maxlength']) {
-    return { key: 'validation.maxLength', params: { max: errors['maxlength'].requiredLength } };
-  }
-  if (errors['passwordPolicy']) return { key: 'validation.passwordPolicy' };
-  if (errors['passwordMismatch']) return { key: 'validation.passwordMismatch' };
+  if (errors['passwordMismatch']) return 'Passwords do not match.';
   return null;
+}
+
+/** The error to show next to a field: only once the user has touched it. */
+export function visibleError(control: AbstractControl): string | null {
+  return control.touched ? fieldError(control) : null;
 }

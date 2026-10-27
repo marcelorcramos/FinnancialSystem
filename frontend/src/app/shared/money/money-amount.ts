@@ -1,14 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { MatIconModule } from '@angular/material/icon';
-import { TranslocoPipe } from '@jsverse/transloco';
 
-import {
-  DEFAULT_CURRENCY,
-  DEFAULT_MONEY_LOCALE,
-  formatMoney,
-  MoneyValue,
-} from './format-money';
-import { Kind, KIND_ICONS } from './kind';
+import { Icon } from '../ui/icon';
+import { DEFAULT_CURRENCY, DEFAULT_MONEY_LOCALE, formatMoney, MoneyValue } from './format-money';
+import { Kind, KIND_ICONS, KIND_NAMES } from './kind';
 
 /**
  * A monetary value coloured by its kind. Colour is never the only signal:
@@ -17,18 +11,16 @@ import { Kind, KIND_ICONS } from './kind';
  */
 @Component({
   selector: 'app-money-amount',
-  imports: [MatIconModule, TranslocoPipe],
+  imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'money-amount',
     '[attr.data-kind]': 'kind()',
   },
   template: `
-    <mat-icon class="money-amount__icon" aria-hidden="true">{{ icon() }}</mat-icon>
+    <app-icon class="money-amount__icon" [name]="icon()" [size]="16" />
     <span class="money-amount__value">{{ formatted() }}</span>
-    <span class="money-amount__kind" [class.cdk-visually-hidden]="!showKind()">
-      {{ 'kind.' + kind() | transloco }}
-    </span>
+    <span class="money-amount__kind" [class.visually-hidden]="!showKind()">{{ kindName() }}</span>
   `,
   styleUrl: './money-amount.scss',
 })
@@ -40,6 +32,7 @@ export class MoneyAmount {
   readonly showKind = input(true);
 
   protected readonly icon = computed(() => KIND_ICONS[this.kind()]);
+  protected readonly kindName = computed(() => KIND_NAMES[this.kind()]);
   protected readonly formatted = computed(() =>
     formatMoney(this.amount(), this.currency(), this.locale()),
   );

@@ -56,7 +56,11 @@ describe('AuthStore', () => {
     );
 
     const register = http.expectOne(`${API}/auth/register`);
-    expect(register.request.body).toEqual({ email: USER.email, password: 'secret123', name: 'Ana' });
+    expect(register.request.body).toEqual({
+      email: USER.email,
+      password: 'secret123',
+      name: 'Ana',
+    });
     register.flush(USER, { status: 201, statusText: 'Created' });
 
     http.expectOne(`${API}/auth/login`).flush(tokens('access-1'));
@@ -99,9 +103,7 @@ describe('AuthStore', () => {
 
   it('reports no session when the refresh cookie is missing, without retrying', async () => {
     const first = firstValueFrom(store.restoreSession());
-    http
-      .expectOne(`${API}/auth/refresh`)
-      .flush(null, { status: 401, statusText: 'Unauthorized' });
+    http.expectOne(`${API}/auth/refresh`).flush(null, { status: 401, statusText: 'Unauthorized' });
 
     expect(await first).toBe(false);
     expect(await firstValueFrom(store.restoreSession())).toBe(false);

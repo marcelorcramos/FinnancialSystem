@@ -1,6 +1,6 @@
 import { FormControl } from '@angular/forms';
 
-import { passwordPolicy } from './password-policy';
+import { passwordPolicy, passwordRules } from './password-policy';
 
 describe('passwordPolicy', () => {
   const check = (value: string) => passwordPolicy(new FormControl(value, { nonNullable: true }));
@@ -18,5 +18,18 @@ describe('passwordPolicy', () => {
 
   it('leaves empty values to the required validator', () => {
     expect(check('')).toBeNull();
+  });
+});
+
+describe('passwordRules', () => {
+  it('reports each rule separately', () => {
+    expect(passwordRules('secure2026').map((rule) => rule.met)).toEqual([
+      true,
+      true,
+      false,
+      true,
+      false,
+    ]);
+    expect(passwordRules('Secure#2026').every((rule) => rule.met)).toBe(true);
   });
 });

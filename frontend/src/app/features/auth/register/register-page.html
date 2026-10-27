@@ -1,80 +1,110 @@
-<section class="card">
-  <h1>{{ 'auth.register.title' | transloco }}</h1>
-  <p class="subtitle">{{ 'auth.register.subtitle' | transloco }}</p>
+@if (error(); as message) {
+  <div class="alert" role="alert">
+    <app-icon name="alert" [size]="18" />
+    <span>{{ message }}</span>
+  </div>
+}
 
-  @if (errorKey(); as key) {
-    <div class="alert" role="alert">
-      <mat-icon aria-hidden="true">error</mat-icon>
-      <span>{{ key | transloco }}</span>
-    </div>
-  }
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <div class="field">
+    <label for="register-name">Name</label>
+    @let nameError = visibleError(form.controls.name);
+    <input
+      id="register-name"
+      class="field__input"
+      formControlName="name"
+      autocomplete="name"
+      [attr.aria-invalid]="!!nameError"
+      [attr.aria-describedby]="nameError ? 'register-name-error' : null"
+    />
+    @if (nameError) {
+      <span id="register-name-error" class="field__error">{{ nameError }}</span>
+    }
+  </div>
 
-  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-    <mat-form-field appearance="outline">
-      <mat-label>{{ 'auth.name' | transloco }}</mat-label>
-      <input matInput formControlName="name" autocomplete="name" />
-      @if (fieldError(form.controls.name); as error) {
-        <mat-error>{{ error.key | transloco: error.params }}</mat-error>
-      }
-    </mat-form-field>
+  <div class="field">
+    <label for="register-email">Email</label>
+    @let emailError = visibleError(form.controls.email);
+    <input
+      id="register-email"
+      class="field__input"
+      type="email"
+      formControlName="email"
+      autocomplete="email"
+      inputmode="email"
+      [attr.aria-invalid]="!!emailError"
+      [attr.aria-describedby]="emailError ? 'register-email-error' : null"
+    />
+    @if (emailError) {
+      <span id="register-email-error" class="field__error">{{ emailError }}</span>
+    }
+  </div>
 
-    <mat-form-field appearance="outline">
-      <mat-label>{{ 'auth.email' | transloco }}</mat-label>
-      <input matInput type="email" formControlName="email" autocomplete="email" inputmode="email" />
-      @if (fieldError(form.controls.email); as error) {
-        <mat-error>{{ error.key | transloco: error.params }}</mat-error>
-      }
-    </mat-form-field>
-
-    <mat-form-field appearance="outline">
-      <mat-label>{{ 'auth.password' | transloco }}</mat-label>
+  <div class="field">
+    <label for="register-password">Password</label>
+    @let passwordError = visibleError(form.controls.password);
+    <div class="field__control">
       <input
-        matInput
+        id="register-password"
+        class="field__input field__input--with-action"
         [type]="showPassword() ? 'text' : 'password'"
         formControlName="password"
         autocomplete="new-password"
+        aria-describedby="register-password-rules"
+        [attr.aria-invalid]="!!passwordError"
       />
       <button
-        mat-icon-button
-        matSuffix
         type="button"
-        [attr.aria-label]="(showPassword() ? 'auth.hidePassword' : 'auth.showPassword') | transloco"
+        class="btn btn--icon btn--quiet field__action"
+        [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
         [attr.aria-pressed]="showPassword()"
         (click)="showPassword.set(!showPassword())"
       >
-        <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        <app-icon [name]="showPassword() ? 'eye-off' : 'eye'" />
       </button>
-      @if (fieldError(form.controls.password); as error) {
-        <mat-error>{{ error.key | transloco: error.params }}</mat-error>
-      }
-    </mat-form-field>
+    </div>
+    @if (passwordError) {
+      <span class="field__error">{{ passwordError }}</span>
+    }
+  </div>
 
-    <mat-form-field appearance="outline">
-      <mat-label>{{ 'auth.confirmPassword' | transloco }}</mat-label>
-      <input
-        matInput
-        [type]="showPassword() ? 'text' : 'password'"
-        formControlName="confirmPassword"
-        autocomplete="new-password"
-      />
-      @if (fieldError(form.controls.confirmPassword); as error) {
-        <mat-error>{{ error.key | transloco: error.params }}</mat-error>
-      }
-    </mat-form-field>
+  <ul id="register-password-rules" class="rules" aria-label="Password rules">
+    @for (rule of rules(); track rule.label) {
+      <li class="rule" [class.rule--met]="rule.met">
+        <app-icon [name]="rule.met ? 'check' : 'close'" [size]="14" />
+        <span>{{ rule.label }}</span>
+        <span class="visually-hidden">{{ rule.met ? '(done)' : '(missing)' }}</span>
+      </li>
+    }
+  </ul>
 
-    <button mat-flat-button class="submit" type="submit" [disabled]="pending()">
-      @if (pending()) {
-        <mat-progress-spinner mode="indeterminate" diameter="20" aria-hidden="true" />
-      } @else {
-        {{ 'auth.register.submit' | transloco }}
-      }
-    </button>
-  </form>
+  <div class="field">
+    <label for="register-confirm">Confirm password</label>
+    @let confirmError = visibleError(form.controls.confirmPassword);
+    <input
+      id="register-confirm"
+      class="field__input"
+      [type]="showPassword() ? 'text' : 'password'"
+      formControlName="confirmPassword"
+      autocomplete="new-password"
+      [attr.aria-invalid]="!!confirmError"
+      [attr.aria-describedby]="confirmError ? 'register-confirm-error' : null"
+    />
+    @if (confirmError) {
+      <span id="register-confirm-error" class="field__error">{{ confirmError }}</span>
+    }
+  </div>
 
-  <p class="switch">
-    {{ 'auth.register.hasAccount' | transloco }}
-    <a routerLink="/auth/login" [queryParams]="returnUrl() ? { returnUrl: returnUrl() } : {}">
-      {{ 'auth.register.goToLogin' | transloco }}
-    </a>
+  <button class="btn btn--primary btn--block" type="submit" [disabled]="pending()">
+    @if (pending()) {
+      <span class="spinner" aria-hidden="true"></span>
+      <span class="visually-hidden">Creating account</span>
+    } @else {
+      Create account
+    }
+  </button>
+  <p class="note">
+    Your account starts with 11 labels (Food, Housing, Savings, Investments…). You can rename,
+    recolor or archive them.
   </p>
-</section>
+</form>

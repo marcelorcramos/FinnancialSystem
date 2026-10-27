@@ -1,24 +1,24 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { MatIconModule } from '@angular/material/icon';
-import { TranslocoPipe } from '@jsverse/transloco';
 
 import { AuthStore } from '../../core/auth/auth-store';
+import { Icon } from '../../shared/ui/icon';
 
 @Component({
   selector: 'app-home-page',
-  imports: [MatIconModule, TranslocoPipe],
+  imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h1>{{ 'home.greeting' | transloco: { name: auth.user()?.name ?? '' } }}</h1>
-    <section class="empty">
-      <mat-icon aria-hidden="true">calendar_month</mat-icon>
-      <p>{{ 'home.intro' | transloco }}</p>
+    <h1>Hello, {{ auth.user()?.name }}</h1>
+    <section class="empty panel">
+      <app-icon name="month" [size]="40" />
+      <p>Your month, labels and charts will show up here.</p>
     </section>
   `,
   styles: `
     h1 {
-      margin: 0 0 var(--space-5);
-      font: var(--mat-sys-headline-small);
+      margin: var(--space-4) 0 var(--space-5);
+      font-size: var(--text-2xl);
+      letter-spacing: -0.02em;
     }
 
     .empty {
@@ -27,16 +27,9 @@ import { AuthStore } from '../../core/auth/auth-store';
       align-items: center;
       gap: var(--space-3);
       padding: var(--space-7) var(--space-4);
-      border: 1px dashed var(--mat-sys-outline-variant);
-      border-radius: var(--radius-l);
-      color: var(--mat-sys-on-surface-variant);
+      border-style: dashed;
+      color: var(--color-text-muted);
       text-align: center;
-
-      mat-icon {
-        width: 40px;
-        height: 40px;
-        font-size: 40px;
-      }
 
       p {
         margin: 0;

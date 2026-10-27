@@ -1,5 +1,5 @@
 /**
- * Per-browser UI preferences (language, theme). Storage can be unavailable
+ * Per-browser UI preferences (theme). Storage can be unavailable
  * (private mode, blocked site data), so every access is guarded.
  */
 export function readPreference(key: string): string | null {

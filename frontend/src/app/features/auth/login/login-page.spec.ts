@@ -4,7 +4,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 
-import { provideTestI18n } from '../../../../testing/i18n';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { UserRead } from '../../../core/auth/auth.models';
 import { USER } from '../../../core/auth/testing';
@@ -14,14 +13,17 @@ describe('LoginPage', () => {
   let fixture: ComponentFixture<LoginPage>;
   let el: HTMLElement;
   let login$: Subject<UserRead>;
-  let store: { login: ReturnType<typeof vi.fn>; sessionExpired: ReturnType<typeof signal<boolean>> };
+  let store: {
+    login: ReturnType<typeof vi.fn>;
+    sessionExpired: ReturnType<typeof signal<boolean>>;
+  };
   let navigate: ReturnType<typeof vi.spyOn>;
 
   beforeEach(async () => {
     login$ = new Subject<UserRead>();
     store = { login: vi.fn(() => login$), sessionExpired: signal(false) };
     TestBed.configureTestingModule({
-      imports: [LoginPage, provideTestI18n()],
+      imports: [LoginPage],
       providers: [provideRouter([]), { provide: AuthStore, useValue: store }],
     });
     navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
@@ -45,8 +47,8 @@ describe('LoginPage', () => {
     await submit();
 
     expect(store.login).not.toHaveBeenCalled();
-    const errors = [...el.querySelectorAll('mat-error')].map((e) => e.textContent?.trim());
-    expect(errors).toEqual(['Campo obrigatório.', 'Campo obrigatório.']);
+    const errors = [...el.querySelectorAll('.field__error')].map((e) => e.textContent?.trim());
+    expect(errors).toEqual(['This field is required.', 'This field is required.']);
   });
 
   it('logs in and goes to the return URL', async () => {
@@ -82,7 +84,7 @@ describe('LoginPage', () => {
     login$.error(new HttpErrorResponse({ status: 401 }));
     await fixture.whenStable();
 
-    expect(el.querySelector('[role=alert]')?.textContent).toContain('Email ou password incorretos.');
+    expect(el.querySelector('[role=alert]')?.textContent).toContain('Incorrect email or password.');
     expect(el.querySelector<HTMLButtonElement>('button[type=submit]')!.disabled).toBe(false);
     expect(navigate).not.toHaveBeenCalled();
   });
@@ -91,14 +93,14 @@ describe('LoginPage', () => {
     store.sessionExpired.set(true);
     await fixture.whenStable();
 
-    expect(el.querySelector('[role=status]')?.textContent).toContain('A tua sessão expirou');
+    expect(el.querySelector('[role=status]')?.textContent).toContain('Your session has expired');
   });
 
   it('toggles password visibility', async () => {
     const input = el.querySelector<HTMLInputElement>('input[formControlName=password]')!;
     expect(input.type).toBe('password');
 
-    el.querySelector<HTMLButtonElement>('button[matSuffix]')!.click();
+    el.querySelector<HTMLButtonElement>('button[aria-label="Show password"]')!.click();
     await fixture.whenStable();
     expect(input.type).toBe('text');
   });

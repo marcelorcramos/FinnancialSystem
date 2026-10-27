@@ -45,9 +45,7 @@ describe('auth guards', () => {
   }
 
   const noSession = () =>
-    http
-      .expectOne(`${API}/auth/refresh`)
-      .flush(null, { status: 401, statusText: 'Unauthorized' });
+    http.expectOne(`${API}/auth/refresh`).flush(null, { status: 401, statusText: 'Unauthorized' });
 
   const validSession = () => {
     http.expectOne(`${API}/auth/refresh`).flush(tokens('access'));

@@ -1,19 +1,20 @@
 import { HttpErrorResponse } from '@angular/common/http';
 
-/** Translation key for an error returned by login or register. */
-export function authErrorKey(error: unknown, context: 'login' | 'register'): string {
-  if (!(error instanceof HttpErrorResponse)) return 'auth.errors.unknown';
+/** User-facing message for an error returned by login or register. */
+export function authErrorMessage(error: unknown, context: 'login' | 'register'): string {
+  const unknown = 'Something went wrong. Please try again.';
+  if (!(error instanceof HttpErrorResponse)) return unknown;
   switch (error.status) {
     case 0:
-      return 'auth.errors.network';
+      return 'Could not reach the server. Please try again.';
     case 401:
-      return context === 'login' ? 'auth.errors.invalidCredentials' : 'auth.errors.unknown';
+      return context === 'login' ? 'Incorrect email or password.' : unknown;
     case 409:
-      return 'auth.errors.emailTaken';
+      return 'An account with this email already exists.';
     case 400:
     case 422:
-      return 'auth.errors.invalidData';
+      return 'Please check the data you entered.';
     default:
-      return 'auth.errors.unknown';
+      return unknown;
   }
 }

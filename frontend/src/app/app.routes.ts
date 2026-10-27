@@ -9,7 +9,7 @@ export const routes: Routes = [
     loadComponent: () => import('./core/layout/shell').then((m) => m.Shell),
     canActivate: [authGuard],
     children: [
-      { path: '', title: 'nav.home', loadComponent: () => import('./features/home/home-page') },
+      { path: '', title: 'Month', loadComponent: () => import('./features/home/home-page') },
     ],
   },
   { path: '**', redirectTo: '' },

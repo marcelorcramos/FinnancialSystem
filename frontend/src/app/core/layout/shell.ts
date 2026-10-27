@@ -1,51 +1,46 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatListModule } from '@angular/material/list';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatSidenavModule } from '@angular/material/sidenav';
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { TranslocoPipe } from '@jsverse/transloco';
 
-import { ScreenService } from '../../shared/layout/screen.service';
+import { Icon } from '../../shared/ui/icon';
+import { APP_NAME } from '../app-title-strategy';
 import { AuthStore } from '../auth/auth-store';
-import { LanguageMenu } from './language-menu';
 import { NAV_ITEMS } from './nav-items';
-import { ThemeMenu } from './theme-menu';
+import { ThemeToggle } from './theme-toggle';
 
 /**
- * App frame for signed-in pages.
- * - phone: top bar with a menu button opening the navigation as an overlay
- * - tablet: navigation rail (icons, labels as tooltips)
- * - desktop: full side navigation
+ * App frame for signed-in pages: a top bar with the brand, the main
+ * navigation, the theme toggle and the account menu. On narrow screens the
+ * navigation wraps under the brand.
  */
 @Component({
   selector: 'app-shell',
   imports: [
-    MatButtonModule,
-    MatIconModule,
-    MatListModule,
-    MatMenuModule,
-    MatSidenavModule,
-    MatToolbarModule,
-    MatTooltipModule,
+    CdkMenu,
+    CdkMenuItem,
+    CdkMenuTrigger,
+    Icon,
     RouterLink,
     RouterLinkActive,
     RouterOutlet,
-    TranslocoPipe,
-    LanguageMenu,
-    ThemeMenu,
+    ThemeToggle,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
 })
 export class Shell {
-  protected readonly screen = inject(ScreenService);
   protected readonly auth = inject(AuthStore);
   protected readonly navItems = NAV_ITEMS;
+  protected readonly appName = APP_NAME;
+  protected readonly initials = computed(() =>
+    (this.auth.user()?.name ?? '')
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]!.toUpperCase())
+      .join(''),
+  );
 
   protected logout(): void {
     this.auth.logout().subscribe();

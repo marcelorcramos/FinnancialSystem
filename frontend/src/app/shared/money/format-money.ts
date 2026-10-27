@@ -5,7 +5,8 @@
 export type MoneyValue = string | number;
 
 export const DEFAULT_CURRENCY = 'EUR';
-export const DEFAULT_MONEY_LOCALE = 'pt-PT';
+// English UI: euros written as €1,234.50.
+export const DEFAULT_MONEY_LOCALE = 'en-IE';
 
 const DECIMAL_PATTERN = /^[-+]?\d+(\.\d+)?$/;
 const formatters = new Map<string, Intl.NumberFormat>();
@@ -32,7 +33,7 @@ export function isMoneyValue(value: unknown): value is MoneyValue {
   return typeof value === 'string' && DECIMAL_PATTERN.test(value.trim());
 }
 
-/** Formats a value as currency, e.g. "1234.5" -> "1234,50 €" in pt-PT. */
+/** Formats a value as currency, e.g. "1234.5" -> "€1,234.50". */
 export function formatMoney(
   value: MoneyValue,
   currency: string = DEFAULT_CURRENCY,

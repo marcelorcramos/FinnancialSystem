@@ -1,18 +1,18 @@
 import { HttpErrorResponse } from '@angular/common/http';
 
-import { authErrorKey } from './auth-errors';
+import { authErrorMessage } from './auth-errors';
 
 const http = (status: number) => new HttpErrorResponse({ status });
 
-describe('authErrorKey', () => {
+describe('authErrorMessage', () => {
   it.each([
-    [http(0), 'login', 'auth.errors.network'],
-    [http(401), 'login', 'auth.errors.invalidCredentials'],
-    [http(409), 'register', 'auth.errors.emailTaken'],
-    [http(422), 'register', 'auth.errors.invalidData'],
-    [http(500), 'login', 'auth.errors.unknown'],
-    [new Error('boom'), 'login', 'auth.errors.unknown'],
-  ] as const)('maps %s on %s to %s', (error, context, key) => {
-    expect(authErrorKey(error, context)).toBe(key);
+    [http(0), 'login', 'Could not reach the server. Please try again.'],
+    [http(401), 'login', 'Incorrect email or password.'],
+    [http(409), 'register', 'An account with this email already exists.'],
+    [http(422), 'register', 'Please check the data you entered.'],
+    [http(500), 'login', 'Something went wrong. Please try again.'],
+    [new Error('boom'), 'login', 'Something went wrong. Please try again.'],
+  ] as const)('maps %s on %s to "%s"', (error, context, message) => {
+    expect(authErrorMessage(error, context)).toBe(message);
   });
 });
