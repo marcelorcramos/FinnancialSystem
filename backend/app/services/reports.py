@@ -1,0 +1,91 @@
+"""ReportService: answers questions by period and category (Phase 3).
+
+This is the single entry point for reports; the Claude chat (Phase 11) will reuse it.
+"""
+
+import uuid
+from datetime import date
+from decimal import Decimal
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.domain import ledger
+from app.domain.errors import NotFoundError
+from app.domain.filters import CategoryFilter
+from app.domain.ledger import LabelBreakdown
+from app.domain.periods import Period, months_in
+from app.models import Label, User
+from app.repositories import reports as reports_repo
+from app.schemas.report import ReportLabel, ReportSummary
+
+
+async def summary(
+    session: AsyncSession,
+    user: User,
+    *,
+    period: Period,
+    categories: CategoryFilter,
+    today: date,
+) -> ReportSummary:
+    await _ensure_own_labels(session, user, categories)
+    months = months_in(period, today)
+
+    breakdowns: dict[uuid.UUID, LabelBreakdown] = {}
+    for label_id, movement_type, amount in await reports_repo.totals_by_label_and_type(
+        session, user.id, months, categories
+    ):
+        breakdown = breakdowns.setdefault(label_id, LabelBreakdown())
+        name = movement_type.value
+        setattr(breakdown, name, getattr(breakdown, name) + amount)
+
+    labels: dict[uuid.UUID, Label] = {
+        label.id: label
+        for label in await reports_repo.usable_labels_matching(session, user.id, categories)
+    }
+    for label in await reports_repo.labels_for_report(
+        session, user.id, breakdowns.keys() - labels.keys()
+    ):
+        labels[label.id] = label
+
+    totals = {label_id: breakdowns.get(label_id, LabelBreakdown()).total for label_id in labels}
+    kinds = {label_id: label.kind for label_id, label in labels.items()}
+    by_kind = ledger.totals_by_kind(totals, kinds)
+    shares = ledger.distribution_shares(totals)
+
+    rows = [
+        _report_label(label, breakdowns.get(label.id, LabelBreakdown()), shares[label.id])
+        for label in labels.values()
+    ]
+    rows.sort(key=lambda r: (-r.total, r.name.lower()))
+    return ReportSummary(
+        period=period,
+        start_month=str(months[0]) if months else None,
+        end_month=str(months[-1]) if months else None,
+        reference_date=today,
+        total=sum(totals.values(), Decimal("0.00")),
+        by_kind=by_kind,
+        kind_shares=ledger.distribution_shares(by_kind),
+        labels=rows,
+    )
+
+
+async def _ensure_own_labels(session: AsyncSession, user: User, categories: CategoryFilter) -> None:
+    if await reports_repo.missing_label_ids(session, user.id, categories.label_ids):
+        raise NotFoundError("Label not found")
+
+
+def _report_label(label: Label, breakdown: LabelBreakdown, share: Decimal) -> ReportLabel:
+    return ReportLabel(
+        label_id=label.id,
+        name=label.name,
+        kind=label.kind,
+        color=label.color,
+        icon=label.icon,
+        archived=label.archived_at is not None,
+        allocation=breakdown.allocation,
+        addition=breakdown.addition,
+        transfer_in=breakdown.transfer_in,
+        transfer_out=breakdown.transfer_out,
+        total=breakdown.total,
+        share=share,
+    )
