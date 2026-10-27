@@ -82,9 +82,31 @@
 
       <section class="row-2">
         <figure class="panel chart">
-          <figcaption>Distribution by kind</figcaption>
+          <div class="chart__head">
+            <figcaption>
+              {{ donutMode() === 'overview' ? 'Distribution by kind' : 'Distribution by label' }}
+            </figcaption>
+            <div class="toggle" role="group" aria-label="Chart view">
+              <button
+                type="button"
+                class="toggle__option"
+                [attr.aria-pressed]="donutMode() === 'overview'"
+                (click)="setDonutMode('overview')"
+              >
+                Overview
+              </button>
+              <button
+                type="button"
+                class="toggle__option"
+                [attr.aria-pressed]="donutMode() === 'detailed'"
+                (click)="setDonutMode('detailed')"
+              >
+                Detailed
+              </button>
+            </div>
+          </div>
           <app-donut
-            [segments]="v.segments"
+            [segments]="donutMode() === 'overview' ? v.segments : v.labelSegments"
             centerLabel="DISTRIBUTED"
             [centerValue]="v.distributed"
             [centerHint]="'of ' + v.income"

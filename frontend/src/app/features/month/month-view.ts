@@ -38,7 +38,10 @@ export interface MonthView {
   unallocated: string;
   overAllocated: boolean;
   distributedShare: string;
+  /** Donut "Overview": one slice per kind (spent, saved, invested). */
   segments: DonutSegment[];
+  /** Donut "Detailed": one slice per label, in the label's own colour. */
+  labelSegments: DonutSegment[];
   labels: LabelRow[];
   recent: RecentEntry[];
 }
@@ -126,6 +129,9 @@ export function buildMonthView(
   const byKind = summary.by_kind as Record<Kind, string>;
   const names = new Map(summary.labels.map((label) => [label.label_id, label.name]));
   const positiveTotal = summary.labels.reduce((sum, l) => sum + Math.max(amount(l.total), 0), 0);
+  const withMoney = summary.labels
+    .filter((label) => !isZero(label.total))
+    .sort((a, b) => amount(b.total) - amount(a.total) || a.name.localeCompare(b.name));
 
   return {
     income: formatMoney(summary.income_total),
@@ -143,19 +149,23 @@ export function buildMonthView(
       color: `var(--kind-${kind})`,
       display: formatMoney(byKind[kind] ?? '0'),
     })),
-    labels: summary.labels
-      .filter((label) => !isZero(label.total))
-      .sort((a, b) => amount(b.total) - amount(a.total) || a.name.localeCompare(b.name))
-      .map((label) => ({
-        id: label.label_id,
-        name: label.name,
-        kind: label.kind,
-        color: label.color,
-        icon: label.icon,
-        total: formatMoney(label.total),
-        share: percent(Math.max(amount(label.total), 0), positiveTotal),
-        detail: labelDetail(label),
-      })),
+    labelSegments: withMoney.map((label) => ({
+      key: label.label_id,
+      label: label.name,
+      value: amount(label.total),
+      color: label.color,
+      display: formatMoney(label.total),
+    })),
+    labels: withMoney.map((label) => ({
+      id: label.label_id,
+      name: label.name,
+      kind: label.kind,
+      color: label.color,
+      icon: label.icon,
+      total: formatMoney(label.total),
+      share: percent(Math.max(amount(label.total), 0), positiveTotal),
+      detail: labelDetail(label),
+    })),
     recent: recentEntries(entries, names, recentLimit),
   };
 }

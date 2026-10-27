@@ -89,6 +89,29 @@ describe('MonthPage', () => {
     expect(links[0]!.getAttribute('aria-label')).toBe('Previous month: September 2026');
   });
 
+  it('switches the donut between kinds (Overview) and labels (Detailed), and remembers it', async () => {
+    localStorage.clear();
+    await render();
+    const toggle = (name: string) =>
+      [...el.querySelectorAll<HTMLButtonElement>('.toggle__option')].find(
+        (b) => b.textContent?.trim() === name,
+      )!;
+    const legend = () => text('app-donut .legend__item').map((t) => t?.split(' ')[0]);
+
+    expect(toggle('Overview').getAttribute('aria-pressed')).toBe('true');
+    expect(legend()).toEqual(['Spent', 'Saved', 'Invested']);
+
+    toggle('Detailed').click();
+    await fixture.whenStable();
+    expect(toggle('Detailed').getAttribute('aria-pressed')).toBe('true');
+    expect(el.querySelector('figcaption')?.textContent?.trim()).toBe('Distribution by label');
+    expect(legend()).toEqual(['Food']);
+    expect(localStorage.getItem('fs.month.donut')).toBe('detailed');
+
+    toggle('Overview').click();
+    expect(localStorage.getItem('fs.month.donut')).toBeNull();
+  });
+
   it('offers to create a month that does not exist yet', async () => {
     const find = vi.fn().mockReturnValueOnce(of(null)).mockReturnValue(of(OCTOBER));
     await render(find);

@@ -13,6 +13,7 @@ import { Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
 import { MonthRead, MonthSummary } from '../../core/api/types';
+import { readPreference, writePreference } from '../../core/storage/preferences';
 import { Donut } from '../../shared/charts/donut';
 import { Icon, IconName, isIconName } from '../../shared/ui/icon';
 import { ToastService } from '../../shared/ui/toast.service';
@@ -23,6 +24,10 @@ import { buildMonthView, MonthView } from './month-view';
 import { MonthsApi } from './months-api';
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
+
+/** Donut view: one slice per kind, or one slice per label. */
+export type DonutMode = 'overview' | 'detailed';
+const DONUT_MODE_KEY = 'fs.month.donut';
 
 @Component({
   selector: 'app-month-page',
@@ -46,6 +51,9 @@ export default class MonthPage {
   protected readonly view = signal<MonthView | null>(null);
   private readonly summary = signal<MonthSummary | null>(null);
   protected readonly showAllLabels = signal(false);
+  protected readonly donutMode = signal<DonutMode>(
+    readPreference(DONUT_MODE_KEY) === 'detailed' ? 'detailed' : 'overview',
+  );
 
   protected readonly title = computed(() => monthTitle(this.year(), this.month()));
   protected readonly previous = computed(() => this.link(-1));
@@ -61,6 +69,11 @@ export default class MonthPage {
 
   protected iconOf(icon: string): IconName {
     return isIconName(icon) ? icon : 'labels';
+  }
+
+  protected setDonutMode(mode: DonutMode): void {
+    this.donutMode.set(mode);
+    writePreference(DONUT_MODE_KEY, mode === 'overview' ? null : mode);
   }
 
   protected reload(): void {

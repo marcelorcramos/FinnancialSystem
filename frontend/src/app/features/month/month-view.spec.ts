@@ -113,6 +113,14 @@ describe('buildMonthView', () => {
     ]);
   });
 
+  it('builds one donut segment per label with money, in its own colour', () => {
+    expect(view.labelSegments.map((s) => [s.label, s.value, s.display, s.color])).toEqual([
+      ['Savings', 288, '€288.00', '#FFB74D'],
+      ['Food', 212, '€212.00', '#FFB74D'],
+      ['Investments', 150, '€150.00', '#FFB74D'],
+    ]);
+  });
+
   it('lists labels with money, largest first, with their base + adjustments', () => {
     expect(view.labels.map((l) => [l.name, l.total, l.share])).toEqual([
       ['Savings', '€288.00', '44.3%'],
