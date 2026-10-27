@@ -1,4 +1,4 @@
-import { fromCents, toCents } from './cents';
+import { fromCents, signedCents, toCents } from './cents';
 
 describe('cents', () => {
   it('reads typed amounts without floats', () => {
@@ -22,5 +22,13 @@ describe('cents', () => {
     expect(fromCents(5)).toBe('0.05');
     expect(fromCents(0)).toBe('0.00');
     expect(fromCents(-1200)).toBe('-12.00');
+  });
+});
+
+describe('signedCents', () => {
+  it('reads API values, negative ones included', () => {
+    expect(signedCents('288.00')).toBe(28800);
+    expect(signedCents('-12.50')).toBe(-1250);
+    expect(signedCents('x')).toBeNull();
   });
 });

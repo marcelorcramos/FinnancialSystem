@@ -12,10 +12,11 @@ import { Dialog } from '@angular/cdk/dialog';
 import { Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
-import { MonthRead } from '../../core/api/types';
+import { MonthRead, MonthSummary } from '../../core/api/types';
 import { Donut } from '../../shared/charts/donut';
 import { Icon, IconName, isIconName } from '../../shared/ui/icon';
 import { ToastService } from '../../shared/ui/toast.service';
+import { AddMoneyData, AddMoneyDialog } from './add-money-dialog';
 import { NewMonthData, NewMonthDialog } from './new-month-dialog';
 import { monthPath, monthTitle, shiftMonth } from './month-route';
 import { buildMonthView, MonthView } from './month-view';
@@ -43,6 +44,7 @@ export default class MonthPage {
   protected readonly state = signal<LoadState>('loading');
   protected readonly sheet = signal<MonthRead | null>(null);
   protected readonly view = signal<MonthView | null>(null);
+  private readonly summary = signal<MonthSummary | null>(null);
   protected readonly showAllLabels = signal(false);
 
   protected readonly title = computed(() => monthTitle(this.year(), this.month()));
@@ -63,6 +65,19 @@ export default class MonthPage {
 
   protected reload(): void {
     this.load(this.year(), this.month());
+  }
+
+  /** Adds money to a label, from outside the app or from another label. */
+  protected addMoney(labelId?: string): void {
+    const summary = this.summary();
+    if (!summary) return;
+    this.dialog
+      .open<boolean, AddMoneyData>(AddMoneyDialog, { data: { summary, labelId } })
+      .closed.subscribe((done) => {
+        if (!done) return;
+        this.toasts.show('Money added');
+        this.reload();
+      });
   }
 
   /** Opens the New month dialog for this month, or for the one after it. */
@@ -105,6 +120,7 @@ export default class MonthPage {
         }
         forkJoin([this.api.summary(sheet.id), this.api.entries(sheet.id)]).subscribe({
           next: ([summary, entries]) => {
+            this.summary.set(summary);
             this.view.set(buildMonthView(summary, entries));
             this.state.set('ready');
           },

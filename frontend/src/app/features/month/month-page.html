@@ -92,7 +92,15 @@
         </figure>
 
         <section class="panel labels" aria-labelledby="labels-title">
-          <h2 id="labels-title">Labels this month</h2>
+          <div class="labels__head">
+            <h2 id="labels-title">Labels this month</h2>
+            @if (!sheet()?.closed_at) {
+              <button type="button" class="btn btn--primary" (click)="addMoney()">
+                <app-icon name="plus" [size]="18" />
+                Add money
+              </button>
+            }
+          </div>
           @for (label of visibleLabels(); track label.id) {
             <div class="label-row">
               <span class="swatch" [style.background]="label.color" aria-hidden="true">
@@ -104,6 +112,16 @@
               </span>
               <span class="num label-row__total">{{ label.total }}</span>
               <span class="num label-row__share">{{ label.share }}</span>
+              @if (!sheet()?.closed_at) {
+                <button
+                  type="button"
+                  class="btn btn--icon btn--quiet"
+                  [attr.aria-label]="'Add money to ' + label.name"
+                  (click)="addMoney(label.id)"
+                >
+                  <app-icon name="plus" [size]="18" />
+                </button>
+              }
             </div>
           } @empty {
             <p class="muted">No money distributed yet.</p>

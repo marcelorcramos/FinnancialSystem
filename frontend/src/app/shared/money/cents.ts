@@ -18,3 +18,11 @@ export function fromCents(cents: number): string {
   const abs = Math.abs(cents);
   return `${sign}${Math.trunc(abs / 100)}.${String(abs % 100).padStart(2, '0')}`;
 }
+
+/** Cents of an API decimal string that may be negative ("-12.50" -> -1250). */
+export function signedCents(text: string): number | null {
+  const value = text.trim();
+  const negative = value.startsWith('-');
+  const cents = toCents(negative ? value.slice(1) : value);
+  return cents === null ? null : negative ? -cents : cents;
+}
