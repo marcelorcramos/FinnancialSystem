@@ -97,23 +97,9 @@ Screens agreed in the mockups:
 - CI split by area: `.github/workflows/backend.yml` and `frontend.yml`.
 - Node 24 for the frontend (Angular 22 needs Node ≥ 22.22).
 
-## Authentication API contract
+## API contract
 
-Prefix `/api/v1`. The access token is returned in the response body and sent as `Authorization: Bearer`. The refresh token lives in a `refresh_token` cookie (HttpOnly, SameSite=Lax, `Path=/api/v1/auth`, `Secure` outside dev).
-
-| Method | Route | Body | Response |
-|---|---|---|---|
-| POST | `/auth/register` | `{email, password, name}` | 201 `UserRead` |
-| POST | `/auth/login` | `{email, password}` | 200 `{access_token, token_type, expires_in}` + cookie |
-| POST | `/auth/refresh` | (cookie) | 200 `{access_token, token_type, expires_in}` + new cookie |
-| POST | `/auth/logout` | (cookie) | 204, cookie cleared |
-| GET | `/users/me` | | 200 `UserRead` |
-| PATCH | `/users/me` | `{name?, currency?, locale?, timezone?}` | 200 `UserRead` |
-| POST | `/users/me/password` | `{current_password, new_password}` | 204 |
-
-`UserRead` = `{id, email, name, avatar_url, currency, locale, timezone, email_verified_at}`.
-
-`POST /auth/token` (form, hidden from the schema) exists only for the Swagger Authorize button.
+The full API contract (auth, labels, months, incomes, entries, transfers, summary, errors and money format) lives in [`docs/API.md`](API.md).
 
 ## Ways of working
 

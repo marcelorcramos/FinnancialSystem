@@ -1,0 +1,170 @@
+# FinnancialSystem API (v1)
+
+The contract the frontend builds on. The interactive version, always in sync with the code, is at `http://localhost:8000/docs` (Swagger) and `/redoc`; the machine-readable schema is `/openapi.json`.
+
+## Conventions
+
+| Topic | Rule |
+|---|---|
+| Base path | `/api/v1` (only `GET /health` lives outside it) |
+| Auth | `Authorization: Bearer <access_token>` on every route except `/auth/*` and `/health` |
+| IDs | UUID strings |
+| Money | **Decimal strings** with 2 decimal places, both ways: send `"212.50"`, receive `"212.50"`. Never parse into a float. Input must be positive (allocations accept `"0"` to remove), at most 2 decimal places and fit `NUMERIC(14,2)` |
+| Dates | `YYYY-MM-DD`; timestamps are ISO 8601 in UTC |
+| Isolation | A resource of another user always answers **404**, never 403 |
+| Soft delete | `DELETE` hides a resource; `POST .../restore` brings it back (the "undo" toast) |
+
+### Errors
+
+Domain errors share one shape:
+
+```json
+{ "detail": "The month is closed. Reopen it to make changes.", "code": "month_closed" }
+```
+
+| Status | `code` | When |
+|---|---|---|
+| 401 | `authentication_failed` | Wrong credentials or invalid session on `/auth/*` |
+| 401 | *(no `code`)* | Missing, invalid or expired access token on a protected route: `{"detail": "Invalid credentials"}` with `WWW-Authenticate: Bearer` → refresh and retry |
+| 404 | `not_found` | The resource does not exist or belongs to someone else |
+| 409 | `conflict` | Duplicates (email, label name or color, month), restores that would clash |
+| 409 | `month_closed` | Any write to a closed month |
+| 422 | `validation_failed` | A domain rule failed (date outside the month, same label on both sides of a transfer, archived label...) |
+| 422 | *(FastAPI shape)* | Request body/query does not match the schema: `{"detail": [{"loc": [...], "msg": "..."}]}` |
+
+## Auth and profile
+
+The access token lasts 15 minutes and comes in the response body. The refresh token lives in an HttpOnly cookie `refresh_token` (`Path=/api/v1/auth`, SameSite=Lax); it rotates on every refresh, and reusing an old one revokes the whole session family. Send refresh/logout requests with credentials.
+
+| Method | Route | Body | Response |
+|---|---|---|---|
+| POST | `/auth/register` | `{email, password, name}` | 201 `User` |
+| POST | `/auth/login` | `{email, password}` | 200 `Token` + cookie |
+| POST | `/auth/refresh` | cookie | 200 `Token` + new cookie |
+| POST | `/auth/logout` | cookie | 204, cookie cleared |
+| GET | `/users/me` | | 200 `User` |
+| PATCH | `/users/me` | `{name?, currency?: "EUR", locale?, timezone?}` | 200 `User` |
+| POST | `/users/me/password` | `{current_password, new_password}` | 204, ends every session |
+
+- `Token` = `{access_token, token_type: "bearer", expires_in}` (seconds).
+- `User` = `{id, email, name, avatar_url, currency, locale, timezone, email_verified_at}`.
+- New passwords: at least 8 characters with a lowercase letter, an uppercase letter, a digit and a special character.
+- Sign-up creates the default labels listed in `DECISIONS.md`.
+
+## Labels
+
+| Method | Route | Body / query | Response |
+|---|---|---|---|
+| GET | `/labels` | `?include_archived=false` | 200 `Label[]`, ordered by kind then name |
+| POST | `/labels` | `{name, kind, color, icon}` | 201 `Label` |
+| GET | `/labels/color-suggestions` | | 200 `{colors: string[8]}`, none used by the user's labels |
+| GET | `/labels/{id}` | | 200 `Label` |
+| PATCH | `/labels/{id}` | `{name?, kind?, color?, icon?}` | 200 `Label` (changing `kind` changes past reports: warn the user) |
+| POST | `/labels/{id}/archive` · `/unarchive` | | 200 `Label` |
+| DELETE | `/labels/{id}` | `?reassign_to={label_id}` (required when the label has entries) | 204 |
+| POST | `/labels/{id}/restore` | | 200 `Label` |
+
+- `Label` = `{id, name, kind, color, icon, is_default, archived_at}`.
+- `kind` is `expense`, `saving` or `investment`. `color` is `#RRGGBB`, stored uppercase, unique per user.
+- Archived labels cannot receive new money but keep their history and their color.
+
+## Months
+
+| Method | Route | Body / query | Response |
+|---|---|---|---|
+| GET | `/months` | `?year=2026` | 200 `Month[]`, newest first |
+| POST | `/months` | `{year, month, note?, copy_allocations?, copy_incomes?}` | 201 `Month` |
+| GET | `/months/{id}` | | 200 `Month` |
+| PATCH | `/months/{id}` | `{note}` | 200 `Month` |
+| POST | `/months/{id}/close` · `/reopen` | | 200 `Month` |
+| DELETE | `/months/{id}` | | 204 |
+| POST | `/months/{id}/restore` | | 200 `Month` |
+| GET | `/months/{id}/summary` | | 200 `MonthSummary` |
+
+- `Month` = `{id, year, month, note, closed_at}`.
+- `copy_allocations` / `copy_incomes` copy from the latest existing earlier month; copies are normal, editable records.
+- A closed month answers `409 month_closed` to every write, including the note, until it is reopened.
+
+### Month summary
+
+```json
+{
+  "month_id": "…", "year": 2026, "month": 10, "closed_at": null,
+  "income_total": "1050.00",
+  "distributed": "650.00",
+  "unallocated": "400.00",
+  "over_allocated": false,
+  "month_total": "650.00",
+  "by_kind": { "expense": "212.00", "saving": "288.00", "investment": "150.00" },
+  "labels": [
+    { "label_id": "…", "name": "Food", "kind": "expense", "color": "#FFB74D", "icon": "restaurant",
+      "archived": false, "allocation": "200.00", "addition": "0.00",
+      "transfer_in": "12.00", "transfer_out": "0.00", "total": "212.00" }
+  ]
+}
+```
+
+- `total` = allocation + addition + transfer_in − transfer_out ("base + adjustments").
+- `unallocated` = income_total − distributed; it may be negative, and `over_allocated` tells the UI to warn.
+- Every usable label is listed (even at zero); archived labels only when they moved money that month.
+
+## Incomes
+
+| Method | Route | Body | Response |
+|---|---|---|---|
+| GET | `/months/{id}/incomes` | | 200 `Income[]` |
+| POST | `/months/{id}/incomes` | `{source, amount, received_on, note?}` | 201 `Income` |
+| PATCH | `/incomes/{id}` | `{source?, amount?, received_on?, note?}` | 200 `Income` |
+| DELETE | `/incomes/{id}` | | 204 |
+| POST | `/incomes/{id}/restore` | | 200 `Income` |
+
+- `Income` = `{id, month_id, source, amount, received_on, note, from_addition}`.
+- `received_on` must fall within the month.
+- Incomes with `from_addition: true` were created by "add money": edit or delete them through their entry (direct writes answer 409).
+
+## Entries
+
+Every movement is an entry with a `movement_type`: `allocation`, `addition`, `transfer_in` or `transfer_out`.
+
+### Allocation (initial distribution)
+
+| Method | Route | Body | Response |
+|---|---|---|---|
+| PUT | `/months/{id}/allocations/{label_id}` | `{amount, note?}` | 200 `Entry`; **204** when `amount` is `"0"` (removed) |
+| DELETE | `/months/{id}/allocations/{label_id}` | | 204 |
+
+One allocation per label and month, dated on the 1st.
+
+### Add money (addition)
+
+| Method | Route | Body | Response |
+|---|---|---|---|
+| POST | `/months/{id}/additions` | `{label_id, amount, occurred_on, source?, note?}` | 201 `Entry` + `source` |
+
+Creates the entry and an income in one transaction, so the label and the month income rise together. `source` defaults to `"Extra income"`.
+
+### Transfers
+
+| Method | Route | Body | Response |
+|---|---|---|---|
+| POST | `/months/{id}/transfers` | `{from_label_id, to_label_id, amount, occurred_on, note?}` | 201 `Transfer` |
+| PATCH | `/transfers/{transfer_id}` | `{from_label_id?, to_label_id?, amount?, occurred_on?, note?}` | 200 `Transfer` |
+| DELETE | `/transfers/{transfer_id}` | | 204 |
+| POST | `/transfers/{transfer_id}/restore` | | 200 `Transfer` |
+
+- `Transfer` = `{transfer_id, month_id, from_label_id, to_label_id, amount, occurred_on, note, out_entry_id, in_entry_id}`.
+- Stored as two entries (`transfer_out` and `transfer_in`) that are always created, edited, deleted and restored together. The labels must differ.
+
+### Listing, editing and undo
+
+| Method | Route | Body | Response |
+|---|---|---|---|
+| GET | `/months/{id}/entries` | | 200 `EntryListItem[]`, by date |
+| PATCH | `/entries/{id}` | allocation: `{amount?, note?}` · addition: `{amount?, occurred_on?, label_id?, source?, note?}` | 200 `Entry` |
+| DELETE | `/entries/{id}` | | 204 |
+| POST | `/entries/{id}/restore` | | 200 `Entry` |
+
+- `Entry` = `{id, month_id, label_id, amount, movement_type, transfer_id, income_id, occurred_on, note, created_at}`.
+- `EntryListItem` = `Entry` + `origin` (`initial_distribution`, `external_income`, `transfer_in`, `transfer_out`) + `source` (additions) + `counterpart_label_id` (transfers).
+- Deleting or restoring a transfer leg affects both legs; an addition takes its income along. Transfer legs are edited through `/transfers`.
+- `occurred_on` must fall within the month; labels must not be archived.
