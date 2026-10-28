@@ -16,6 +16,7 @@ import { apiErrorMessage } from '../../core/api/api-errors';
 import { MonthRead, MonthSummary } from '../../core/api/types';
 import { readPreference, writePreference } from '../../core/storage/preferences';
 import { Donut } from '../../shared/charts/donut';
+import { Evolution } from './evolution';
 import { Icon, IconName, isIconName } from '../../shared/ui/icon';
 import { ToastService } from '../../shared/ui/toast.service';
 import { AddMoneyData, AddMoneyDialog } from './add-money-dialog';
@@ -33,7 +34,7 @@ const DONUT_MODE_KEY = 'fs.month.donut';
 
 @Component({
   selector: 'app-month-page',
-  imports: [Donut, Icon, RouterLink],
+  imports: [Donut, Evolution, Icon, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './month-page.html',
   styleUrl: './month-page.scss',
@@ -51,7 +52,7 @@ export default class MonthPage {
   protected readonly state = signal<LoadState>('loading');
   protected readonly sheet = signal<MonthRead | null>(null);
   protected readonly view = signal<MonthView | null>(null);
-  private readonly summary = signal<MonthSummary | null>(null);
+  protected readonly summary = signal<MonthSummary | null>(null);
   protected readonly showAllLabels = signal(false);
   protected readonly donutMode = signal<DonutMode>(
     readPreference(DONUT_MODE_KEY) === 'detailed' ? 'detailed' : 'overview',

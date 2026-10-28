@@ -170,6 +170,14 @@
         </section>
       </section>
 
+      @if (summary(); as summary) {
+        <app-evolution
+          [labels]="summary.labels"
+          [preferred]="v.labels[0]?.id ?? null"
+          [refresh]="v"
+        />
+      }
+
       <section class="panel recent" aria-labelledby="recent-title">
         <h2 id="recent-title">Recent entries</h2>
         @for (entry of v.recent; track entry.id) {

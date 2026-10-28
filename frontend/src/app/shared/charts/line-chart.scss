@@ -1,0 +1,74 @@
+:host {
+  display: block;
+}
+
+.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.grid {
+  stroke: var(--color-border);
+  stroke-dasharray: 4 6;
+
+  &--base {
+    stroke: var(--color-border-strong);
+    stroke-dasharray: none;
+  }
+}
+
+.axis {
+  fill: var(--color-text-subtle);
+  font-family: var(--font-mono);
+  font-size: 12px;
+
+  &--x {
+    fill: var(--color-text-muted);
+    font-family: inherit;
+    font-size: 13px;
+  }
+
+  &--current {
+    fill: var(--color-text);
+  }
+}
+
+.area {
+  opacity: 0.16;
+}
+
+.line {
+  fill: none;
+  stroke-width: 4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.dot {
+  fill: var(--color-bg);
+  stroke-width: 3;
+  cursor: pointer;
+  transition: r var(--motion);
+
+  &:focus-visible {
+    outline: none;
+    stroke-width: 5;
+  }
+}
+
+.tip {
+  pointer-events: none;
+
+  rect {
+    fill: var(--color-text);
+  }
+
+  text {
+    fill: var(--color-bg);
+    font-family: var(--font-mono);
+    font-size: 15px;
+    font-weight: 700;
+  }
+}

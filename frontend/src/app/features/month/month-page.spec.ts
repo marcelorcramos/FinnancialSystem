@@ -3,9 +3,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
-import { EntryListItem, MonthRead, MonthSummary } from '../../core/api/types';
+import { EntryListItem, MonthRead, MonthSummary, ReportSeries } from '../../core/api/types';
 import { ToastService } from '../../shared/ui/toast.service';
 import MonthPage from './month-page';
+import { ReportsApi } from '../reports/reports-api';
 import { MonthsApi } from './months-api';
 import { PlanMonthDialog } from './plan-month-dialog';
 
@@ -55,6 +56,21 @@ const ENTRY: EntryListItem = {
   counterpart_label_id: null,
 };
 
+const SERIES = {
+  months: ['2026-09', '2026-10'],
+  labels: [
+    {
+      label_id: 'food',
+      name: 'Food',
+      total: '412.00',
+      points: [
+        { month: '2026-09', total: '200.00' },
+        { month: '2026-10', total: '212.00' },
+      ],
+    },
+  ],
+} as ReportSeries;
+
 describe('MonthPage', () => {
   let fixture: ComponentFixture<MonthPage>;
   let el: HTMLElement;
@@ -79,6 +95,7 @@ describe('MonthPage', () => {
         provideRouter([]),
         { provide: MonthsApi, useValue: api },
         { provide: Dialog, useValue: dialog },
+        { provide: ReportsApi, useValue: { series: vi.fn(() => of(SERIES)) } },
       ],
     });
     fixture = TestBed.createComponent(MonthPage);
@@ -104,6 +121,7 @@ describe('MonthPage', () => {
       '€400.00',
     ]);
     expect(el.querySelector('app-donut')).not.toBeNull();
+    expect(el.querySelector('app-evolution .evolution__stats')?.textContent).toContain('€212.00');
     expect(text('.label-row__name')).toEqual(['Food']);
     expect(text('.label-row__detail')).toEqual(['Base €200.00 · +€12.00 moved in']);
     const links = [...el.querySelectorAll<HTMLAnchorElement>('.picker a')];

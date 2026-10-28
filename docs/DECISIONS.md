@@ -79,7 +79,7 @@ The current look (Angular Material, Roboto, Material Symbols) feels like Google/
 
 Screens agreed in the mockups:
 
-- **Month**: income, spent, saved, invested and unallocated totals; a thick donut with hover details and two views chosen with **Overview / Detailed** buttons (Overview = one slice per kind: Spent, Saved, Invested; Detailed = one slice per label in its own colour; the choice is remembered per browser); labels list ("base + adjustments"); a large evolution chart with a **category** and a **period** selector (last month by day, last 6 / 12 months, all time); recent entries.
+- **Month**: income, spent, saved, invested and unallocated totals; a thick donut with hover details and two views chosen with **Overview / Detailed** buttons (Overview = one slice per kind: Spent, Saved, Invested; Detailed = one slice per label in its own colour; the choice is remembered per browser); labels list ("base + adjustments"); a large evolution chart with a **category** and a **period** selector (last 6 / 12 months, all time; rolling from the current month, months without money count as zero; "last month by day" waits for daily data, see `FUTURE_IMPLEMENTATIONS.md`) showing this month, the monthly average and the change since the first month; recent entries with delete + Undo; **Close month** (with Undo) and **Reopen**.
 - **Sign in / create account** with live password rules; **Account** (name, email, EUR, time zone, password, sign out other devices); **Preferences & accessibility**.
 - **Labels** grouped by kind, archive, and delete with reassignment of entries; **Create label** with the kind question, the 8 suggested colors plus a `#RRGGBB` field, and icons.
 - **Add money**: from outside the app (raises income) or from another label (a transfer), showing the effect before confirming.
@@ -93,7 +93,7 @@ Screens agreed in the mockups:
 - Python dependencies in `requirements.txt` (runtime) and `requirements-dev.txt` (tests and lint). `pyproject.toml` only holds Ruff, mypy and pytest configuration.
 - SQLAlchemy 2.0 async with `asyncpg`.
 - Integration tests with testcontainers (real PostgreSQL); Docker must be running.
-- Frontend: Angular (latest stable), standalone components, Signals, zoneless, new control flow, own components on Angular CDK (no Angular Material), ECharts via ngx-echarts.
+- Frontend: Angular (latest stable), standalone components, Signals, zoneless, new control flow, own components on Angular CDK (no Angular Material), charts as own SVG components (donut, line) instead of ECharts.
 - Dev file storage: SeaweedFS (S3-compatible) instead of MinIO, because MinIO Docker images are no longer public. The code speaks S3, so production can still use Azure Blob (through an S3 gateway or its own SDK, decided in Phase 9).
 - CI split by area: `.github/workflows/backend.yml` and `frontend.yml`.
 - Node 24 for the frontend (Angular 22 needs Node ≥ 22.22).
