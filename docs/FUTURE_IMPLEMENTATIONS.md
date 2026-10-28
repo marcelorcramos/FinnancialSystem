@@ -11,6 +11,7 @@ When an idea moves into scope, record the decision in `DECISIONS.md` and remove 
 | Idea | Notes |
 |---|---|
 | Custom time ranges | User-editable report periods: last N days (e.g. 60 or 40 days), a specific year (only 2024, only 2023), any start/end range. Today only last month, last 6 months, last 12 months and all time exist. |
+| Evolution of the current month by day | "Last month" on the evolution chart as one point per day or week inside the month (e.g. Oct 1, 8, 15, 22, 31), as in the mockup. Needs a daily series from the API; today `/reports/series` aggregates by month, so the chart offers only last 6 / 12 months and all time. |
 
 ## Limits and alerts
 
