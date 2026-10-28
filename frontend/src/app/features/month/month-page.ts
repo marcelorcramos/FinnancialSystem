@@ -12,6 +12,7 @@ import { Dialog } from '@angular/cdk/dialog';
 import { Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
+import { apiErrorMessage } from '../../core/api/api-errors';
 import { MonthRead, MonthSummary } from '../../core/api/types';
 import { readPreference, writePreference } from '../../core/storage/preferences';
 import { Donut } from '../../shared/charts/donut';
@@ -21,7 +22,7 @@ import { AddMoneyData, AddMoneyDialog } from './add-money-dialog';
 import { NewMonthData, NewMonthDialog } from './new-month-dialog';
 import { PlanMonthData, PlanMonthDialog } from './plan-month-dialog';
 import { monthPath, monthTitle, shiftMonth } from './month-route';
-import { buildMonthView, MonthView } from './month-view';
+import { buildMonthView, MonthView, RecentEntry } from './month-view';
 import { MonthsApi } from './months-api';
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
@@ -105,6 +106,43 @@ export default class MonthPage {
         this.toasts.show('Plan saved');
         this.reload();
       });
+  }
+
+  /** Deletes an entry (soft delete) and offers to bring it back. */
+  protected deleteEntry(entry: RecentEntry): void {
+    this.api.deleteEntry(entry.id).subscribe({
+      next: () => {
+        this.toasts.show(`“${entry.title}” deleted`, {
+          label: 'Undo',
+          run: () =>
+            this.api.restoreEntry(entry.id).subscribe({
+              next: () => this.reload(),
+              error: (error: unknown) => this.toasts.show(apiErrorMessage(error)),
+            }),
+        });
+        this.reload();
+      },
+      error: (error: unknown) => this.toasts.show(apiErrorMessage(error)),
+    });
+  }
+
+  /** Closes the month (no more changes) or reopens it. */
+  protected setClosed(closed: boolean): void {
+    const sheet = this.sheet();
+    if (!sheet) return;
+    const request = closed ? this.api.close(sheet.id) : this.api.reopen(sheet.id);
+    request.subscribe({
+      next: () => {
+        const title = this.title();
+        if (closed) {
+          this.toasts.show(`${title} closed`, { label: 'Undo', run: () => this.setClosed(false) });
+        } else {
+          this.toasts.show(`${title} reopened`);
+        }
+        this.reload();
+      },
+      error: (error: unknown) => this.toasts.show(apiErrorMessage(error)),
+    });
   }
 
   /** Opens the New month dialog for this month, or for the one after it. */
