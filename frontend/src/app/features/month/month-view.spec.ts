@@ -143,6 +143,13 @@ describe('buildMonthView', () => {
     ]);
   });
 
+  it('does not repeat the default source of extra income', () => {
+    const entries = ENTRIES.map((e) =>
+      e.source === 'Freelance' ? { ...e, source: 'Extra income' } : e,
+    );
+    expect(buildMonthView(SUMMARY, entries).recent[1]!.origin).toBe('Extra income');
+  });
+
   it('limits the recent entries', () => {
     expect(buildMonthView(SUMMARY, ENTRIES, 2).recent.length).toBe(2);
   });

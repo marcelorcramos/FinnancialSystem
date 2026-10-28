@@ -101,7 +101,11 @@ function recentEntries(entries: EntryListItem[], names: Map<string, string>, lim
               id: entry.id,
               date,
               title: name(entry.label_id),
-              origin: entry.source ? `Extra income · ${entry.source}` : 'Extra income',
+              // The API default source is "Extra income" itself: do not repeat it.
+              origin:
+                entry.source && entry.source !== 'Extra income'
+                  ? `Extra income · ${entry.source}`
+                  : 'Extra income',
               amount: `+${money}`,
               incoming: true,
             };
