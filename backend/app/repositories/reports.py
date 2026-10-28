@@ -51,6 +51,20 @@ async def totals_by_label_and_type(
     return [(row[0], row[1], row[2]) for row in result]
 
 
+async def totals_by_label_month_and_type(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    months: Sequence[MonthKey] | None,
+    categories: CategoryFilter,
+) -> list[tuple[uuid.UUID, MonthKey, MovementType, Decimal]]:
+    """Sum of amounts per (label, month, movement type) in the window."""
+    stmt = select(
+        Entry.label_id, Month.year, Month.month, Entry.movement_type, func.sum(Entry.amount)
+    ).group_by(Entry.label_id, Month.year, Month.month, Entry.movement_type)
+    result = await session.execute(_scoped(stmt, user_id, months, categories))
+    return [(row[0], MonthKey(row[1], row[2]), row[3], row[4]) for row in result]
+
+
 async def labels_for_report(
     session: AsyncSession, user_id: uuid.UUID, label_ids: set[uuid.UUID]
 ) -> list[Label]:

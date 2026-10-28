@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from app.domain.periods import MonthKey, Period, months_back, months_in
+from app.domain.periods import MonthKey, Period, months_back, months_between, months_in
 
 TODAY = date(2026, 10, 26)
 
@@ -46,3 +46,10 @@ def test_month_key_order_index_and_text() -> None:
 def test_months_back_requires_a_positive_count() -> None:
     with pytest.raises(ValueError):
         months_back(MonthKey(2026, 1), 0)
+
+
+def test_months_between_includes_both_ends_and_crosses_the_year() -> None:
+    assert months_between(MonthKey(2025, 11), MonthKey(2026, 2)) == keys(
+        (2025, 11), (2025, 12), (2026, 1), (2026, 2)
+    )
+    assert months_between(MonthKey(2026, 3), MonthKey(2026, 3)) == keys((2026, 3))
