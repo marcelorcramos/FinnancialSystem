@@ -19,6 +19,7 @@ import { Icon, IconName, isIconName } from '../../shared/ui/icon';
 import { ToastService } from '../../shared/ui/toast.service';
 import { AddMoneyData, AddMoneyDialog } from './add-money-dialog';
 import { NewMonthData, NewMonthDialog } from './new-month-dialog';
+import { PlanMonthData, PlanMonthDialog } from './plan-month-dialog';
 import { monthPath, monthTitle, shiftMonth } from './month-route';
 import { buildMonthView, MonthView } from './month-view';
 import { MonthsApi } from './months-api';
@@ -89,6 +90,19 @@ export default class MonthPage {
       .closed.subscribe((done) => {
         if (!done) return;
         this.toasts.show('Money added');
+        this.reload();
+      });
+  }
+
+  /** Edits the month's recurring incomes and the initial distribution per label. */
+  protected plan(): void {
+    const summary = this.summary();
+    if (!summary) return;
+    this.dialog
+      .open<boolean, PlanMonthData>(PlanMonthDialog, { data: { summary } })
+      .closed.subscribe((saved) => {
+        if (!saved) return;
+        this.toasts.show('Plan saved');
         this.reload();
       });
   }

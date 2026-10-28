@@ -6,6 +6,7 @@ import { of, throwError } from 'rxjs';
 import { MonthRead, MonthSummary } from '../../core/api/types';
 import MonthPage from './month-page';
 import { MonthsApi } from './months-api';
+import { PlanMonthDialog } from './plan-month-dialog';
 
 const OCTOBER: MonthRead = { id: 'm10', year: 2026, month: 10, note: null, closed_at: null };
 
@@ -130,6 +131,19 @@ describe('MonthPage', () => {
       .find((b) => b.textContent?.includes('New month'))!
       .click();
     expect(dialog.open.mock.calls[0]![1].data).toEqual({ year: 2026, month: 11 });
+  });
+
+  it('opens the Plan dialog with the month summary and reloads after saving', async () => {
+    dialog.open = vi.fn(() => ({ closed: of(true) }));
+    await render();
+    dialog.open = vi.fn(() => ({ closed: of(true) }));
+    [...el.querySelectorAll<HTMLButtonElement>('button')]
+      .find((b) => b.textContent?.trim() === 'Plan')!
+      .click();
+    await fixture.whenStable();
+    expect(dialog.open.mock.calls[0]![0]).toBe(PlanMonthDialog);
+    expect(dialog.open.mock.calls[0]![1].data).toEqual({ summary: SUMMARY });
+    expect(api['summary']).toHaveBeenCalledTimes(2);
   });
 
   it('reports a failure to load', async () => {

@@ -1,0 +1,156 @@
+<section class="dialog" role="dialog" aria-modal="true" aria-labelledby="plan-title">
+  <header class="head">
+    <h2 id="plan-title">Plan · {{ title }}</h2>
+    <button type="button" class="btn btn--icon btn--quiet" aria-label="Close" (click)="ref.close()">
+      <app-icon name="close" />
+    </button>
+  </header>
+
+  @if (error(); as message) {
+    <div class="alert" role="alert">
+      <app-icon name="alert" [size]="18" />
+      <span>{{ message }}</span>
+    </div>
+  }
+
+  <fieldset class="group">
+    <legend>Income</legend>
+    @if (loading()) {
+      <p class="muted" role="status">Loading incomes…</p>
+    } @else {
+      @for (row of incomes(); track row.key) {
+        <div class="plan-income" [class.plan-income--removed]="row.removed">
+          <input
+            class="field__input"
+            maxlength="100"
+            placeholder="e.g. Salary"
+            [attr.aria-label]="'Income name ' + ($index + 1)"
+            [value]="row.source"
+            [disabled]="row.removed"
+            (input)="editIncome(row.key, { source: $any($event.target).value })"
+          />
+          <input
+            class="field__input num plan-income__amount"
+            inputmode="decimal"
+            placeholder="0.00"
+            [attr.aria-label]="(row.source || 'Income') + ' amount'"
+            [value]="row.text"
+            [disabled]="row.removed"
+            (input)="editIncome(row.key, { text: $any($event.target).value })"
+          />
+          <button
+            type="button"
+            class="btn btn--icon btn--quiet"
+            [attr.aria-pressed]="row.removed"
+            [attr.aria-label]="(row.removed ? 'Bring back ' : 'Remove ') + (row.source || 'income')"
+            (click)="toggleIncome(row.key)"
+          >
+            <app-icon [name]="row.removed ? 'plus' : 'close'" [size]="18" />
+          </button>
+        </div>
+      } @empty {
+        <p class="muted">No income yet. Add your salary to start distributing it.</p>
+      }
+      @if (extras().length) {
+        <div class="plan-extra">
+          <span
+            >Extra income · {{ extras().length }}
+            {{ extras().length === 1 ? 'entry' : 'entries' }}</span
+          >
+          <span class="num">{{ money(extrasTotal()) }}</span>
+          <span class="muted">from Add money</span>
+        </div>
+      }
+      <button type="button" class="btn plan-add" (click)="addIncome()">
+        <app-icon name="plus" [size]="18" />
+        Add income
+      </button>
+    }
+  </fieldset>
+
+  <fieldset class="group">
+    <legend>Distribution at the start of the month</legend>
+    <div class="review">
+      <div class="review__head plan-head" aria-hidden="true">
+        <span>Label</span><span>Amount</span>
+      </div>
+      @for (row of allocations(); track row.id) {
+        @let change = delta(row);
+        <div class="review__row plan-row">
+          <span class="review__label">
+            <span class="swatch" [style.background]="row.color" aria-hidden="true">
+              <app-icon [name]="row.icon" [size]="14" />
+            </span>
+            <span class="review__name">
+              <span>{{ row.name }}</span>
+              @if (change.text) {
+                <span class="num review__delta" [attr.data-tone]="change.tone">{{
+                  change.text
+                }}</span>
+              }
+            </span>
+          </span>
+          <span class="stepper">
+            <button
+              type="button"
+              class="btn btn--icon"
+              [attr.aria-label]="'Decrease ' + row.name + ' by €10'"
+              (click)="step(row.id, -1)"
+            >
+              −
+            </button>
+            <input
+              class="field__input num"
+              inputmode="decimal"
+              [attr.aria-label]="row.name + ' amount for ' + title"
+              [attr.aria-invalid]="change.tone === 'removed'"
+              [value]="row.text"
+              (input)="type(row.id, $any($event.target).value)"
+            />
+            <button
+              type="button"
+              class="btn btn--icon"
+              [attr.aria-label]="'Increase ' + row.name + ' by €10'"
+              (click)="step(row.id, 1)"
+            >
+              +
+            </button>
+          </span>
+        </div>
+      } @empty {
+        <p class="muted">Create labels first to distribute your income.</p>
+      }
+      <p class="muted small">− and + change by €10. €0 leaves a label out of the plan.</p>
+    </div>
+  </fieldset>
+
+  <div class="summary" aria-live="polite">
+    <span
+      ><span class="muted">Income</span><span class="num">{{ totals().income }}</span></span
+    >
+    <span
+      ><span class="muted">Distributed</span
+      ><span class="num">{{ totals().distributed }}</span></span
+    >
+    <span>
+      <span class="muted">Unallocated</span>
+      <span class="num" [class.negative]="totals().negative">{{ totals().unallocated }}</span>
+    </span>
+  </div>
+
+  <footer class="actions">
+    <button type="button" class="btn" (click)="ref.close()">Cancel</button>
+    <button
+      type="button"
+      class="btn btn--primary"
+      [disabled]="pending() || loading() || invalid()"
+      (click)="save()"
+    >
+      @if (changes()) {
+        Save {{ changes() }} {{ changes() === 1 ? 'change' : 'changes' }}
+      } @else {
+        Done
+      }
+    </button>
+  </footer>
+</section>

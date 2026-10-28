@@ -84,6 +84,7 @@ Screens agreed in the mockups:
 - **Labels** grouped by kind, archive, and delete with reassignment of entries; **Create label** with the kind question, the 8 suggested colors plus a `#RRGGBB` field, and icons.
 - **Add money**: from outside the app (raises income) or from another label (a transfer), showing the effect before confirming.
 - **New month** copying from the previous month, with **Review amounts**: every label shows its previous-month value and the new value, editable with −/+ (€10), typed, removed or reset; the salary is editable too. The month is created with the reviewed values (no backend change: create the month, then set each allocation).
+- **Plan** (on the month screen, open months only): edit the recurring incomes (add a salary, change, rename or remove one) and the initial distribution of every usable label with −/+ (€10) or typed values. Extra income from Add money is shown as one total and edited through its entry. Totals update live and saving sends only what changed.
 
 ## Structure and tooling
 

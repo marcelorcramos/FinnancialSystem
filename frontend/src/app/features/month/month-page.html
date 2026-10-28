@@ -117,6 +117,10 @@
           <div class="labels__head">
             <h2 id="labels-title">Labels this month</h2>
             @if (!sheet()?.closed_at) {
+              <button type="button" class="btn labels__plan" (click)="plan()">
+                <app-icon name="sliders" [size]="18" />
+                Plan
+              </button>
               <button type="button" class="btn btn--primary" (click)="addMoney()">
                 <app-icon name="plus" [size]="18" />
                 Add money
