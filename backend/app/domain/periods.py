@@ -52,6 +52,11 @@ def months_back(end: MonthKey, count: int) -> list[MonthKey]:
     return [MonthKey.from_index(i) for i in range(end.index - count + 1, end.index + 1)]
 
 
+def months_between(first: MonthKey, last: MonthKey) -> list[MonthKey]:
+    """Every month from `first` to `last` (inclusive), oldest first."""
+    return months_back(last, last.index - first.index + 1)
+
+
 def months_in(period: Period, today: date) -> list[MonthKey] | None:
     """The months covered by `period`, oldest first; None means no time limit."""
     if period is Period.ALL:

@@ -168,3 +168,61 @@ Creates the entry and an income in one transaction, so the label and the month i
 - `EntryListItem` = `Entry` + `origin` (`initial_distribution`, `external_income`, `transfer_in`, `transfer_out`) + `source` (additions) + `counterpart_label_id` (transfers).
 - Deleting or restoring a transfer leg affects both legs; an addition takes its income along. Transfer legs are edited through `/transfers`.
 - `occurred_on` must fall within the month; labels must not be archived.
+
+## Reports
+
+Both report routes take the same optional query filters:
+
+| Parameter | Values | Default |
+|---|---|---|
+| `period` | `last_month` (the current month), `last_6_months`, `last_12_months`, `all` | `all` |
+| `label_ids` | Label UUID; repeat the parameter for several | every label |
+| `kinds` | `expense`, `saving`, `investment`; repeat for several. Combined with `label_ids` as a union | every kind |
+
+Windows are rolling and include the current month (in the user's time zone). Deleted entries and months never count. A `label_ids` value that is not one of the user's labels answers 404.
+
+| Method | Route | Response |
+|---|---|---|
+| GET | `/reports/summary` | 200 `ReportSummary`: totals by label and kind (donut) |
+| GET | `/reports/series` | 200 `ReportSeries`: net total per label and month (line chart) |
+
+### Report summary
+
+```json
+{
+  "period": "last_6_months", "start_month": "2026-05", "end_month": "2026-10",
+  "reference_date": "2026-10-28",
+  "total": "362.00",
+  "by_kind": { "expense": "212.00", "saving": "0.00", "investment": "150.00" },
+  "kind_shares": { "expense": "58.56", "saving": "0.00", "investment": "41.44" },
+  "labels": [
+    { "label_id": "…", "name": "Food", "kind": "expense", "color": "#FFB74D", "icon": "restaurant",
+      "archived": false, "allocation": "200.00", "addition": "0.00",
+      "transfer_in": "12.00", "transfer_out": "0.00", "total": "212.00", "share": "58.56" }
+  ]
+}
+```
+
+- `share` and `kind_shares` are percentages of the distributed money. A label whose total is zero or below gets `"0.00"` (no slice) but is still listed.
+- With `period=all`, `start_month` and `end_month` are `null`.
+
+### Report series
+
+```json
+{
+  "period": "last_6_months", "start_month": "2026-05", "end_month": "2026-10",
+  "reference_date": "2026-10-28",
+  "months": ["2026-05", "2026-06", "2026-07", "2026-08", "2026-09", "2026-10"],
+  "totals": [ { "month": "2026-05", "total": "30.00" }, "…" ],
+  "labels": [
+    { "label_id": "…", "name": "Water", "kind": "expense", "color": "#4FC3F7", "icon": "water_drop",
+      "archived": false, "total": "180.00",
+      "points": [ { "month": "2026-05", "total": "30.00" }, "…" ] }
+  ]
+}
+```
+
+- Every month of the window has a point, so lines have no gaps: a month without money (or without a sheet) is `"0.00"`.
+- `totals` adds up the selected labels per month; `labels[].total` is the label's total over the window and matches `/reports/summary`.
+- With `period=all`, the series starts at the first month with money and ends at the current month (or a later sheet). An account without money returns empty `months`.
+- Labels are listed the same way as in the summary, largest window total first.
