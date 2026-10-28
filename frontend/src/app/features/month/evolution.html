@@ -1,0 +1,80 @@
+<figure class="panel evolution">
+  <figcaption class="evolution__head">
+    <h2 class="evolution__title">Evolution</h2>
+    @if (selected(); as label) {
+      <div class="evolution__filters">
+        <div class="field">
+          <label for="evolution-label">Category</label>
+          <span class="select">
+            <span class="select__swatch" [style.background]="label.color" aria-hidden="true"></span>
+            <select
+              id="evolution-label"
+              class="field__input select__input"
+              (change)="pickLabel($any($event.target).value)"
+            >
+              @for (group of options(); track group.kind) {
+                <optgroup [label]="group.text">
+                  @for (option of group.labels; track option.label_id) {
+                    <option
+                      [value]="option.label_id"
+                      [selected]="option.label_id === label.label_id"
+                    >
+                      {{ option.name }}
+                    </option>
+                  }
+                </optgroup>
+              }
+            </select>
+          </span>
+        </div>
+        <div class="field">
+          <label for="evolution-period">Period</label>
+          <select
+            id="evolution-period"
+            class="field__input"
+            (change)="pickPeriod($any($event.target).value)"
+          >
+            @for (option of periods; track option.value) {
+              <option [value]="option.value" [selected]="option.value === period()">
+                {{ option.text }}
+              </option>
+            }
+          </select>
+        </div>
+      </div>
+    }
+    @if (view(); as v) {
+      <dl class="evolution__stats">
+        <div>
+          <dt>This month</dt>
+          <dd class="num">{{ v.current }}</dd>
+        </div>
+        <div>
+          <dt>Monthly average</dt>
+          <dd class="num">{{ v.average }}</dd>
+        </div>
+        <div>
+          <dt>{{ v.changeLabel }}</dt>
+          <dd class="num" [style.color]="v.color">{{ v.change }}</dd>
+        </div>
+      </dl>
+    }
+  </figcaption>
+
+  @if (!selected()) {
+    <p class="muted">Create a label to follow its evolution.</p>
+  } @else if (failed()) {
+    <p class="muted" role="alert">Could not load the evolution.</p>
+  } @else if (view(); as v) {
+    <app-line-chart
+      [points]="v.points"
+      [color]="v.color"
+      [ariaLabel]="v.aria"
+      [formatAxis]="formatAxis"
+    />
+  } @else if (series()) {
+    <p class="muted">No money in this period yet.</p>
+  } @else {
+    <p class="muted" role="status">Loading…</p>
+  }
+</figure>

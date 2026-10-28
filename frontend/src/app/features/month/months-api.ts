@@ -68,6 +68,10 @@ export class MonthsApi {
     return this.http.patch<IncomeRead>(`${this.base}/incomes/${incomeId}`, body);
   }
 
+  deleteIncome(incomeId: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/incomes/${incomeId}`);
+  }
+
   /** An amount of "0" removes the allocation (the API then answers 204 with no body). */
   setAllocation(id: string, labelId: string, body: AllocationSet): Observable<EntryRead | null> {
     return this.http.put<EntryRead | null>(`${this.months}/${id}/allocations/${labelId}`, body);

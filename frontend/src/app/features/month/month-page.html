@@ -16,14 +16,24 @@
       <app-icon name="chevron-right" />
     </a>
   </div>
-  @if (sheet()?.closed_at) {
-    <span class="chip">Closed</span>
-  }
   @if (state() === 'ready') {
-    <button type="button" class="btn new-month" (click)="newMonth('next')">
-      <app-icon name="plus" [size]="18" />
-      New month
-    </button>
+    @if (sheet()?.closed_at) {
+      <span class="chip">Closed</span>
+    }
+    <div class="head__actions">
+      @if (sheet()?.closed_at) {
+        <button type="button" class="btn btn--quiet" (click)="setClosed(false)">Reopen</button>
+      } @else {
+        <button type="button" class="btn btn--quiet" (click)="setClosed(true)">
+          <app-icon name="check" [size]="18" />
+          Close month
+        </button>
+      }
+      <button type="button" class="btn" (click)="newMonth('next')">
+        <app-icon name="plus" [size]="18" />
+        New month
+      </button>
+    </div>
   }
 </header>
 
@@ -117,6 +127,10 @@
           <div class="labels__head">
             <h2 id="labels-title">Labels this month</h2>
             @if (!sheet()?.closed_at) {
+              <button type="button" class="btn labels__plan" (click)="plan()">
+                <app-icon name="sliders" [size]="18" />
+                Plan
+              </button>
               <button type="button" class="btn btn--primary" (click)="addMoney()">
                 <app-icon name="plus" [size]="18" />
                 Add money
@@ -156,6 +170,14 @@
         </section>
       </section>
 
+      @if (summary(); as summary) {
+        <app-evolution
+          [labels]="summary.labels"
+          [preferred]="v.labels[0]?.id ?? null"
+          [refresh]="v"
+        />
+      }
+
       <section class="panel recent" aria-labelledby="recent-title">
         <h2 id="recent-title">Recent entries</h2>
         @for (entry of v.recent; track entry.id) {
@@ -168,6 +190,16 @@
             <span class="num entry__amount" [class.entry__amount--in]="entry.incoming">{{
               entry.amount
             }}</span>
+            @if (!sheet()?.closed_at) {
+              <button
+                type="button"
+                class="btn btn--icon btn--quiet entry__delete"
+                [attr.aria-label]="'Delete ' + entry.title"
+                (click)="deleteEntry(entry)"
+              >
+                <app-icon name="trash" [size]="18" />
+              </button>
+            }
           </div>
         } @empty {
           <p class="muted">No entries yet.</p>

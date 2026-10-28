@@ -535,6 +535,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/reports/series': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Report Series
+     * @description Net total per label and month for a time window and category filter (line chart data).
+     */
+    get: operations['report_series_api_v1_reports_series_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/health': {
     parameters: {
       query?: never;
@@ -1048,6 +1068,41 @@ export interface components {
        */
       share: string;
     };
+    /** ReportSeries */
+    ReportSeries: {
+      period: components['schemas']['Period'];
+      /**
+       * Start Month
+       * @description First month of the series (YYYY-MM)
+       */
+      start_month: string | null;
+      /**
+       * End Month
+       * @description Last month of the series (YYYY-MM)
+       */
+      end_month: string | null;
+      /**
+       * Reference Date
+       * Format: date
+       * @description Today in the user's time zone
+       */
+      reference_date: string;
+      /**
+       * Months
+       * @description Every month of the series, oldest first, gaps included
+       */
+      months: string[];
+      /**
+       * Totals
+       * @description Selected labels combined, per month
+       */
+      totals: components['schemas']['SeriesPoint'][];
+      /**
+       * Labels
+       * @description Selected labels, largest window total first
+       */
+      labels: components['schemas']['SeriesLabel'][];
+    };
     /** ReportSummary */
     ReportSummary: {
       period: components['schemas']['Period'];
@@ -1088,6 +1143,46 @@ export interface components {
        * @description Selected labels, largest total first
        */
       labels: components['schemas']['ReportLabel'][];
+    };
+    /** SeriesLabel */
+    SeriesLabel: {
+      /**
+       * Label Id
+       * Format: uuid
+       */
+      label_id: string;
+      /** Name */
+      name: string;
+      kind: components['schemas']['LabelKind'];
+      /** Color */
+      color: string;
+      /** Icon */
+      icon: string;
+      /** Archived */
+      archived: boolean;
+      /**
+       * Total
+       * @description Net total over the whole window
+       */
+      total: string;
+      /**
+       * Points
+       * @description One point per month of the window
+       */
+      points: components['schemas']['SeriesPoint'][];
+    };
+    /** SeriesPoint */
+    SeriesPoint: {
+      /**
+       * Month
+       * @description YYYY-MM
+       */
+      month: string;
+      /**
+       * Total
+       * @description Net total of the label in that month
+       */
+      total: string;
     };
     /**
      * TransferCreate
@@ -2554,6 +2649,41 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['ReportSummary'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  report_series_api_v1_reports_series_get: {
+    parameters: {
+      query?: {
+        period?: components['schemas']['Period'];
+        /** @description Labels to include (repeat the parameter for several) */
+        label_ids?: string[] | null;
+        /** @description Label kinds to include; combined with label_ids as a union */
+        kinds?: components['schemas']['LabelKind'][] | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ReportSeries'];
         };
       };
       /** @description Validation Error */

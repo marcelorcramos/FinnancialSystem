@@ -3,9 +3,12 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
-import { MonthRead, MonthSummary } from '../../core/api/types';
+import { EntryListItem, MonthRead, MonthSummary, ReportSeries } from '../../core/api/types';
+import { ToastService } from '../../shared/ui/toast.service';
 import MonthPage from './month-page';
+import { ReportsApi } from '../reports/reports-api';
 import { MonthsApi } from './months-api';
+import { PlanMonthDialog } from './plan-month-dialog';
 
 const OCTOBER: MonthRead = { id: 'm10', year: 2026, month: 10, note: null, closed_at: null };
 
@@ -37,6 +40,37 @@ const SUMMARY: MonthSummary = {
   ],
 };
 
+const ENTRY: EntryListItem = {
+  id: 'e1',
+  month_id: 'm10',
+  label_id: 'food',
+  amount: '200.00',
+  movement_type: 'allocation',
+  transfer_id: null,
+  income_id: null,
+  occurred_on: '2026-10-01',
+  note: null,
+  created_at: '2026-10-01T09:00:00Z',
+  origin: 'initial_distribution',
+  source: null,
+  counterpart_label_id: null,
+};
+
+const SERIES = {
+  months: ['2026-09', '2026-10'],
+  labels: [
+    {
+      label_id: 'food',
+      name: 'Food',
+      total: '412.00',
+      points: [
+        { month: '2026-09', total: '200.00' },
+        { month: '2026-10', total: '212.00' },
+      ],
+    },
+  ],
+} as ReportSeries;
+
 describe('MonthPage', () => {
   let fixture: ComponentFixture<MonthPage>;
   let el: HTMLElement;
@@ -49,6 +83,10 @@ describe('MonthPage', () => {
       summary: vi.fn(() => of(SUMMARY)),
       entries: vi.fn(() => of([])),
       create: vi.fn(() => of(OCTOBER)),
+      deleteEntry: vi.fn(() => of(undefined)),
+      restoreEntry: vi.fn(() => of({})),
+      close: vi.fn(() => of({ ...OCTOBER, closed_at: '2026-10-31T10:00:00Z' })),
+      reopen: vi.fn(() => of(OCTOBER)),
     };
     dialog = { open: vi.fn(() => ({ closed: of(OCTOBER) })) };
     TestBed.configureTestingModule({
@@ -57,6 +95,7 @@ describe('MonthPage', () => {
         provideRouter([]),
         { provide: MonthsApi, useValue: api },
         { provide: Dialog, useValue: dialog },
+        { provide: ReportsApi, useValue: { series: vi.fn(() => of(SERIES)) } },
       ],
     });
     fixture = TestBed.createComponent(MonthPage);
@@ -82,6 +121,7 @@ describe('MonthPage', () => {
       '€400.00',
     ]);
     expect(el.querySelector('app-donut')).not.toBeNull();
+    expect(el.querySelector('app-evolution .evolution__stats')?.textContent).toContain('€212.00');
     expect(text('.label-row__name')).toEqual(['Food']);
     expect(text('.label-row__detail')).toEqual(['Base €200.00 · +€12.00 moved in']);
     const links = [...el.querySelectorAll<HTMLAnchorElement>('.picker a')];
@@ -130,6 +170,59 @@ describe('MonthPage', () => {
       .find((b) => b.textContent?.includes('New month'))!
       .click();
     expect(dialog.open.mock.calls[0]![1].data).toEqual({ year: 2026, month: 11 });
+  });
+
+  it('opens the Plan dialog with the month summary and reloads after saving', async () => {
+    dialog.open = vi.fn(() => ({ closed: of(true) }));
+    await render();
+    dialog.open = vi.fn(() => ({ closed: of(true) }));
+    [...el.querySelectorAll<HTMLButtonElement>('button')]
+      .find((b) => b.textContent?.trim() === 'Plan')!
+      .click();
+    await fixture.whenStable();
+    expect(dialog.open.mock.calls[0]![0]).toBe(PlanMonthDialog);
+    expect(dialog.open.mock.calls[0]![1].data).toEqual({ summary: SUMMARY });
+    expect(api['summary']).toHaveBeenCalledTimes(2);
+  });
+
+  it('deletes an entry and brings it back with Undo', async () => {
+    await render();
+    api['entries']!.mockReturnValue(of([ENTRY]));
+    fixture.componentRef.setInput('month', '9');
+    fixture.componentRef.setInput('month', '10');
+    await fixture.whenStable();
+    const toasts = TestBed.inject(ToastService);
+
+    el.querySelector<HTMLButtonElement>('button[aria-label="Delete Food"]')!.click();
+    await fixture.whenStable();
+    expect(api['deleteEntry']).toHaveBeenCalledWith('e1');
+    const toast = toasts.toasts().at(-1)!;
+    expect(toast.message).toBe('“Food” deleted');
+
+    toasts.act(toast);
+    expect(api['restoreEntry']).toHaveBeenCalledWith('e1');
+  });
+
+  it('closes the month, hiding the write actions, and reopens it', async () => {
+    await render();
+    const button = (name: string) =>
+      [...el.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+        b.textContent?.includes(name),
+      );
+
+    api['find']!.mockReturnValue(of({ ...OCTOBER, closed_at: '2026-10-31T10:00:00Z' }));
+    button('Close month')!.click();
+    await fixture.whenStable();
+    expect(api['close']).toHaveBeenCalledWith('m10');
+    expect(el.querySelector('.chip')?.textContent).toBe('Closed');
+    expect(button('Add money')).toBeUndefined();
+    expect(button('Plan')).toBeUndefined();
+
+    api['find']!.mockReturnValue(of(OCTOBER));
+    button('Reopen')!.click();
+    await fixture.whenStable();
+    expect(api['reopen']).toHaveBeenCalledWith('m10');
+    expect(button('Add money')).toBeDefined();
   });
 
   it('reports a failure to load', async () => {
