@@ -171,7 +171,7 @@ Creates the entry and an income in one transaction, so the label and the month i
 
 ## Reports
 
-Both report routes take the same optional query filters:
+Every report route takes the same optional query filters:
 
 | Parameter | Values | Default |
 |---|---|---|
@@ -185,6 +185,7 @@ Windows are rolling and include the current month (in the user's time zone). Del
 |---|---|---|
 | GET | `/reports/summary` | 200 `ReportSummary`: totals by label and kind (donut) |
 | GET | `/reports/series` | 200 `ReportSeries`: net total per label and month (line chart) |
+| GET | `/reports/entries` | 200 `ReportEntries`: the entries behind the totals, newest first (`limit` 1–200, default 50; `offset` ≥ 0) |
 
 ### Report summary
 
@@ -226,3 +227,26 @@ Windows are rolling and include the current month (in the user's time zone). Del
 - `totals` adds up the selected labels per month; `labels[].total` is the label's total over the window and matches `/reports/summary`.
 - With `period=all`, the series starts at the first month with money and ends at the current month (or a later sheet). An account without money returns empty `months`.
 - Labels are listed the same way as in the summary, largest window total first.
+
+### Report entries
+
+```json
+{
+  "period": "last_month", "start_month": "2026-10", "end_month": "2026-10",
+  "reference_date": "2026-10-28",
+  "total": "212.00", "count": 2, "limit": 50, "offset": 0,
+  "entries": [
+    { "id": "…", "month_id": "…", "month": "2026-10", "label_id": "…", "amount": "12.00",
+      "movement_type": "transfer_in", "transfer_id": "…", "income_id": null,
+      "occurred_on": "2026-10-10", "note": null, "created_at": "…",
+      "origin": "transfer_in", "source": null, "counterpart_label_id": "…" },
+    { "id": "…", "month": "2026-10", "amount": "200.00", "movement_type": "allocation",
+      "origin": "initial_distribution", "…": "…" }
+  ]
+}
+```
+
+- Each entry has the same fields as the month's entry list, plus `month` (YYYY-MM).
+- `total` is the net sum of every matching entry (transfers out subtract), not just this page, and equals the `/reports/summary` total. `count` is the number of matching entries across all pages.
+- `counterpart_label_id` names the other label of a transfer even when that label is outside the filter.
+- Sorted by `occurred_on`, newest first; ties keep creation order, newest first.

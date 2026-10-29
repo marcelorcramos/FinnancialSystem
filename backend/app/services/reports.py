@@ -18,12 +18,15 @@ from app.domain.periods import MonthKey, Period, months_between, months_in
 from app.models import Label, User
 from app.repositories import reports as reports_repo
 from app.schemas.report import (
+    ReportEntries,
+    ReportEntry,
     ReportLabel,
     ReportSeries,
     ReportSummary,
     SeriesLabel,
     SeriesPoint,
 )
+from app.services.entries import list_item
 
 
 async def summary(
@@ -129,6 +132,53 @@ async def series(
             for i, m in enumerate(months)
         ],
         labels=rows,
+    )
+
+
+async def entries(
+    session: AsyncSession,
+    user: User,
+    *,
+    period: Period,
+    categories: CategoryFilter,
+    today: date,
+    limit: int,
+    offset: int,
+) -> ReportEntries:
+    """The entries behind the summary, newest first, one page at a time."""
+    await _ensure_own_labels(session, user, categories)
+    months = months_in(period, today)
+
+    breakdown = LabelBreakdown()
+    for _, movement_type, amount in await reports_repo.totals_by_label_and_type(
+        session, user.id, months, categories
+    ):
+        name = movement_type.value
+        setattr(breakdown, name, getattr(breakdown, name) + amount)
+
+    page = await reports_repo.entries_in_window(
+        session, user.id, months, categories, limit=limit, offset=offset
+    )
+    rows = [row for row, _ in page]
+    sources = await reports_repo.income_sources(
+        session, user.id, {row.income_id for row in rows if row.income_id}
+    )
+    legs = await reports_repo.transfer_leg_labels(
+        session, user.id, {row.transfer_id for row in rows if row.transfer_id}
+    )
+    return ReportEntries(
+        period=period,
+        start_month=str(months[0]) if months else None,
+        end_month=str(months[-1]) if months else None,
+        reference_date=today,
+        total=breakdown.total,
+        count=await reports_repo.count_entries(session, user.id, months, categories),
+        limit=limit,
+        offset=offset,
+        entries=[
+            ReportEntry(**list_item(row, sources, legs).model_dump(), month=str(month))
+            for row, month in page
+        ],
     )
 
 

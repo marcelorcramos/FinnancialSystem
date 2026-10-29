@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from app.domain.enums import LabelKind
 from app.domain.periods import Period
+from app.schemas.entry import EntryListItem
 
 
 class ReportLabel(BaseModel):
@@ -58,3 +59,19 @@ class ReportSeries(BaseModel):
     months: list[str] = Field(description="Every month of the series, oldest first, gaps included")
     totals: list[SeriesPoint] = Field(description="Selected labels combined, per month")
     labels: list[SeriesLabel] = Field(description="Selected labels, largest window total first")
+
+
+class ReportEntry(EntryListItem):
+    month: str = Field(description="Month of the sheet the entry belongs to (YYYY-MM)")
+
+
+class ReportEntries(BaseModel):
+    period: Period
+    start_month: str | None = Field(description="First month of the window (YYYY-MM); null = all")
+    end_month: str | None = Field(description="Last month of the window (YYYY-MM); null = all")
+    reference_date: date = Field(description="Today in the user's time zone")
+    total: Decimal = Field(description="Net sum of every matching entry (same as the summary)")
+    count: int = Field(description="Number of matching entries, across all pages")
+    limit: int
+    offset: int
+    entries: list[ReportEntry] = Field(description="This page, newest first")

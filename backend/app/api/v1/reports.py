@@ -7,7 +7,7 @@ from app.api.deps import CurrentUser, SessionDep, Today
 from app.domain.enums import LabelKind
 from app.domain.filters import CategoryFilter
 from app.domain.periods import Period
-from app.schemas.report import ReportSeries, ReportSummary
+from app.schemas.report import ReportEntries, ReportSeries, ReportSummary
 from app.services import reports
 
 router = APIRouter(prefix="/reports", tags=["reports"])
@@ -48,3 +48,27 @@ async def report_series(
     """Net total per label and month for a time window and category filter (line chart data)."""
     categories = CategoryFilter(frozenset(label_ids or ()), frozenset(kinds or ()))
     return await reports.series(session, user, period=period, categories=categories, today=today)
+
+
+@router.get("/entries")
+async def report_entries(
+    user: CurrentUser,
+    session: SessionDep,
+    today: Today,
+    period: Period = Period.ALL,
+    label_ids: LabelIds = None,
+    kinds: Kinds = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> ReportEntries:
+    """The entries behind a summary, newest first, with their origin (report list)."""
+    categories = CategoryFilter(frozenset(label_ids or ()), frozenset(kinds or ()))
+    return await reports.entries(
+        session,
+        user,
+        period=period,
+        categories=categories,
+        today=today,
+        limit=limit,
+        offset=offset,
+    )
