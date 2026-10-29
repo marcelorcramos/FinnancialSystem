@@ -18,6 +18,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/month/month-page'),
       },
       {
+        path: 'reports',
+        title: 'Reports',
+        loadComponent: () => import('./features/reports/reports-page'),
+      },
+      {
         path: 'labels',
         title: 'Labels',
         loadComponent: () => import('./features/labels/labels-page'),

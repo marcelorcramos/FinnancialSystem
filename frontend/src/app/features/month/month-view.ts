@@ -56,7 +56,10 @@ function percent(part: number, whole: number): string {
   return whole > 0 ? `${((part / whole) * 100).toFixed(1)}%` : '0.0%';
 }
 
-function labelDetail(label: LabelSummary): string {
+/** "Base €200.00 · +€12.00 moved in": how a label total was built. */
+export function labelDetail(
+  label: Pick<LabelSummary, 'allocation' | 'addition' | 'transfer_in' | 'transfer_out'>,
+): string {
   const parts = [`Base ${formatMoney(label.allocation)}`];
   if (!isZero(label.addition)) parts.push(`+${formatMoney(label.addition)} extra income`);
   if (!isZero(label.transfer_in)) parts.push(`+${formatMoney(label.transfer_in)} moved in`);

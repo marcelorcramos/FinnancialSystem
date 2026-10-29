@@ -40,4 +40,13 @@ describe('ReportsApi', () => {
     expect(request.request.params.keys()).toEqual([]);
     request.flush({});
   });
+
+  it('pages the entries', () => {
+    api.entries({ kinds: ['expense'] }, { limit: 20, offset: 40 }).subscribe();
+    const request = http.expectOne((r) => r.url === '/api/v1/reports/entries');
+    expect(request.request.params.get('limit')).toBe('20');
+    expect(request.request.params.get('offset')).toBe('40');
+    expect(request.request.params.getAll('kinds')).toEqual(['expense']);
+    request.flush({});
+  });
 });

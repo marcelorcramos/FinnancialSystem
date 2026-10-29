@@ -555,6 +555,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/reports/entries': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Report Entries
+     * @description The entries behind a summary, newest first, with their origin (report list).
+     */
+    get: operations['report_entries_api_v1_reports_entries_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/health': {
     parameters: {
       query?: never;
@@ -1033,6 +1053,102 @@ export interface components {
      * @enum {string}
      */
     Period: 'last_month' | 'last_6_months' | 'last_12_months' | 'all';
+    /** ReportEntries */
+    ReportEntries: {
+      period: components['schemas']['Period'];
+      /**
+       * Start Month
+       * @description First month of the window (YYYY-MM); null = all
+       */
+      start_month: string | null;
+      /**
+       * End Month
+       * @description Last month of the window (YYYY-MM); null = all
+       */
+      end_month: string | null;
+      /**
+       * Reference Date
+       * Format: date
+       * @description Today in the user's time zone
+       */
+      reference_date: string;
+      /**
+       * Total
+       * @description Net sum of every matching entry (same as the summary)
+       */
+      total: string;
+      /**
+       * Count
+       * @description Number of matching entries, across all pages
+       */
+      count: number;
+      /** Limit */
+      limit: number;
+      /** Offset */
+      offset: number;
+      /**
+       * Entries
+       * @description This page, newest first
+       */
+      entries: components['schemas']['ReportEntry'][];
+    };
+    /** ReportEntry */
+    ReportEntry: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Month Id
+       * Format: uuid
+       */
+      month_id: string;
+      /**
+       * Label Id
+       * Format: uuid
+       */
+      label_id: string;
+      /** Amount */
+      amount: string;
+      movement_type: components['schemas']['MovementType'];
+      /** Transfer Id */
+      transfer_id: string | null;
+      /** Income Id */
+      income_id: string | null;
+      /**
+       * Occurred On
+       * Format: date
+       */
+      occurred_on: string;
+      /** Note */
+      note: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /**
+       * Origin
+       * @enum {string}
+       */
+      origin: 'initial_distribution' | 'external_income' | 'transfer_in' | 'transfer_out';
+      /**
+       * Source
+       * @description Income source of an addition
+       */
+      source?: string | null;
+      /**
+       * Counterpart Label Id
+       * @description The other label of a transfer
+       */
+      counterpart_label_id?: string | null;
+      /**
+       * Month
+       * @description Month of the sheet the entry belongs to (YYYY-MM)
+       */
+      month: string;
+    };
     /** ReportLabel */
     ReportLabel: {
       /**
@@ -2684,6 +2800,43 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['ReportSeries'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  report_entries_api_v1_reports_entries_get: {
+    parameters: {
+      query?: {
+        period?: components['schemas']['Period'];
+        /** @description Labels to include (repeat the parameter for several) */
+        label_ids?: string[] | null;
+        /** @description Label kinds to include; combined with label_ids as a union */
+        kinds?: components['schemas']['LabelKind'][] | null;
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ReportEntries'];
         };
       };
       /** @description Validation Error */

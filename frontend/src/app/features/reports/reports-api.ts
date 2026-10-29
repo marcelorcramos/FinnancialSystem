@@ -3,7 +3,13 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from '../../core/api/api-config';
-import { LabelKind, ReportPeriod, ReportSeries, ReportSummary } from '../../core/api/types';
+import {
+  LabelKind,
+  ReportEntries,
+  ReportPeriod,
+  ReportSeries,
+  ReportSummary,
+} from '../../core/api/types';
 
 /** Report filters: a rolling time window and any mix of labels and kinds (a union). */
 export interface ReportFilter {
@@ -12,7 +18,7 @@ export interface ReportFilter {
   kinds?: readonly LabelKind[];
 }
 
-/** Reports by period and category (donut and line chart data). */
+/** Reports by period and category: totals (donut), series (line chart) and entries. */
 @Injectable({ providedIn: 'root' })
 export class ReportsApi {
   private readonly http = inject(HttpClient);
@@ -24,6 +30,12 @@ export class ReportsApi {
 
   series(filter: ReportFilter = {}): Observable<ReportSeries> {
     return this.http.get<ReportSeries>(`${this.reports}/series`, { params: params(filter) });
+  }
+
+  /** One page of the entries behind the totals, newest first. */
+  entries(filter: ReportFilter = {}, page = { limit: 50, offset: 0 }): Observable<ReportEntries> {
+    const query = params(filter).set('limit', page.limit).set('offset', page.offset);
+    return this.http.get<ReportEntries>(`${this.reports}/entries`, { params: query });
   }
 }
 
