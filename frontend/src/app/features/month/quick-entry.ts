@@ -105,7 +105,7 @@ export const OUTSIDE = 'outside';
       font-size: var(--text-s);
     }
 
-    @media (max-width: 600px) {
+    @media (max-width: 599px) {
       .quick__amount {
         max-width: none;
       }
