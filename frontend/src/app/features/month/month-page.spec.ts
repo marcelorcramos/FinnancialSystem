@@ -217,12 +217,34 @@ describe('MonthPage', () => {
     expect(el.querySelector('.chip')?.textContent).toBe('Closed');
     expect(button('Add money')).toBeUndefined();
     expect(button('Plan')).toBeUndefined();
+    expect(el.querySelector('app-quick-entry')).toBeNull();
 
     api['find']!.mockReturnValue(of(OCTOBER));
     button('Reopen')!.click();
     await fixture.whenStable();
     expect(api['reopen']).toHaveBeenCalledWith('m10');
     expect(button('Add money')).toBeDefined();
+  });
+
+  it('lists every entry on demand and adds quick entries', async () => {
+    await render();
+    const many = Array.from({ length: 8 }, (_, i) => ({
+      ...ENTRY,
+      id: `e${i}`,
+      occurred_on: `2026-10-0${i + 1}`,
+    }));
+    api['entries']!.mockReturnValue(of(many));
+    fixture.componentInstance['reload']();
+    await fixture.whenStable();
+
+    expect(el.querySelectorAll('.entry')).toHaveLength(6);
+    const toggle = [...el.querySelectorAll<HTMLButtonElement>('.recent .more')][0]!;
+    expect(toggle.textContent?.trim()).toBe('Show all 8 entries');
+    toggle.click();
+    await fixture.whenStable();
+    expect(el.querySelectorAll('.entry')).toHaveLength(8);
+    expect(el.querySelector('.recent .more')?.textContent?.trim()).toBe('Show the latest 6');
+    expect(el.querySelector('app-quick-entry')).not.toBeNull();
   });
 
   it('reports a failure to load', async () => {

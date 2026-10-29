@@ -238,6 +238,11 @@
     margin-bottom: var(--space-3);
     font-size: var(--text-m);
   }
+
+  app-quick-entry {
+    display: block;
+    margin-bottom: var(--space-4);
+  }
 }
 
 .entry {

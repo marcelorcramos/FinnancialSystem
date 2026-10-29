@@ -13,10 +13,11 @@ import { Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
 import { apiErrorMessage } from '../../core/api/api-errors';
-import { MonthRead, MonthSummary } from '../../core/api/types';
+import { EntryListItem, MonthRead, MonthSummary } from '../../core/api/types';
 import { readPreference, writePreference } from '../../core/storage/preferences';
 import { Donut } from '../../shared/charts/donut';
 import { Evolution } from './evolution';
+import { QuickEntry } from './quick-entry';
 import { Icon, IconName, isIconName } from '../../shared/ui/icon';
 import { ToastService } from '../../shared/ui/toast.service';
 import { AddMoneyData, AddMoneyDialog } from './add-money-dialog';
@@ -34,7 +35,7 @@ const DONUT_MODE_KEY = 'fs.month.donut';
 
 @Component({
   selector: 'app-month-page',
-  imports: [Donut, Evolution, Icon, RouterLink],
+  imports: [Donut, Evolution, Icon, QuickEntry, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './month-page.html',
   styleUrl: './month-page.scss',
@@ -51,9 +52,15 @@ export default class MonthPage {
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly sheet = signal<MonthRead | null>(null);
-  protected readonly view = signal<MonthView | null>(null);
   protected readonly summary = signal<MonthSummary | null>(null);
+  private readonly entries = signal<EntryListItem[]>([]);
   protected readonly showAllLabels = signal(false);
+  protected readonly showAllEntries = signal(false);
+  protected readonly view = computed<MonthView | null>(() => {
+    const summary = this.summary();
+    if (!summary) return null;
+    return buildMonthView(summary, this.entries(), this.showAllEntries() ? Infinity : 6);
+  });
   protected readonly donutMode = signal<DonutMode>(
     readPreference(DONUT_MODE_KEY) === 'detailed' ? 'detailed' : 'overview',
   );
@@ -94,6 +101,12 @@ export default class MonthPage {
         this.toasts.show('Money added');
         this.reload();
       });
+  }
+
+  /** After a quick entry: confirm it and show the new totals. */
+  protected entryAdded(description: string): void {
+    this.toasts.show(description);
+    this.reload();
   }
 
   /** Edits the month's recurring incomes and the initial distribution per label. */
@@ -176,18 +189,19 @@ export default class MonthPage {
   private load(year: number, month: number): void {
     this.state.set('loading');
     this.showAllLabels.set(false);
+    this.showAllEntries.set(false);
     this.api.find(year, month).subscribe({
       next: (sheet) => {
         this.sheet.set(sheet);
         if (!sheet) {
-          this.view.set(null);
+          this.summary.set(null);
           this.state.set('missing');
           return;
         }
         forkJoin([this.api.summary(sheet.id), this.api.entries(sheet.id)]).subscribe({
           next: ([summary, entries]) => {
+            this.entries.set(entries);
             this.summary.set(summary);
-            this.view.set(buildMonthView(summary, entries));
             this.state.set('ready');
           },
           error: () => this.state.set('error'),

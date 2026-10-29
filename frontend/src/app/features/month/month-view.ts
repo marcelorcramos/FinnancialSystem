@@ -44,6 +44,8 @@ export interface MonthView {
   labelSegments: DonutSegment[];
   labels: LabelRow[];
   recent: RecentEntry[];
+  /** Every entry the list can show (a transfer counts once). */
+  entryCount: number;
 }
 
 const KIND_SEGMENTS: { kind: Kind; label: string }[] = [
@@ -174,5 +176,6 @@ export function buildMonthView(
       detail: labelDetail(label),
     })),
     recent: recentEntries(entries, names, recentLimit),
+    entryCount: entries.filter((entry) => entry.origin !== 'transfer_in').length,
   };
 }
