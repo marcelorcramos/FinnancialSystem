@@ -207,29 +207,32 @@ async def list_for_month(
     for row in rows:
         if row.transfer_id is not None:
             legs.setdefault(row.transfer_id, {})[row.movement_type] = row.label_id
+    return [list_item(row, sources, legs) for row in rows]
 
-    items = []
-    for row in rows:
-        base = EntryRead.model_validate(row).model_dump()
-        if row.movement_type is MovementType.ALLOCATION:
-            item = EntryListItem(**base, origin="initial_distribution")
-        elif row.movement_type is MovementType.ADDITION:
-            source = sources.get(row.income_id) if row.income_id else None
-            item = EntryListItem(**base, origin="external_income", source=source)
-        else:
-            assert row.transfer_id is not None
-            other = (
-                MovementType.TRANSFER_OUT
-                if row.movement_type is MovementType.TRANSFER_IN
-                else MovementType.TRANSFER_IN
-            )
-            item = EntryListItem(
-                **base,
-                origin=row.movement_type.value,
-                counterpart_label_id=legs[row.transfer_id].get(other),
-            )
-        items.append(item)
-    return items
+
+def list_item(
+    row: Entry,
+    sources: dict[uuid.UUID, str],
+    legs: dict[uuid.UUID, dict[MovementType, uuid.UUID]],
+) -> EntryListItem:
+    """An entry with its origin: income source of an addition, other label of a transfer."""
+    base = EntryRead.model_validate(row).model_dump()
+    if row.movement_type is MovementType.ALLOCATION:
+        return EntryListItem(**base, origin="initial_distribution")
+    if row.movement_type is MovementType.ADDITION:
+        source = sources.get(row.income_id) if row.income_id else None
+        return EntryListItem(**base, origin="external_income", source=source)
+    assert row.transfer_id is not None
+    other = (
+        MovementType.TRANSFER_OUT
+        if row.movement_type is MovementType.TRANSFER_IN
+        else MovementType.TRANSFER_IN
+    )
+    return EntryListItem(
+        **base,
+        origin=row.movement_type.value,
+        counterpart_label_id=legs.get(row.transfer_id, {}).get(other),
+    )
 
 
 async def update_entry(

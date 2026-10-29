@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain.enums import MovementType
 from app.domain.filters import CategoryFilter
 from app.domain.periods import MonthKey
-from app.models import Entry, Label, Month
+from app.models import Entry, Income, Label, Month
 
 
 def _scoped[S: Select[*tuple[Any, ...]]](
@@ -26,7 +26,11 @@ def _scoped[S: Select[*tuple[Any, ...]]](
         .where(
             Entry.user_id == user_id,
             Entry.deleted_at.is_(None),
+            # Scoping the joined tables too lets the planner use their user_id indexes
+            # instead of scanning every user's months and labels (validated with EXPLAIN).
+            Month.user_id == user_id,
             Month.deleted_at.is_(None),
+            Label.user_id == user_id,
         )
     )
     if months is not None:
@@ -63,6 +67,65 @@ async def totals_by_label_month_and_type(
     ).group_by(Entry.label_id, Month.year, Month.month, Entry.movement_type)
     result = await session.execute(_scoped(stmt, user_id, months, categories))
     return [(row[0], MonthKey(row[1], row[2]), row[3], row[4]) for row in result]
+
+
+async def entries_in_window(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    months: Sequence[MonthKey] | None,
+    categories: CategoryFilter,
+    *,
+    limit: int,
+    offset: int,
+) -> list[tuple[Entry, MonthKey]]:
+    """One page of the window's entries with their month, newest first."""
+    stmt = (
+        select(Entry, Month.year, Month.month)
+        .order_by(Entry.occurred_on.desc(), Entry.created_at.desc(), Entry.movement_type, Entry.id)
+        .limit(limit)
+        .offset(offset)
+    )
+    result = await session.execute(_scoped(stmt, user_id, months, categories))
+    return [(row[0], MonthKey(row[1], row[2])) for row in result]
+
+
+async def count_entries(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    months: Sequence[MonthKey] | None,
+    categories: CategoryFilter,
+) -> int:
+    stmt = select(func.count(Entry.id))
+    return (await session.scalar(_scoped(stmt, user_id, months, categories))) or 0
+
+
+async def transfer_leg_labels(
+    session: AsyncSession, user_id: uuid.UUID, transfer_ids: set[uuid.UUID]
+) -> dict[uuid.UUID, dict[MovementType, uuid.UUID]]:
+    """Label of each active leg of the given transfers, even legs outside the filter."""
+    if not transfer_ids:
+        return {}
+    stmt = select(Entry.transfer_id, Entry.movement_type, Entry.label_id).where(
+        Entry.user_id == user_id,
+        Entry.transfer_id.in_(transfer_ids),
+        Entry.deleted_at.is_(None),
+    )
+    legs: dict[uuid.UUID, dict[MovementType, uuid.UUID]] = {}
+    for transfer_id, movement_type, label_id in await session.execute(stmt):
+        assert transfer_id is not None  # filtered by the IN clause
+        legs.setdefault(transfer_id, {})[movement_type] = label_id
+    return legs
+
+
+async def income_sources(
+    session: AsyncSession, user_id: uuid.UUID, income_ids: set[uuid.UUID]
+) -> dict[uuid.UUID, str]:
+    if not income_ids:
+        return {}
+    stmt = select(Income.id, Income.source).where(
+        Income.user_id == user_id, Income.id.in_(income_ids)
+    )
+    return {income_id: source for income_id, source in await session.execute(stmt)}
 
 
 async def labels_for_report(
