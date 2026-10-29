@@ -26,7 +26,11 @@ def _scoped[S: Select[*tuple[Any, ...]]](
         .where(
             Entry.user_id == user_id,
             Entry.deleted_at.is_(None),
+            # Scoping the joined tables too lets the planner use their user_id indexes
+            # instead of scanning every user's months and labels (validated with EXPLAIN).
+            Month.user_id == user_id,
             Month.deleted_at.is_(None),
+            Label.user_id == user_id,
         )
     )
     if months is not None:
