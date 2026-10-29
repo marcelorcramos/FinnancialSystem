@@ -30,6 +30,9 @@ export type TransferCreate = Schemas['TransferCreate'];
 export type TransferRead = Schemas['TransferRead'];
 
 export type ReportSummary = Schemas['ReportSummary'];
+export type ReportLabel = Schemas['ReportLabel'];
+export type ReportEntries = Schemas['ReportEntries'];
+export type ReportEntry = Schemas['ReportEntry'];
 export type ReportPeriod = Schemas['Period'];
 export type ReportSeries = Schemas['ReportSeries'];
 export type SeriesLabel = Schemas['SeriesLabel'];

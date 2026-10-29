@@ -11,6 +11,7 @@ import {
 import { LabelKind, LabelSummary, ReportPeriod, ReportSeries } from '../../core/api/types';
 import { readPreference, writePreference } from '../../core/storage/preferences';
 import { LineChart, LinePoint } from '../../shared/charts/line-chart';
+import { monthLabel, wholeEuros } from '../../shared/charts/month-label';
 import { fromCents, signedCents } from '../../shared/money/cents';
 import { formatMoney } from '../../shared/money/format-money';
 import { ReportsApi } from '../reports/reports-api';
@@ -31,20 +32,6 @@ const KIND_GROUPS: { kind: LabelKind; text: string }[] = [
 
 const LABEL_KEY = 'fs.month.evolution.label';
 const PERIOD_KEY = 'fs.month.evolution.period';
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-/** "2026-05" -> "May"; the year is added when the series crosses one ("Jan 27"). */
-function monthLabel(key: string, withYear: boolean): string {
-  const [year, month] = key.split('-');
-  const name = MONTHS[Number(month) - 1]!;
-  return withYear ? `${name} ${year!.slice(2)}` : name;
-}
-
-function wholeEuros(value: number): string {
-  const euros = Math.round(Math.abs(value));
-  return `${value < 0 ? '−' : ''}€${euros.toLocaleString('en-IE')}`;
-}
-
 /**
  * How one label moved across months (line chart), with a category and a
  * period selector. Windows are rolling from the current month, like reports.

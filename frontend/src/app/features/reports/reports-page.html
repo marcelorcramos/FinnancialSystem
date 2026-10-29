@@ -1,0 +1,286 @@
+<header class="head">
+  <h1>Reports</h1>
+  <div class="toggle" role="group" aria-label="Period">
+    @for (option of periods; track option.value) {
+      <button
+        type="button"
+        class="toggle__option"
+        [attr.aria-pressed]="activePeriod() === option.value"
+        (click)="setPeriod(option.value)"
+      >
+        {{ option.text }}
+      </button>
+    }
+  </div>
+</header>
+
+<section class="panel filters" aria-labelledby="filters-title">
+  <div class="filters__head">
+    <h2 id="filters-title">Categories</h2>
+    <span class="filters__hint">
+      {{ filtered() ? 'Showing the selected kinds and labels together' : 'Showing every label' }}
+    </span>
+    @if (filtered()) {
+      <button type="button" class="btn btn--quiet filters__clear" (click)="clearFilters()">
+        <app-icon name="close" [size]="16" />
+        Clear
+      </button>
+    }
+  </div>
+  <div class="chips" role="group" aria-label="Kinds">
+    @for (option of kinds; track option.kind) {
+      <button
+        type="button"
+        class="chip"
+        [attr.data-kind]="option.kind"
+        [attr.aria-pressed]="isKindOn(option.kind)"
+        (click)="toggleKind(option.kind)"
+      >
+        <app-icon [name]="option.kind" [size]="16" />
+        {{ option.text }}
+      </button>
+    }
+  </div>
+  <div class="chips" role="group" aria-label="Labels">
+    @for (label of labelOptions(); track label.id) {
+      <button
+        type="button"
+        class="chip"
+        [attr.aria-pressed]="isLabelOn(label.id)"
+        (click)="toggleLabel(label.id)"
+      >
+        <span class="chip__swatch" [style.background]="label.color" aria-hidden="true"></span>
+        {{ label.name }}
+      </button>
+    }
+  </div>
+</section>
+
+@switch (state()) {
+  @case ('error') {
+    <div class="alert" role="alert">
+      <app-icon name="alert" [size]="18" />
+      <span>Could not load the report.</span>
+      <button type="button" class="btn" (click)="retry()">Try again</button>
+    </div>
+  }
+  @default {
+    @if (view(); as v) {
+      <section class="totals" aria-label="Totals" [attr.aria-busy]="state() === 'loading'">
+        <div class="total panel total--accent">
+          <span class="total__label">Total</span>
+          <span class="total__value num">{{ v.total }}</span>
+          <span class="total__hint">{{ v.window }}</span>
+        </div>
+        <div class="total panel" data-kind="expense">
+          <span class="total__label">Spent</span>
+          <span class="total__value num">{{ v.spent }}</span>
+        </div>
+        <div class="total panel" data-kind="saving">
+          <span class="total__label">Saved</span>
+          <span class="total__value num">{{ v.saved }}</span>
+        </div>
+        <div class="total panel" data-kind="investment">
+          <span class="total__label">Invested</span>
+          <span class="total__value num">{{ v.invested }}</span>
+        </div>
+      </section>
+
+      <section class="row-2">
+        <figure class="panel chart">
+          <div class="chart__head">
+            <figcaption>
+              {{ donutMode() === 'overview' ? 'Distribution by kind' : 'Distribution by label' }}
+            </figcaption>
+            <div class="toggle" role="group" aria-label="Chart view">
+              <button
+                type="button"
+                class="toggle__option"
+                [attr.aria-pressed]="donutMode() === 'overview'"
+                (click)="setDonutMode('overview')"
+              >
+                Overview
+              </button>
+              <button
+                type="button"
+                class="toggle__option"
+                [attr.aria-pressed]="donutMode() === 'detailed'"
+                (click)="setDonutMode('detailed')"
+              >
+                Detailed
+              </button>
+            </div>
+          </div>
+          <app-donut
+            [segments]="donutMode() === 'overview' ? v.kindSegments : v.labelSegments"
+            centerLabel="TOTAL"
+            [centerValue]="v.total"
+            [centerHint]="v.window"
+          />
+        </figure>
+
+        <section class="panel bars" aria-labelledby="bars-title">
+          <div class="chart__head">
+            <h2 id="bars-title">By label</h2>
+            <div class="toggle" role="group" aria-label="Show labels as">
+              <button
+                type="button"
+                class="toggle__option"
+                [attr.aria-pressed]="barsMode() === 'chart'"
+                (click)="setBarsMode('chart')"
+              >
+                Bars
+              </button>
+              <button
+                type="button"
+                class="toggle__option"
+                [attr.aria-pressed]="barsMode() === 'table'"
+                (click)="setBarsMode('table')"
+              >
+                Table
+              </button>
+            </div>
+          </div>
+
+          @if (!v.bars.length) {
+            <p class="muted">No money in this period yet.</p>
+          } @else if (barsMode() === 'chart') {
+            <ul class="bars__legend" aria-hidden="true">
+              <li><span class="bars__key bars__key--base"></span>Base</li>
+              <li><span class="bars__key bars__key--extra"></span>Extra income</li>
+              <li><span class="bars__key bars__key--moved-in"></span>Moved in</li>
+              <li><span class="bars__key bars__key--moved-out"></span>Moved out</li>
+            </ul>
+            <ol class="bars__list">
+              @for (bar of v.bars; track bar.id) {
+                <li class="bar">
+                  <span class="bar__name">
+                    {{ bar.name }}
+                    @if (bar.archived) {
+                      <span class="bar__archived">archived</span>
+                    }
+                  </span>
+                  <span class="num bar__total">{{ bar.total }}</span>
+                  <span class="num bar__share">{{ bar.share }}</span>
+                  <span class="bar__track" aria-hidden="true">
+                    <span class="bar__fill" [style.width.%]="bar.width">
+                      @for (part of bar.parts; track part.part) {
+                        <span
+                          class="bar__part"
+                          [attr.data-part]="part.part"
+                          [style.width.%]="part.width"
+                          [style.background]="bar.color"
+                        ></span>
+                      }
+                      @if (bar.movedOut) {
+                        <span class="bar__moved-out" [style.width.%]="bar.movedOut"></span>
+                      }
+                    </span>
+                  </span>
+                  <span class="bar__detail">{{ bar.detail }}</span>
+                </li>
+              }
+            </ol>
+          } @else {
+            <div class="table-scroll">
+              <table class="table">
+                <caption class="visually-hidden">
+                  Labels by total,
+                  {{
+                    v.window
+                  }}
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Label</th>
+                    <th scope="col" class="num">Base</th>
+                    <th scope="col" class="num">Extra income</th>
+                    <th scope="col" class="num">Moved in</th>
+                    <th scope="col" class="num">Moved out</th>
+                    <th scope="col" class="num">Total</th>
+                    <th scope="col" class="num">Share</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (bar of v.bars; track bar.id) {
+                    <tr>
+                      <th scope="row">{{ bar.name }}</th>
+                      <td class="num">{{ bar.base }}</td>
+                      <td class="num">{{ bar.extra }}</td>
+                      <td class="num">{{ bar.movedIn }}</td>
+                      <td class="num">{{ bar.movedOutText }}</td>
+                      <td class="num table__total">{{ bar.total }}</td>
+                      <td class="num">{{ bar.share }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+          @if (v.empty) {
+            <p class="muted bars__empty">
+              {{ v.empty }} selected {{ v.empty === 1 ? 'label has' : 'labels have' }} no money in
+              this period.
+            </p>
+          }
+        </section>
+      </section>
+
+      @if (trend(); as t) {
+        <figure class="panel trend">
+          <figcaption class="trend__head">
+            <h2>Month by month</h2>
+            <dl class="trend__stats">
+              <div>
+                <dt>Monthly average</dt>
+                <dd class="num">{{ t.average }}</dd>
+              </div>
+              <div>
+                <dt>Highest · {{ t.highestMonth }}</dt>
+                <dd class="num">{{ t.highest }}</dd>
+              </div>
+            </dl>
+          </figcaption>
+          <app-line-chart
+            [points]="t.points"
+            color="var(--color-accent-text)"
+            [ariaLabel]="t.aria"
+            [formatAxis]="formatAxis"
+          />
+        </figure>
+      }
+
+      <section class="panel entries" aria-labelledby="entries-title">
+        <div class="entries__head">
+          <h2 id="entries-title">Entries</h2>
+          <span class="muted">{{ entryCount() }} in {{ v.window }}</span>
+        </div>
+        @for (row of rows(); track row.id) {
+          <div class="entry">
+            <span class="num entry__date">{{ row.date }}</span>
+            <span class="entry__text">
+              <span class="entry__label">
+                <span class="chip__swatch" [style.background]="row.color" aria-hidden="true"></span>
+                {{ row.label }}
+              </span>
+              <span class="entry__origin">{{ row.origin }}</span>
+            </span>
+            <span class="num entry__amount" [class.entry__amount--out]="row.outgoing">{{
+              row.amount
+            }}</span>
+          </div>
+        } @empty {
+          <p class="muted">No entries in this period.</p>
+        }
+        @if (rows().length < entryCount()) {
+          <button type="button" class="btn more" [disabled]="loadingMore()" (click)="loadMore()">
+            {{ loadingMore() ? 'Loading…' : 'Show more' }}
+            <span class="muted">({{ rows().length }} of {{ entryCount() }})</span>
+          </button>
+        }
+      </section>
+    } @else {
+      <p class="muted" role="status">Loading the report…</p>
+    }
+  }
+}

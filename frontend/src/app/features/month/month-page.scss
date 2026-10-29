@@ -147,35 +147,6 @@
   margin-bottom: var(--space-3);
 }
 
-.toggle {
-  display: inline-flex;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-m);
-}
-
-.toggle__option {
-  min-height: 36px;
-  padding: 0 var(--space-4);
-  border: none;
-  border-radius: var(--radius-s);
-  background: transparent;
-  color: var(--color-text-muted);
-  font: inherit;
-  font-size: var(--text-s);
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background-color var(--motion),
-    color var(--motion);
-
-  &[aria-pressed='true'] {
-    background: var(--color-accent);
-    color: var(--color-on-accent);
-  }
-}
-
 .labels {
   flex: 999 1 520px;
   min-width: 0;

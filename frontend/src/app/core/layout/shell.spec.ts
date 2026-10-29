@@ -29,7 +29,7 @@ describe('Shell', () => {
   it('shows the brand and the main navigation', () => {
     expect(el.querySelector('.brand')?.textContent).toContain('FinnancialSystem');
     const links = [...el.querySelectorAll('nav[aria-label=Main] a')];
-    expect(links.map((a) => a.textContent?.trim())).toEqual(['Month', 'Labels']);
+    expect(links.map((a) => a.textContent?.trim())).toEqual(['Month', 'Reports', 'Labels']);
   });
 
   it('shows the user initials on the account button', () => {
