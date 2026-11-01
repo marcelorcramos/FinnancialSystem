@@ -80,7 +80,7 @@ The current look (Angular Material, Roboto, Material Symbols) feels like Google/
 | Components | Angular Material is removed; own components built on Angular CDK (focus, overlays, a11y), no Material look. |
 | Language | The UI is **English only**; the PT translations go away. |
 | Motion | Subtle transitions (hover on rows, donut slices grow, chart points enlarge); all off with "Reduce motion". |
-| Accessibility | Color is never the only signal (text, icons, optional chart patterns); text size, high contrast and reduce-motion preferences. |
+| Accessibility | Color is never the only signal (text, icons, optional chart patterns); text size, high contrast and reduce-motion preferences. Checked on 2026-11-01: the token colours pass WCAG AA in both themes (text at least 4.7:1, kind slices at least 5.3:1 against the surface); every chart value is reachable by keyboard (donut legend, line chart points) and as text (`aria-label`s, the Reports **Table** view). Label colours are user-picked and may be faint in the light theme, so their values are always written next to them. |
 
 Screens agreed in the mockups:
 
