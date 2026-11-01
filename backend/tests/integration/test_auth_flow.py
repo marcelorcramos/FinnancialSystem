@@ -146,6 +146,37 @@ async def test_logout_revokes_refresh_token(client: AsyncClient) -> None:
     assert (await client.post("/api/v1/auth/refresh")).status_code == 401
 
 
+async def test_logout_others_keeps_only_this_session(client: AsyncClient) -> None:
+    user = await register(client)
+    await login(client, user["email"])
+    phone = client.cookies.get(REFRESH_COOKIE)
+    access = await login(client, user["email"])
+    laptop = client.cookies.get(REFRESH_COOKIE)
+    assert phone and laptop and phone != laptop
+
+    response = await client.post("/api/v1/auth/logout-others", headers=bearer(access))
+    assert response.status_code == 204
+    assert (await client.post("/api/v1/auth/refresh")).status_code == 200  # this device
+    client.cookies.set(REFRESH_COOKIE, phone, path="/api/v1/auth")
+    assert (await client.post("/api/v1/auth/refresh")).status_code == 401  # the other one
+
+
+async def test_logout_others_needs_own_live_session(client: AsyncClient) -> None:
+    alice, bob = await register(client), await register(client)
+    await login(client, alice["email"])
+    alice_cookie = client.cookies.get(REFRESH_COOKIE)
+    bob_access = await login(client, bob["email"])
+    assert alice_cookie
+    client.cookies.set(REFRESH_COOKIE, alice_cookie, path="/api/v1/auth")
+    # Bob cannot use Alice's session to sign out her other devices, nor his own without one.
+    response = await client.post("/api/v1/auth/logout-others", headers=bearer(bob_access))
+    assert response.status_code == 401
+    client.cookies.clear()
+    response = await client.post("/api/v1/auth/logout-others", headers=bearer(bob_access))
+    assert response.status_code == 401
+    assert (await client.post("/api/v1/auth/logout-others")).status_code == 401
+
+
 async def test_update_profile(client: AsyncClient) -> None:
     user = await register(client)
     access = await login(client, user["email"])

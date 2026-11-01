@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Cookie, Depends, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from app.api.deps import SessionDep
+from app.api.deps import CurrentUser, SessionDep
 from app.core.config import settings
 from app.schemas.auth import AccessToken
 from app.schemas.user import LoginRequest, UserCreate, UserRead
@@ -66,3 +66,11 @@ async def logout(
 ) -> None:
     await auth.logout(session, refresh_token)
     response.delete_cookie(REFRESH_COOKIE, path=REFRESH_COOKIE_PATH)
+
+
+@router.post("/logout-others", status_code=status.HTTP_204_NO_CONTENT)
+async def logout_others(
+    user: CurrentUser, session: SessionDep, refresh_token: RefreshCookie = None
+) -> None:
+    """Sign out every other device; this session (its refresh cookie) stays signed in."""
+    await auth.logout_others(session, user, refresh_token)
