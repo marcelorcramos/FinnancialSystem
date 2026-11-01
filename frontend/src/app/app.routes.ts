@@ -23,6 +23,16 @@ export const routes: Routes = [
         loadComponent: () => import('./features/reports/reports-page'),
       },
       {
+        path: 'account',
+        title: 'Account',
+        loadComponent: () => import('./features/account/account-page'),
+      },
+      {
+        path: 'preferences',
+        title: 'Preferences',
+        loadComponent: () => import('./features/account/preferences-page'),
+      },
+      {
         path: 'labels',
         title: 'Labels',
         loadComponent: () => import('./features/labels/labels-page'),

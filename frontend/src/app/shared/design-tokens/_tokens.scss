@@ -80,3 +80,30 @@
     --motion: 0ms linear;
   }
 }
+
+// Display preferences (core/preferences/display-preferences.ts).
+:root[data-text-size='large'] {
+  font-size: 112.5%;
+}
+
+:root[data-text-size='larger'] {
+  font-size: 125%;
+}
+
+:root[data-reduce-motion] {
+  --motion: 0ms linear;
+}
+
+:root[data-reduce-motion] *,
+:root[data-reduce-motion] *::before,
+:root[data-reduce-motion] *::after {
+  animation-duration: 0.01ms !important;
+  transition-duration: 0.01ms !important;
+}
+
+:root[data-high-contrast] {
+  --color-border: light-dark(#6b7782, #8a96a1);
+  --color-border-strong: light-dark(#3d4853, #c4ccd3);
+  --color-text-muted: light-dark(#1f272e, #e6eaee);
+  --color-text-subtle: light-dark(#2f3942, #d7dde2);
+}

@@ -14,14 +14,18 @@ function withBearer<T>(req: HttpRequest<T>, token: string | null): HttpRequest<T
  * refreshes the token once and retries. If the refresh fails the session is
  * expired and the user is sent to the login page.
  *
- * /auth/* calls are left alone: they either don't need the token or a 401
+ * The public /auth calls are left alone: they don't need the token, and a 401
  * there means bad credentials / no refresh cookie, not an expired token.
+ * /auth/logout-others is the exception: it needs both the token and the cookie.
  */
+const PUBLIC_AUTH = ['register', 'login', 'refresh', 'logout', 'token'];
+
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const baseUrl = inject(API_BASE_URL);
   const store = inject(AuthStore);
 
-  if (!req.url.startsWith(baseUrl) || req.url.startsWith(`${baseUrl}/auth/`)) {
+  const isPublicAuth = PUBLIC_AUTH.some((path) => req.url === `${baseUrl}/auth/${path}`);
+  if (!req.url.startsWith(baseUrl) || isPublicAuth) {
     return next(req);
   }
 

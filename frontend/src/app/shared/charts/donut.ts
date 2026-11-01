@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+
+import { DisplayPreferencesService } from '../../core/preferences/display-preferences';
 
 export interface DonutSegment {
   key: string;
@@ -9,7 +11,11 @@ export interface DonutSegment {
   color: string;
   /** Formatted value, e.g. "€212.00". */
   display: string;
+  /** Texture drawn over the colour when "Patterns in charts" is on. */
+  pattern?: 'lines' | 'dots';
 }
+
+let nextId = 0;
 
 const RADIUS = 100;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -25,6 +31,20 @@ const GAP = 6;
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <svg viewBox="0 0 280 280" class="donut" role="img" [attr.aria-label]="ariaLabel()">
+      <defs>
+        <pattern
+          [attr.id]="ids.lines"
+          width="8"
+          height="8"
+          patternUnits="userSpaceOnUse"
+          patternTransform="rotate(45)"
+        >
+          <line x1="0" y1="0" x2="0" y2="8" class="ink" stroke-width="2.5" />
+        </pattern>
+        <pattern [attr.id]="ids.dots" width="8" height="8" patternUnits="userSpaceOnUse">
+          <circle cx="4" cy="4" r="1.6" class="ink" />
+        </pattern>
+      </defs>
       <g transform="rotate(-90 140 140)" fill="none">
         <circle cx="140" cy="140" r="100" class="track" stroke-width="44" />
         @for (arc of arcs(); track arc.key) {
@@ -41,6 +61,19 @@ const GAP = 6;
             (mouseenter)="active.set(arc.key)"
             (mouseleave)="active.set(null)"
           />
+          @if (arc.pattern) {
+            <circle
+              cx="140"
+              cy="140"
+              r="100"
+              class="arc arc--pattern"
+              [style.stroke]="'url(#' + arc.pattern + ')'"
+              [attr.stroke-width]="arc.width"
+              [attr.opacity]="arc.opacity"
+              [attr.stroke-dasharray]="arc.dash"
+              [attr.stroke-dashoffset]="arc.offset"
+            />
+          }
         }
       </g>
       <text x="140" y="122" text-anchor="middle" class="center__label">{{ center().label }}</text>
@@ -58,7 +91,12 @@ const GAP = 6;
             (focus)="active.set(item.key)"
             (blur)="active.set(null)"
           >
-            <span class="legend__dot" [style.background]="item.color" aria-hidden="true"></span>
+            <span
+              class="legend__dot"
+              [style.background-color]="item.color"
+              [attr.data-pattern]="display.current().patterns ? item.pattern : null"
+              aria-hidden="true"
+            ></span>
             <span>{{ item.label }}</span
             >{{ ' ' }}<span class="legend__share">{{ item.share }}</span>
           </button>
@@ -85,7 +123,11 @@ export class Donut {
     return total > 0 ? `${((Math.max(segment.value, 0) / total) * 100).toFixed(1)}%` : '0.0%';
   }
 
+  protected readonly display = inject(DisplayPreferencesService);
+  protected readonly ids = { lines: `donut-lines-${nextId}`, dots: `donut-dots-${nextId++}` };
+
   protected readonly arcs = computed(() => {
+    const patterns = this.display.current().patterns;
     const total = this.total();
     const visible = this.segments().filter((s) => s.value > 0);
     const gap = visible.length > 1 ? GAP : 0;
@@ -100,6 +142,7 @@ export class Donut {
         opacity: active && active !== segment.key ? 0.3 : 1,
         dash: `${Math.max(length - gap, 0.01).toFixed(2)} ${CIRCUMFERENCE.toFixed(2)}`,
         offset: (-cursor).toFixed(2),
+        pattern: patterns && segment.pattern ? this.ids[segment.pattern] : null,
       };
       cursor += length;
       return arc;
