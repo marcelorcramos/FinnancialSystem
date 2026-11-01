@@ -18,6 +18,7 @@ import { Icon, IconName, isIconName } from '../../shared/ui/icon';
 import { ToastService } from '../../shared/ui/toast.service';
 import { DeleteLabelChoice, DeleteLabelData, DeleteLabelDialog } from './delete-label-dialog';
 import { LabelEditorData, LabelEditorDialog } from './label-editor-dialog';
+import { dialogA11y } from '../../shared/ui/dialog-a11y';
 import { LabelsApi } from './labels-api';
 
 @Component({
@@ -57,7 +58,10 @@ export default class LabelsPage implements OnInit {
   /** Opens the editor; without a label it creates a new one. */
   protected edit(label?: LabelRead): void {
     this.dialog
-      .open<LabelRead, LabelEditorData>(LabelEditorDialog, { data: { label } })
+      .open<LabelRead, LabelEditorData>(LabelEditorDialog, {
+        data: { label },
+        ...dialogA11y('editor-title'),
+      })
       .closed.subscribe((saved) => {
         if (!saved) return;
         this.reload();
@@ -109,7 +113,10 @@ export default class LabelsPage implements OnInit {
       targets: this.active().filter((l) => l.id !== label.id),
     };
     this.dialog
-      .open<DeleteLabelChoice, DeleteLabelData>(DeleteLabelDialog, { data })
+      .open<DeleteLabelChoice, DeleteLabelData>(DeleteLabelDialog, {
+        data,
+        ...dialogA11y('delete-title', { alert: true, describedBy: 'delete-text' }),
+      })
       .closed.subscribe((choice) => {
         if (choice?.action === 'archive') {
           this.archive(label);
