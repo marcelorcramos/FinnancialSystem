@@ -18,6 +18,7 @@ import { readPreference, writePreference } from '../../core/storage/preferences'
 import { Donut } from '../../shared/charts/donut';
 import { Evolution } from './evolution';
 import { QuickEntry } from './quick-entry';
+import { dialogA11y } from '../../shared/ui/dialog-a11y';
 import { Icon, IconName, isIconName } from '../../shared/ui/icon';
 import { ToastService } from '../../shared/ui/toast.service';
 import { AddMoneyData, AddMoneyDialog } from './add-money-dialog';
@@ -127,7 +128,10 @@ export default class MonthPage {
     const summary = this.summary();
     if (!summary) return;
     this.dialog
-      .open<boolean, AddMoneyData>(AddMoneyDialog, { data: { summary, labelId } })
+      .open<boolean, AddMoneyData>(AddMoneyDialog, {
+        data: { summary, labelId },
+        ...dialogA11y('add-money-title'),
+      })
       .closed.subscribe((done) => {
         if (!done) return;
         this.toasts.show('Money added');
@@ -146,7 +150,10 @@ export default class MonthPage {
     const summary = this.summary();
     if (!summary) return;
     this.dialog
-      .open<boolean, PlanMonthData>(PlanMonthDialog, { data: { summary } })
+      .open<boolean, PlanMonthData>(PlanMonthDialog, {
+        data: { summary },
+        ...dialogA11y('plan-title'),
+      })
       .closed.subscribe((saved) => {
         if (!saved) return;
         this.toasts.show('Plan saved');
@@ -198,7 +205,10 @@ export default class MonthPage {
         ? { year: this.year(), month: this.month() }
         : shiftMonth(this.year(), this.month(), 1);
     this.dialog
-      .open<MonthRead, NewMonthData>(NewMonthDialog, { data: target })
+      .open<MonthRead, NewMonthData>(NewMonthDialog, {
+        data: target,
+        ...dialogA11y('new-month-title'),
+      })
       .closed.subscribe((created) => {
         if (!created) return;
         this.toasts.show(`${monthTitle(created.year, created.month)} created`);

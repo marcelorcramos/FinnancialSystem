@@ -6,10 +6,8 @@ on:
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend.yml'
+  # Every pull request runs it: it is a required check on main.
   pull_request:
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend.yml'
 
 permissions:
   contents: read
