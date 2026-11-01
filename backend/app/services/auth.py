@@ -115,6 +115,21 @@ async def logout(session: AsyncSession, raw_token: str | None) -> None:
         await session.commit()
 
 
+async def logout_others(session: AsyncSession, user: User, raw_token: str | None) -> None:
+    """End every session of the user except the one holding this refresh token."""
+    current = (
+        await refresh_tokens.get_by_hash_for_update(session, security.hash_refresh_token(raw_token))
+        if raw_token
+        else None
+    )
+    if current is None or current.user_id != user.id or current.revoked_at is not None:
+        raise AuthenticationError(INVALID_SESSION)
+    await refresh_tokens.revoke_other_families(
+        session, user.id, current.family_id, datetime.now(UTC)
+    )
+    await session.commit()
+
+
 async def change_password(
     session: AsyncSession, user: User, current_password: str, new_password: str
 ) -> None:

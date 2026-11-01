@@ -42,6 +42,7 @@ The access token lasts 15 minutes and comes in the response body. The refresh to
 | POST | `/auth/login` | `{email, password}` | 200 `Token` + cookie |
 | POST | `/auth/refresh` | cookie | 200 `Token` + new cookie |
 | POST | `/auth/logout` | cookie | 204, cookie cleared |
+| POST | `/auth/logout-others` | Bearer + cookie | 204, ends every other session; this one stays signed in |
 | GET | `/users/me` | | 200 `User` |
 | PATCH | `/users/me` | `{name?, currency?: "EUR", locale?, timezone?}` | 200 `User` |
 | POST | `/users/me/password` | `{current_password, new_password}` | 204, ends every session |
