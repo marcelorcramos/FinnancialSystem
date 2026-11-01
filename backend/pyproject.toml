@@ -31,3 +31,14 @@ asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 markers = ["integration: needs Docker (PostgreSQL via testcontainers)"]
 addopts = "-ra"
+
+[tool.coverage.run]
+source = ["app"]
+# SQLAlchemy's async engine runs ORM code in greenlets; without this, code after an
+# awaited query is not traced and the services look untested.
+concurrency = ["thread", "greenlet"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 95

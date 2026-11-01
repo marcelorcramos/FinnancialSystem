@@ -3,8 +3,11 @@ name: backend
 on:
   push:
     paths: ["backend/**", ".github/workflows/backend.yml"]
+  # Every pull request runs it: it is a required check on main.
   pull_request:
-    paths: ["backend/**", ".github/workflows/backend.yml"]
+
+permissions:
+  contents: read
 
 defaults:
   run:
@@ -15,6 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SECRET_KEY: ci-secret-key-0123456789abcdef0123456789
+    outputs:
+      coverage: ${{ steps.coverage.outputs.total }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -26,4 +31,35 @@ jobs:
       - run: ruff check .
       - run: ruff format --check .
       - run: mypy app
-      - run: pytest --cov=app --cov-report=term-missing
+      # Integration tests start PostgreSQL with testcontainers; fails under 95% coverage.
+      - run: pytest --cov=app
+      - id: coverage
+        run: echo "total=$(coverage report --format=total)" >> "$GITHUB_OUTPUT"
+
+  badge:
+    # Publishes coverage.svg to the `badges` branch, which the README shows.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - name: Write the badge
+        run: python backend/scripts/coverage_badge.py "${{ needs.checks.outputs.coverage }}" /tmp/coverage.svg
+      - name: Push it to the badges branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git fetch --depth 1 origin badges; then
+            git switch badges
+          else
+            git switch --orphan badges
+          fi
+          cp /tmp/coverage.svg coverage.svg
+          git add coverage.svg
+          git diff --cached --quiet || git commit -m "Update the coverage badge"
+          git push origin badges
