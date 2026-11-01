@@ -7,11 +7,68 @@
 
 A personal finance app that works month by month: each month's income is distributed across labels (Food, Housing, Savings, Investments…), money can be added or moved between labels, and reports answer questions such as "how much did I spend on water in the last 6 months?".
 
-## Stack
+## Technologies
 
-- **Backend:** FastAPI (async), SQLAlchemy 2, PostgreSQL, Alembic. Money is `NUMERIC(14,2)` / `Decimal`, never float.
-- **Frontend:** Angular (zoneless, signals), own SVG charts, Vitest, Playwright.
-- **Infrastructure:** Docker Compose; Redis, RabbitMQ and Celery come in Phase 7.
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.162-009688?logo=fastapi&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![Angular](https://img.shields.io/badge/Angular-22-DD0031?logo=angular&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker_Compose-2496ED?logo=docker&logoColor=white)
+![Playwright](https://img.shields.io/badge/Playwright-1.64-2EAD33?logo=playwright&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=githubactions&logoColor=white)
+
+### Backend
+
+| Technology | Version | What it does here |
+|---|---|---|
+| Python | 3.12 | Language of the API |
+| FastAPI + Uvicorn | 0.162 / 0.54 | Async REST API, OpenAPI docs at `/docs` |
+| SQLAlchemy (async) + asyncpg | 2.1 / 0.32 | ORM and PostgreSQL driver; layered as api → services → domain → repositories |
+| Alembic | 1.20 | Database migrations, applied when the API starts |
+| Pydantic + pydantic-settings | 2.14 / 2.16 | Request and response schemas (money as `Decimal`), configuration from the environment |
+| PyJWT + argon2-cffi | 2.15 / 25.1 | Short-lived access tokens, rotating refresh tokens in an HttpOnly cookie, Argon2 password hashes |
+| structlog | 26.1 | Structured logs (JSON outside development) |
+
+### Frontend
+
+| Technology | Version | What it does here |
+|---|---|---|
+| Angular | 22 | Standalone components, zoneless change detection and signals |
+| Angular CDK | 22 | Accessible dialogs and menus |
+| TypeScript | 6.0 | Strict typing; API types generated from the backend OpenAPI with openapi-typescript |
+| RxJS | 7.8 | HTTP and the auth refresh flow |
+| Own SVG charts | | Donut, line and bar charts with keyboard access and text alternatives |
+| nginx | 1.29 | Serves the built app and proxies `/api` in the container |
+
+### Data and infrastructure
+
+| Technology | Version | What it does here |
+|---|---|---|
+| PostgreSQL | 16 | Main database: `NUMERIC(14,2)` money, UUID keys, soft delete, audit log |
+| Docker + Docker Compose | | The whole stack locally (`deploy/docker-compose.yml`), with healthchecks |
+| Redis | 7 | In the stack; cache and rate limiting arrive in Phase 7 |
+| RabbitMQ | 4 | In the stack; domain events (outbox) and the Celery broker arrive in Phase 7 |
+| SeaweedFS (S3-compatible) | 4.50 | In the stack for file exports (Phase 9) |
+| Mailpit | 1.32 | Catches outgoing email in development |
+
+### Quality and tests
+
+| Technology | Version | What it does here |
+|---|---|---|
+| pytest + pytest-asyncio + httpx | | Backend unit and integration tests through the real ASGI app |
+| testcontainers | 4.15 | A real PostgreSQL per test run, locally and in CI |
+| pytest-cov | | Coverage, with a 95% floor (99% today) |
+| Ruff + mypy | | Python lint, formatting and strict type checks |
+| Vitest + jsdom | 5 / 30 | Frontend unit tests |
+| ESLint (angular-eslint) + Prettier | 10 / 3.8 | Frontend lint and formatting |
+| Playwright | 1.64 | End-to-end tests on desktop and phone against the Compose stack |
+| GitHub Actions | | `backend`, `frontend` and `e2e` workflows on every pull request, required to merge into `main` |
+| pre-commit | | Ruff and file checks before each commit |
+
+### Planned
+
+Celery and Celery beat (recurring entries, Phase 7), Kubernetes with Helm (Phase 13) and an AI chat over the reports with the Claude API (Phase 11). See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full plan.
 
 ## Run it
 
