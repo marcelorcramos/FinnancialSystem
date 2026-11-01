@@ -63,10 +63,10 @@ export interface ReportView {
   empty: number;
 }
 
-const KIND_SEGMENTS: { kind: Kind; label: string }[] = [
+const KIND_SEGMENTS: { kind: Kind; label: string; pattern?: 'lines' | 'dots' }[] = [
   { kind: 'expense', label: 'Spent' },
-  { kind: 'saving', label: 'Saved' },
-  { kind: 'investment', label: 'Invested' },
+  { kind: 'saving', label: 'Saved', pattern: 'lines' },
+  { kind: 'investment', label: 'Invested', pattern: 'dots' },
 ];
 
 function percentText(value: string): string {
@@ -129,9 +129,10 @@ export function buildReportView(summary: ReportSummary): ReportView {
     spent: formatMoney(byKind.expense ?? '0'),
     saved: formatMoney(byKind.saving ?? '0'),
     invested: formatMoney(byKind.investment ?? '0'),
-    kindSegments: KIND_SEGMENTS.map(({ kind, label }) => ({
+    kindSegments: KIND_SEGMENTS.map(({ kind, label, pattern }) => ({
       key: kind,
       label,
+      pattern,
       value: cents(byKind[kind] ?? '0'),
       color: `var(--kind-${kind})`,
       display: formatMoney(byKind[kind] ?? '0'),

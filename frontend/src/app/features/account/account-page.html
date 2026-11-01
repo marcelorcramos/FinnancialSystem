@@ -1,0 +1,157 @@
+<h1>Account</h1>
+
+<div class="layout">
+  <nav class="side" aria-label="Settings">
+    <a class="side__link" href="#profile">Profile</a>
+    <a class="side__link" href="#security">Security</a>
+    <a class="side__link" href="#sessions">Sessions</a>
+    <a class="side__link" routerLink="/preferences">Preferences &amp; accessibility</a>
+    <a class="side__link" routerLink="/labels">Labels</a>
+  </nav>
+
+  <div class="sections">
+    <section id="profile" class="panel section" aria-labelledby="profile-title">
+      <div class="profile__head">
+        <span class="avatar" aria-hidden="true">{{ initials() }}</span>
+        <div>
+          <h2 id="profile-title">Personal details</h2>
+          <span class="hint">Signed in as {{ user()?.email }}</span>
+        </div>
+      </div>
+      <form class="grid" (submit)="$event.preventDefault(); saveProfile()">
+        <div class="field">
+          <label for="account-name">Name</label>
+          <input
+            id="account-name"
+            class="field__input"
+            autocomplete="name"
+            maxlength="100"
+            [value]="name()"
+            [attr.aria-invalid]="!profileValid()"
+            (input)="name.set($any($event.target).value)"
+          />
+        </div>
+        <div class="field">
+          <label for="account-email">Email</label>
+          <input
+            id="account-email"
+            class="field__input"
+            readonly
+            aria-describedby="account-email-hint"
+            [value]="user()?.email ?? ''"
+          />
+          <span id="account-email-hint" class="hint">
+            {{
+              user()?.email_verified_at
+                ? 'Verified'
+                : 'Not verified · email verification comes later'
+            }}
+          </span>
+        </div>
+        <div class="field">
+          <label for="account-currency">Currency</label>
+          <input
+            id="account-currency"
+            class="field__input"
+            readonly
+            aria-describedby="account-currency-hint"
+            value="EUR · €"
+          />
+          <span id="account-currency-hint" class="hint">Only euro for now</span>
+        </div>
+        <div class="field">
+          <label for="account-timezone">Time zone</label>
+          <select
+            id="account-timezone"
+            class="field__input"
+            aria-describedby="account-timezone-hint"
+            (change)="timezone.set($any($event.target).value)"
+          >
+            @for (zone of zones; track zone) {
+              <option [value]="zone" [selected]="zone === timezone()">{{ zone }}</option>
+            }
+          </select>
+          <span id="account-timezone-hint" class="hint"
+            >Sets what "this month" means in reports</span
+          >
+        </div>
+        @if (profileError(); as message) {
+          <p class="error" role="alert">{{ message }}</p>
+        }
+        <div class="actions">
+          <button
+            type="submit"
+            class="btn btn--primary"
+            [disabled]="!profileChanged() || !profileValid() || savingProfile()"
+          >
+            {{ savingProfile() ? 'Saving…' : 'Save changes' }}
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <section id="security" class="panel section" aria-labelledby="security-title">
+      <h2 id="security-title">Change password</h2>
+      <form class="grid" (submit)="$event.preventDefault(); changePassword()">
+        <div class="field">
+          <label for="account-current-password">Current password</label>
+          <input
+            id="account-current-password"
+            class="field__input"
+            type="password"
+            autocomplete="current-password"
+            [value]="currentPassword()"
+            (input)="currentPassword.set($any($event.target).value)"
+          />
+        </div>
+        <div class="field">
+          <label for="account-new-password">New password</label>
+          <input
+            id="account-new-password"
+            class="field__input"
+            type="password"
+            autocomplete="new-password"
+            aria-describedby="account-password-rules"
+            [value]="newPassword()"
+            (input)="newPassword.set($any($event.target).value)"
+          />
+        </div>
+        <ul id="account-password-rules" class="rules" aria-label="Password rules">
+          @for (rule of rules(); track rule.label) {
+            <li class="rule" [class.rule--met]="rule.met">
+              <app-icon [name]="rule.met ? 'check' : 'close'" [size]="14" />
+              <span>{{ rule.label }}</span>
+              <span class="visually-hidden">{{ rule.met ? '(done)' : '(missing)' }}</span>
+            </li>
+          }
+        </ul>
+        <p class="hint grid__full">Changing it signs you out on every other device.</p>
+        @if (passwordError(); as message) {
+          <p class="error" role="alert">{{ message }}</p>
+        }
+        <div class="actions">
+          <button type="submit" class="btn" [disabled]="!passwordValid() || changingPassword()">
+            {{ changingPassword() ? 'Updating…' : 'Update password' }}
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <section id="sessions" class="panel section section--danger" aria-labelledby="sessions-title">
+      <div>
+        <h2 id="sessions-title">Sign out everywhere</h2>
+        <p class="hint">
+          Ends every session on phones and other browsers. You stay signed in here.
+        </p>
+      </div>
+      <button
+        type="button"
+        class="btn btn--danger"
+        [disabled]="signingOut()"
+        (click)="signOutOthers()"
+      >
+        Sign out other devices
+      </button>
+    </section>
+  </div>
+</div>

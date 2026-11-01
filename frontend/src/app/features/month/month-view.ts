@@ -48,10 +48,10 @@ export interface MonthView {
   entryCount: number;
 }
 
-const KIND_SEGMENTS: { kind: Kind; label: string }[] = [
+const KIND_SEGMENTS: { kind: Kind; label: string; pattern?: 'lines' | 'dots' }[] = [
   { kind: 'expense', label: 'Spent' },
-  { kind: 'saving', label: 'Saved' },
-  { kind: 'investment', label: 'Invested' },
+  { kind: 'saving', label: 'Saved', pattern: 'lines' },
+  { kind: 'investment', label: 'Invested', pattern: 'dots' },
 ];
 
 function percent(part: number, whole: number): string {
@@ -151,9 +151,10 @@ export function buildMonthView(
     unallocated: formatMoney(summary.unallocated),
     overAllocated: summary.over_allocated,
     distributedShare: percent(distributed, amount(summary.income_total)),
-    segments: KIND_SEGMENTS.map(({ kind, label }) => ({
+    segments: KIND_SEGMENTS.map(({ kind, label, pattern }) => ({
       key: kind,
       label,
+      pattern,
       value: amount(byKind[kind] ?? '0'),
       color: `var(--kind-${kind})`,
       display: formatMoney(byKind[kind] ?? '0'),

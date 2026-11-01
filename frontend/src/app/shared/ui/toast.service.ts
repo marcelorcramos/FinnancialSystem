@@ -35,4 +35,14 @@ export class ToastService {
     this.dismiss(toast.id);
     toast.action?.run();
   }
+
+  /** Runs the newest Undo still on screen (⌘/Ctrl+Z). Returns whether there was one. */
+  undoLatest(): boolean {
+    const toast = this._toasts()
+      .filter((t) => t.action?.label === 'Undo')
+      .at(-1);
+    if (!toast) return false;
+    this.act(toast);
+    return true;
+  }
 }

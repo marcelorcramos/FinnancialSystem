@@ -1,6 +1,6 @@
 import { Dialog } from '@angular/cdk/dialog';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
 import { EntryListItem, MonthRead, MonthSummary, ReportSeries } from '../../core/api/types';
@@ -75,7 +75,7 @@ describe('MonthPage', () => {
   let fixture: ComponentFixture<MonthPage>;
   let el: HTMLElement;
   let api: Record<string, ReturnType<typeof vi.fn>>;
-  let dialog: { open: ReturnType<typeof vi.fn> };
+  let dialog: { open: ReturnType<typeof vi.fn>; openDialogs: unknown[] };
 
   async function render(find = vi.fn(() => of(OCTOBER))) {
     api = {
@@ -88,7 +88,7 @@ describe('MonthPage', () => {
       close: vi.fn(() => of({ ...OCTOBER, closed_at: '2026-10-31T10:00:00Z' })),
       reopen: vi.fn(() => of(OCTOBER)),
     };
-    dialog = { open: vi.fn(() => ({ closed: of(OCTOBER) })) };
+    dialog = { open: vi.fn(() => ({ closed: of(OCTOBER) })), openDialogs: [] };
     TestBed.configureTestingModule({
       imports: [MonthPage],
       providers: [
@@ -245,6 +245,36 @@ describe('MonthPage', () => {
     expect(el.querySelectorAll('.entry')).toHaveLength(8);
     expect(el.querySelector('.recent .more')?.textContent?.trim()).toBe('Show the latest 6');
     expect(el.querySelector('app-quick-entry')).not.toBeNull();
+  });
+
+  it('answers the keyboard shortcuts unless typing', async () => {
+    await render();
+    const router = TestBed.inject(Router);
+    const go = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+    const press = (
+      key: string,
+      init: KeyboardEventInit = {},
+      target: EventTarget = document.body,
+    ) => target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, ...init }));
+
+    press('n');
+    expect(document.activeElement?.id).toBe('quick-amount');
+    press('ArrowRight', {}, document.activeElement!); // typing in a field: ignored
+    expect(go).not.toHaveBeenCalled();
+    (document.activeElement as HTMLElement).blur();
+
+    press('t');
+    expect(document.activeElement?.id).toBe('quick-from');
+    (document.activeElement as HTMLElement).blur();
+
+    press('ArrowLeft');
+    press('ArrowRight');
+    expect(go.mock.calls.map((c) => c[0])).toEqual(['/month/2026/9', '/month/2026/11']);
+
+    const toasts = TestBed.inject(ToastService);
+    const undo = vi.spyOn(toasts, 'undoLatest').mockReturnValue(true);
+    press('z', { ctrlKey: true });
+    expect(undo).toHaveBeenCalledOnce();
   });
 
   it('reports a failure to load', async () => {

@@ -73,3 +73,21 @@
 .legend__share {
   font-family: var(--font-mono);
 }
+
+.arc--pattern {
+  pointer-events: none;
+}
+
+.ink {
+  fill: #111417;
+  stroke: #111417;
+}
+
+.legend__dot[data-pattern='lines'] {
+  background-image: repeating-linear-gradient(45deg, #111417 0 2px, transparent 2px 5px);
+}
+
+.legend__dot[data-pattern='dots'] {
+  background-image: radial-gradient(#111417 1.2px, transparent 1.4px);
+  background-size: 5px 5px;
+}

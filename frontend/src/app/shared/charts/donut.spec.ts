@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
+import { DisplayPreferencesService } from '../../core/preferences/display-preferences';
 import { Donut, DonutSegment } from './donut';
 
 const SEGMENTS: DonutSegment[] = [
@@ -46,5 +47,22 @@ describe('Donut', () => {
     const arcs = [...el.querySelectorAll('circle.arc')];
     expect(arcs.map((a) => a.getAttribute('stroke-width'))).toEqual(['56', '44']);
     expect(arcs[1]!.getAttribute('opacity')).toBe('0.3');
+  });
+
+  it('adds a texture to patterned slices unless patterns are turned off', async () => {
+    fixture.componentRef.setInput('segments', [
+      SEGMENTS[0]!,
+      { ...SEGMENTS[1]!, pattern: 'lines' },
+    ]);
+    await fixture.whenStable();
+    const overlay = () => el.querySelectorAll<SVGCircleElement>('circle.arc--pattern');
+    expect(overlay()).toHaveLength(1);
+    expect(overlay()[0]!.style.stroke).toContain('donut-lines-');
+    expect(el.querySelector('.legend__dot[data-pattern=lines]')).not.toBeNull();
+
+    TestBed.inject(DisplayPreferencesService).set('patterns', false);
+    await fixture.whenStable();
+    expect(overlay()).toHaveLength(0);
+    expect(el.querySelector('.legend__dot[data-pattern]')).toBeNull();
   });
 });

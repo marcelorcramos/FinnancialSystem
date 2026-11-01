@@ -39,6 +39,7 @@ const DONUT_MODE_KEY = 'fs.month.donut';
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './month-page.html',
   styleUrl: './month-page.scss',
+  host: { '(document:keydown)': 'onKeydown($event)' },
 })
 export default class MonthPage {
   private readonly api = inject(MonthsApi);
@@ -75,6 +76,37 @@ export default class MonthPage {
 
   constructor() {
     effect(() => this.load(this.year(), this.month()));
+  }
+
+  /**
+   * Shortcuts (listed on the Preferences page): N new entry, T transfer,
+   * ←/→ previous/next month, ⌘/Ctrl+Z undo the last delete. Ignored while
+   * typing in a field or with a dialog open.
+   */
+  protected onKeydown(event: KeyboardEvent): void {
+    const target = event.target as HTMLElement | null;
+    const typing =
+      !!target?.closest('input, select, textarea, [contenteditable="true"]') ||
+      this.dialog.openDialogs.length > 0;
+    if (event.defaultPrevented || typing || event.altKey) return;
+
+    const key = event.key.toLowerCase();
+    if (key === 'z' && (event.metaKey || event.ctrlKey) && !event.shiftKey) {
+      if (this.toasts.undoLatest()) event.preventDefault();
+      return;
+    }
+    if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+
+    const focus = (selector: string) => {
+      const field = document.querySelector<HTMLElement>(selector);
+      if (!field) return;
+      event.preventDefault();
+      field.focus();
+    };
+    if (key === 'n') focus('#quick-amount');
+    else if (key === 't') focus('#quick-from');
+    else if (key === 'arrowleft') void this.router.navigateByUrl(this.previous().path);
+    else if (key === 'arrowright') void this.router.navigateByUrl(this.next().path);
   }
 
   protected iconOf(icon: string): IconName {

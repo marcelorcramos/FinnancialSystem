@@ -44,6 +44,14 @@
         <span>{{ user.email }}</span>
       </div>
     }
+    <a class="menu__item" routerLink="/account" cdkMenuItem>
+      <app-icon name="user" [size]="18" />
+      Account
+    </a>
+    <a class="menu__item" routerLink="/preferences" cdkMenuItem>
+      <app-icon name="sliders" [size]="18" />
+      Preferences
+    </a>
     <button type="button" class="menu__item" cdkMenuItem (cdkMenuItemTriggered)="logout()">
       <app-icon name="logout" [size]="18" />
       Sign out

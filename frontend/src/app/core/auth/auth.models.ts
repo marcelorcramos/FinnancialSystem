@@ -27,3 +27,8 @@ export interface TokenResponse {
   token_type: string;
   expires_in: number;
 }
+
+export interface ProfileUpdate {
+  name?: string;
+  timezone?: string;
+}

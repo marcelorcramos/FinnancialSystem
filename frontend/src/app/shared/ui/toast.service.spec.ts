@@ -28,4 +28,19 @@ describe('ToastService', () => {
     expect(run).toHaveBeenCalled();
     expect(service.toasts()).toEqual([]);
   });
+
+  it('runs the newest Undo on demand', () => {
+    const service = TestBed.inject(ToastService);
+    const first = vi.fn();
+    const second = vi.fn();
+    expect(service.undoLatest()).toBe(false);
+    service.show('A deleted', { label: 'Undo', run: first });
+    service.show('B deleted', { label: 'Undo', run: second });
+    service.show('Saved');
+
+    expect(service.undoLatest()).toBe(true);
+    expect(second).toHaveBeenCalledOnce();
+    expect(first).not.toHaveBeenCalled();
+    expect(service.toasts().map((t) => t.message)).toEqual(['A deleted', 'Saved']);
+  });
 });
