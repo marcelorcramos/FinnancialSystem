@@ -32,10 +32,19 @@
 
 .plan-head,
 .plan-row {
-  grid-template-columns: 1fr 180px;
+  grid-template-columns: minmax(0, 1fr) 180px;
 }
 
 @media (max-width: 480px) {
+  // The label takes its own line (see new-month-dialog.scss), the stepper goes under it.
+  .plan-row {
+    grid-template-columns: 1fr;
+
+    .stepper {
+      justify-self: end;
+    }
+  }
+
   .plan-income {
     grid-template-columns: 1fr 104px 44px;
   }

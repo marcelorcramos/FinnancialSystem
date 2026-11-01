@@ -13,10 +13,12 @@ import { Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
 import { apiErrorMessage } from '../../core/api/api-errors';
-import { MonthRead, MonthSummary } from '../../core/api/types';
+import { EntryListItem, MonthRead, MonthSummary } from '../../core/api/types';
 import { readPreference, writePreference } from '../../core/storage/preferences';
 import { Donut } from '../../shared/charts/donut';
 import { Evolution } from './evolution';
+import { QuickEntry } from './quick-entry';
+import { dialogA11y } from '../../shared/ui/dialog-a11y';
 import { Icon, IconName, isIconName } from '../../shared/ui/icon';
 import { ToastService } from '../../shared/ui/toast.service';
 import { AddMoneyData, AddMoneyDialog } from './add-money-dialog';
@@ -34,10 +36,11 @@ const DONUT_MODE_KEY = 'fs.month.donut';
 
 @Component({
   selector: 'app-month-page',
-  imports: [Donut, Evolution, Icon, RouterLink],
+  imports: [Donut, Evolution, Icon, QuickEntry, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './month-page.html',
   styleUrl: './month-page.scss',
+  host: { '(document:keydown)': 'onKeydown($event)' },
 })
 export default class MonthPage {
   private readonly api = inject(MonthsApi);
@@ -51,9 +54,15 @@ export default class MonthPage {
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly sheet = signal<MonthRead | null>(null);
-  protected readonly view = signal<MonthView | null>(null);
   protected readonly summary = signal<MonthSummary | null>(null);
+  private readonly entries = signal<EntryListItem[]>([]);
   protected readonly showAllLabels = signal(false);
+  protected readonly showAllEntries = signal(false);
+  protected readonly view = computed<MonthView | null>(() => {
+    const summary = this.summary();
+    if (!summary) return null;
+    return buildMonthView(summary, this.entries(), this.showAllEntries() ? Infinity : 6);
+  });
   protected readonly donutMode = signal<DonutMode>(
     readPreference(DONUT_MODE_KEY) === 'detailed' ? 'detailed' : 'overview',
   );
@@ -68,6 +77,37 @@ export default class MonthPage {
 
   constructor() {
     effect(() => this.load(this.year(), this.month()));
+  }
+
+  /**
+   * Shortcuts (listed on the Preferences page): N new entry, T transfer,
+   * ←/→ previous/next month, ⌘/Ctrl+Z undo the last delete. Ignored while
+   * typing in a field or with a dialog open.
+   */
+  protected onKeydown(event: KeyboardEvent): void {
+    const target = event.target as HTMLElement | null;
+    const typing =
+      !!target?.closest('input, select, textarea, [contenteditable="true"]') ||
+      this.dialog.openDialogs.length > 0;
+    if (event.defaultPrevented || typing || event.altKey) return;
+
+    const key = event.key.toLowerCase();
+    if (key === 'z' && (event.metaKey || event.ctrlKey) && !event.shiftKey) {
+      if (this.toasts.undoLatest()) event.preventDefault();
+      return;
+    }
+    if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+
+    const focus = (selector: string) => {
+      const field = document.querySelector<HTMLElement>(selector);
+      if (!field) return;
+      event.preventDefault();
+      field.focus();
+    };
+    if (key === 'n') focus('#quick-amount');
+    else if (key === 't') focus('#quick-from');
+    else if (key === 'arrowleft') void this.router.navigateByUrl(this.previous().path);
+    else if (key === 'arrowright') void this.router.navigateByUrl(this.next().path);
   }
 
   protected iconOf(icon: string): IconName {
@@ -88,7 +128,10 @@ export default class MonthPage {
     const summary = this.summary();
     if (!summary) return;
     this.dialog
-      .open<boolean, AddMoneyData>(AddMoneyDialog, { data: { summary, labelId } })
+      .open<boolean, AddMoneyData>(AddMoneyDialog, {
+        data: { summary, labelId },
+        ...dialogA11y('add-money-title'),
+      })
       .closed.subscribe((done) => {
         if (!done) return;
         this.toasts.show('Money added');
@@ -96,12 +139,21 @@ export default class MonthPage {
       });
   }
 
+  /** After a quick entry: confirm it and show the new totals. */
+  protected entryAdded(description: string): void {
+    this.toasts.show(description);
+    this.reload();
+  }
+
   /** Edits the month's recurring incomes and the initial distribution per label. */
   protected plan(): void {
     const summary = this.summary();
     if (!summary) return;
     this.dialog
-      .open<boolean, PlanMonthData>(PlanMonthDialog, { data: { summary } })
+      .open<boolean, PlanMonthData>(PlanMonthDialog, {
+        data: { summary },
+        ...dialogA11y('plan-title'),
+      })
       .closed.subscribe((saved) => {
         if (!saved) return;
         this.toasts.show('Plan saved');
@@ -153,7 +205,10 @@ export default class MonthPage {
         ? { year: this.year(), month: this.month() }
         : shiftMonth(this.year(), this.month(), 1);
     this.dialog
-      .open<MonthRead, NewMonthData>(NewMonthDialog, { data: target })
+      .open<MonthRead, NewMonthData>(NewMonthDialog, {
+        data: target,
+        ...dialogA11y('new-month-title'),
+      })
       .closed.subscribe((created) => {
         if (!created) return;
         this.toasts.show(`${monthTitle(created.year, created.month)} created`);
@@ -176,18 +231,19 @@ export default class MonthPage {
   private load(year: number, month: number): void {
     this.state.set('loading');
     this.showAllLabels.set(false);
+    this.showAllEntries.set(false);
     this.api.find(year, month).subscribe({
       next: (sheet) => {
         this.sheet.set(sheet);
         if (!sheet) {
-          this.view.set(null);
+          this.summary.set(null);
           this.state.set('missing');
           return;
         }
         forkJoin([this.api.summary(sheet.id), this.api.entries(sheet.id)]).subscribe({
           next: ([summary, entries]) => {
+            this.entries.set(entries);
             this.summary.set(summary);
-            this.view.set(buildMonthView(summary, entries));
             this.state.set('ready');
           },
           error: () => this.state.set('error'),

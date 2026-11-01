@@ -1,0 +1,111 @@
+<a class="back" routerLink="/account">← Account</a>
+<h1>Preferences &amp; accessibility</h1>
+<p class="intro">Saved in this browser.</p>
+
+<div class="layout">
+  <div class="sections">
+    <section class="panel section" aria-labelledby="theme-title">
+      <h2 id="theme-title">Theme</h2>
+      <div class="toggle toggle--fill" role="group" aria-labelledby="theme-title">
+        @for (option of themes; track option.mode) {
+          <button
+            type="button"
+            class="toggle__option"
+            [attr.aria-pressed]="mode() === option.mode"
+            (click)="setTheme(option.mode)"
+          >
+            {{ option.name }}
+          </button>
+        }
+      </div>
+      <p class="hint">Dark is the default. System follows your device.</p>
+    </section>
+
+    <section class="panel section" aria-labelledby="size-title">
+      <h2 id="size-title">Text size</h2>
+      <div class="toggle toggle--fill" role="group" aria-labelledby="size-title">
+        @for (option of sizes; track option.size) {
+          <button
+            type="button"
+            class="toggle__option"
+            [attr.data-size]="option.size"
+            [attr.aria-pressed]="current().textSize === option.size"
+            (click)="setSize(option.size)"
+          >
+            {{ option.name }}
+          </button>
+        }
+      </div>
+    </section>
+
+    <section class="panel switches" aria-label="Accessibility">
+      @for (item of switches; track item.key) {
+        <div class="switch-row">
+          <span class="switch-row__text">
+            <span [id]="'pref-' + item.key" class="switch-row__title">{{ item.title }}</span>
+            <span class="hint">{{ item.help }}</span>
+          </span>
+          <button
+            type="button"
+            role="switch"
+            class="switch"
+            [attr.aria-checked]="current()[item.key]"
+            [attr.aria-labelledby]="'pref-' + item.key"
+            (click)="toggle(item.key)"
+          >
+            <span class="switch__knob" aria-hidden="true"></span>
+          </button>
+        </div>
+      }
+    </section>
+
+    <section class="panel section" aria-labelledby="keys-title">
+      <h2 id="keys-title">Keyboard</h2>
+      <p class="hint">On the month screen, when you are not typing in a field:</p>
+      <ul class="keys">
+        <li><kbd>N</kbd> New entry</li>
+        <li><kbd>T</kbd> Transfer</li>
+        <li><kbd>←</kbd>{{ ' ' }}<kbd>→</kbd> Previous / next month</li>
+        <li><kbd>⌘</kbd>/<kbd>Ctrl</kbd>{{ ' ' }}<kbd>Z</kbd> Undo the last delete</li>
+      </ul>
+    </section>
+  </div>
+
+  <aside class="panel preview" aria-label="Preview">
+    <span class="hint">Preview</span>
+    <span class="preview__title">October 2026</span>
+    <span class="preview__amount num">€1,632.00 distributed</span>
+    <svg
+      viewBox="0 0 300 120"
+      class="preview__chart"
+      role="img"
+      aria-label="Expense €1,094, saving €388, investment €150"
+    >
+      <defs>
+        <pattern
+          id="pref-lines"
+          width="8"
+          height="8"
+          patternUnits="userSpaceOnUse"
+          patternTransform="rotate(45)"
+        >
+          <line x1="0" y1="0" x2="0" y2="8" class="pattern-ink" stroke-width="2.5" />
+        </pattern>
+        <pattern id="pref-dots" width="8" height="8" patternUnits="userSpaceOnUse">
+          <circle cx="4" cy="4" r="1.6" class="pattern-ink" />
+        </pattern>
+      </defs>
+      <rect x="0" y="10" width="200" height="26" rx="3" style="fill: var(--kind-expense)" />
+      <rect x="0" y="48" width="71" height="26" rx="3" style="fill: var(--kind-saving)" />
+      <rect x="0" y="86" width="27" height="26" rx="3" style="fill: var(--kind-investment)" />
+      @if (current().patterns) {
+        <rect x="0" y="48" width="71" height="26" rx="3" fill="url(#pref-lines)" />
+        <rect x="0" y="86" width="27" height="26" rx="3" fill="url(#pref-dots)" />
+      }
+      <text x="210" y="28" class="preview__label">Expense</text>
+      <text x="81" y="66" class="preview__label">Saving</text>
+      <text x="37" y="104" class="preview__label">Investment</text>
+    </svg>
+    <span class="hint">{{ motionText() }}</span>
+  </aside>
+</div>

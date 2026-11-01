@@ -1,3 +1,5 @@
+@use '../../shared/design-tokens/breakpoints' as bp;
+
 :host {
   display: flex;
   flex-direction: column;
@@ -68,7 +70,7 @@
 
 .totals {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: var(--space-3);
 }
 
@@ -238,6 +240,11 @@
     margin-bottom: var(--space-3);
     font-size: var(--text-m);
   }
+
+  app-quick-entry {
+    display: block;
+    margin-bottom: var(--space-4);
+  }
 }
 
 .entry {
@@ -266,4 +273,19 @@
 
 .entry__amount--in {
   color: var(--kind-investment);
+}
+
+/* Phones: two totals per row with smaller figures. */
+@include bp.phone {
+  .total {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .total--accent {
+    grid-column: 1 / -1;
+  }
+
+  .total__value {
+    font-size: 1.25rem;
+  }
 }

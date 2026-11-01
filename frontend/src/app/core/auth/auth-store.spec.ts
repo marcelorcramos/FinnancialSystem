@@ -70,6 +70,51 @@ describe('AuthStore', () => {
     expect(store.accessToken()).toBe('access-1');
   });
 
+  async function signIn() {
+    const done = firstValueFrom(store.login({ email: USER.email, password: 'Old-pass-1!' }));
+    http.expectOne(`${API}/auth/login`).flush(tokens('access-1'));
+    http.expectOne(`${API}/users/me`).flush(USER);
+    await done;
+  }
+
+  it('saves the profile and keeps the new user', async () => {
+    await signIn();
+    const result = firstValueFrom(store.updateProfile({ name: 'Ana Silva' }));
+    const patch = http.expectOne(`${API}/users/me`);
+    expect(patch.request.method).toBe('PATCH');
+    expect(patch.request.body).toEqual({ name: 'Ana Silva' });
+    patch.flush({ ...USER, name: 'Ana Silva' });
+    await result;
+    expect(store.user()?.name).toBe('Ana Silva');
+  });
+
+  it('changes the password, then signs this session in again with it', async () => {
+    await signIn();
+    const result = firstValueFrom(store.changePassword('Old-pass-1!', 'New-pass-2!'));
+    const change = http.expectOne(`${API}/users/me/password`);
+    expect(change.request.body).toEqual({
+      current_password: 'Old-pass-1!',
+      new_password: 'New-pass-2!',
+    });
+    change.flush(null, { status: 204, statusText: 'No Content' });
+    const login = http.expectOne(`${API}/auth/login`);
+    expect(login.request.body).toEqual({ email: USER.email, password: 'New-pass-2!' });
+    login.flush(tokens('access-2'));
+    http.expectOne(`${API}/users/me`).flush(USER);
+    await result;
+    expect(store.accessToken()).toBe('access-2');
+  });
+
+  it('signs out the other devices with the refresh cookie', async () => {
+    await signIn();
+    const result = firstValueFrom(store.logoutOthers(), { defaultValue: undefined });
+    const request = http.expectOne(`${API}/auth/logout-others`);
+    expect(request.request.withCredentials).toBe(true);
+    request.flush(null, { status: 204, statusText: 'No Content' });
+    await result;
+    expect(store.isAuthenticated()).toBe(true);
+  });
+
   it('does not log in when the credentials are rejected', async () => {
     const result = firstValueFrom(store.login({ email: USER.email, password: 'wrong' }));
     http

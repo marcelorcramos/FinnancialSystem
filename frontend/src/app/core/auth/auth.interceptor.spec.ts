@@ -119,12 +119,21 @@ describe('authInterceptor', () => {
     await expect(result).rejects.toMatchObject({ status: 500 });
   });
 
-  it('leaves /auth endpoints alone (a 401 on login is bad credentials)', async () => {
+  it('leaves the public /auth endpoints alone (a 401 on login is bad credentials)', async () => {
     const result = firstValueFrom(client.post(`${API}/auth/login`, {}));
     const req = http.expectOne(`${API}/auth/login`);
     expect(req.request.headers.has('Authorization')).toBe(false);
     req.flush(null, unauthorized);
 
     await expect(result).rejects.toMatchObject({ status: 401 });
+  });
+
+  it('sends the token to /auth/logout-others, which needs the session too', async () => {
+    signIn();
+    const result = firstValueFrom(client.post(`${API}/auth/logout-others`, null));
+    const req = http.expectOne(`${API}/auth/logout-others`);
+    expect(req.request.headers.get('Authorization')).toBe('Bearer access-1');
+    req.flush(null, { status: 204, statusText: 'No Content' });
+    await result;
   });
 });

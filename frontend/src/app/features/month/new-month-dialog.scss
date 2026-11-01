@@ -106,7 +106,8 @@
 .review__head,
 .review__row {
   display: grid;
-  grid-template-columns: 1fr 96px 180px 44px;
+  // minmax(0, 1fr): a long label name wraps instead of pushing into the stepper.
+  grid-template-columns: minmax(0, 1fr) 96px 180px 44px;
   align-items: center;
   gap: var(--space-2);
 }
@@ -144,6 +145,7 @@
   flex-direction: column;
   min-width: 0;
   font-weight: 600;
+  overflow-wrap: break-word;
 }
 
 .review__delta {
@@ -239,4 +241,19 @@
   display: flex;
   justify-content: flex-end;
   gap: var(--space-2);
+}
+
+// Phones: the label takes its own line, then the previous value, the stepper and remove.
+@media (max-width: 480px) {
+  .review__head {
+    display: none;
+  }
+
+  .review__row {
+    grid-template-columns: minmax(0, 1fr) auto 44px;
+  }
+
+  .review__label {
+    grid-column: 1 / -1;
+  }
 }

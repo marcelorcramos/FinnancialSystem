@@ -14,7 +14,7 @@ import {
 
 import { AuthApi } from './auth-api';
 import { withCrossTabLock } from './cross-tab-lock';
-import { LoginRequest, RegisterRequest, UserRead } from './auth.models';
+import { LoginRequest, ProfileUpdate, RegisterRequest, UserRead } from './auth.models';
 
 export const LOGIN_PATH = '/auth/login';
 const REFRESH_LOCK = 'finnancial.auth.refresh';
@@ -104,6 +104,26 @@ export class AuthStore {
         void this.router.navigateByUrl(LOGIN_PATH);
       }),
     );
+  }
+
+  updateProfile(changes: ProfileUpdate): Observable<UserRead> {
+    return this.api.updateMe(changes).pipe(tap((user) => this._user.set(user)));
+  }
+
+  /**
+   * Changes the password. The API ends every session, so this one signs in
+   * again with the new password and only the other devices are signed out.
+   */
+  changePassword(currentPassword: string, newPassword: string): Observable<UserRead> {
+    const email = this._user()?.email;
+    if (!email) return throwError(() => new Error('Not signed in'));
+    return this.api
+      .changePassword(currentPassword, newPassword)
+      .pipe(switchMap(() => this.login({ email, password: newPassword })));
+  }
+
+  logoutOthers(): Observable<void> {
+    return this.api.logoutOthers();
   }
 
   /** Called when the API rejects us and the refresh cookie no longer works. */

@@ -174,12 +174,15 @@
         <app-evolution
           [labels]="summary.labels"
           [preferred]="v.labels[0]?.id ?? null"
-          [refresh]="v"
+          [refresh]="summary"
         />
       }
 
       <section class="panel recent" aria-labelledby="recent-title">
-        <h2 id="recent-title">Recent entries</h2>
+        <h2 id="recent-title">Entries</h2>
+        @if (!sheet()?.closed_at && summary()) {
+          <app-quick-entry [summary]="summary()!" (added)="entryAdded($event)" />
+        }
         @for (entry of v.recent; track entry.id) {
           <div class="entry">
             <span class="num entry__date">{{ entry.date }}</span>
@@ -203,6 +206,15 @@
           </div>
         } @empty {
           <p class="muted">No entries yet.</p>
+        }
+        @if (v.entryCount > 6) {
+          <button
+            type="button"
+            class="btn btn--quiet more"
+            (click)="showAllEntries.set(!showAllEntries())"
+          >
+            {{ showAllEntries() ? 'Show the latest 6' : 'Show all ' + v.entryCount + ' entries' }}
+          </button>
         }
       </section>
     }

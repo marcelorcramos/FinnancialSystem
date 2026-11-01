@@ -16,12 +16,7 @@ export type DeleteLabelChoice = { action: 'reassign'; targetId: string } | { act
   selector: 'app-delete-label-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section
-      class="dialog"
-      role="alertdialog"
-      aria-labelledby="delete-title"
-      aria-describedby="delete-text"
-    >
+    <section class="dialog">
       <h2 id="delete-title">Delete “{{ data.label.name }}”?</h2>
       <p id="delete-text">
         This label has entries. Money never disappears, so its entries move to another label first.

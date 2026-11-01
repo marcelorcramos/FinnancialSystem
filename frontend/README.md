@@ -17,6 +17,7 @@ Node `^22.22.3 || ^24.15.0` (see `.nvmrc`).
 | `npm run lint` | ESLint (angular-eslint) |
 | `npm test` / `npm run test:ci` | Unit tests (Vitest), watch mode / single run |
 | `npm run build` | Production build into `dist/` |
+| `npm run e2e` | Playwright end-to-end tests (`e2e/`, desktop and phone) against the Compose stack on http://localhost:8080; `E2E_BASE_URL=http://localhost:4200` runs them against the dev server. First time: `npx playwright install chromium` |
 | `docker build -t finnancial-frontend .` | nginx image; `API_UPSTREAM` (default `http://api:8000`) sets where `/api` goes |
 
 ## Structure
