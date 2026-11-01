@@ -8,12 +8,8 @@ on:
       - 'backend/**'
       - 'deploy/**'
       - '.github/workflows/e2e.yml'
+  # Every pull request runs it: it is a required check on main.
   pull_request:
-    paths:
-      - 'frontend/**'
-      - 'backend/**'
-      - 'deploy/**'
-      - '.github/workflows/e2e.yml'
 
 permissions:
   contents: read
