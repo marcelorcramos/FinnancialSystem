@@ -252,3 +252,26 @@ Windows are rolling and include the current month (in the user's time zone). Del
 - `total` is the net sum of every matching entry (transfers out subtract), not just this page, and equals the `/reports/summary` total. `count` is the number of matching entries across all pages.
 - `counterpart_label_id` names the other label of a transfer even when that label is outside the filter.
 - Sorted by `occurred_on`, newest first; ties keep creation order, newest first.
+
+## Limits
+
+A limit is a maximum for a label: a default for every month, or one for a single month that replaces the default. Limits only warn, never block a write.
+
+| Method | Route | Body | Response |
+|---|---|---|---|
+| GET | `/limits` | | 200 `Limit[]` (defaults have `month_id: null`) |
+| PUT | `/labels/{label_id}/limit` | `{amount}` | 200 `Limit`: creates or changes the default |
+| DELETE | `/labels/{label_id}/limit` | | 204 |
+| PUT | `/months/{month_id}/limits/{label_id}` | `{amount}` | 200 `Limit`; 409 `month_closed` on a closed month |
+| DELETE | `/months/{month_id}/limits/{label_id}` | | 204: the default applies again |
+| GET | `/months/{month_id}/limits` | | 200 `LimitStatus[]`, most used first |
+
+```json
+{ "label_id": "…", "name": "Food", "color": "#FFB74D", "limit_id": "…",
+  "limit": "300.00", "source": "default", "total": "250.00", "remaining": "50.00",
+  "percent": "83.33", "level": "warning" }
+```
+
+- `level` is `warning` from 80% and `exceeded` from 100%, compared exactly (`percent` is rounded for display), otherwise `null`.
+- `total` is the label's month total, as in the month summary.
+

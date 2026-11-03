@@ -19,3 +19,8 @@ class AuditAction(StrEnum):
     UPDATE = "update"
     DELETE = "delete"
     RESTORE = "restore"
+
+
+class AlertLevel(StrEnum):
+    WARNING = "warning"  # 80% of the limit or more
+    EXCEEDED = "exceeded"  # 100% or more

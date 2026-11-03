@@ -74,6 +74,12 @@ Icon names are Material Symbols for now; they will change with the frontend rede
 | Recurring entries | Opt-in per user (`auto_new_month`, off by default: a month appearing on its own could surprise). Celery beat runs `create_due_months` every hour; for each opted-in user whose own month (in their time zone) has no sheet yet, it creates it copying the previous month's allocations and recurring incomes (rent, salary), like **New month** with both copies ticked. The first month is always created by hand, and running it again changes nothing. Celery uses RabbitMQ as broker, late acks, and no result backend. |
 | Processes | Compose runs the API image as separate processes: `api`, `relay`, `consumer-cache`, `consumer-limits`, `consumer-goals`, `worker` and `beat`; the background ones start once the API is healthy (migrations done). RabbitMQ 4 refuses transient non-exclusive queues, so the Celery worker runs without remote control, mingle, gossip and event heartbeats. Queue arguments cannot change once a queue exists: changing them means deleting and recreating the queue. |
 
+## Limits, alerts and goals (2026-11-03)
+
+| Topic | Decision |
+|---|---|
+| Limits | Per label: a default amount for every month (`month_id` null) and optional amounts for single months that replace it. They are compared with the label's month total (the same total the month screen shows) and only warn, never block. Thresholds are fixed: `warning` from 80%, `exceeded` from 100%, compared exactly. A closed month's limits cannot change. |
+
 ## Future ideas
 
 Ideas left for later live in [`docs/FUTURE_IMPLEMENTATIONS.md`](FUTURE_IMPLEMENTATIONS.md).
