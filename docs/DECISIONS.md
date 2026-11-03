@@ -74,6 +74,15 @@ Icon names are Material Symbols for now; they will change with the frontend rede
 | Recurring entries | Opt-in per user (`auto_new_month`, off by default: a month appearing on its own could surprise). Celery beat runs `create_due_months` every hour; for each opted-in user whose own month (in their time zone) has no sheet yet, it creates it copying the previous month's allocations and recurring incomes (rent, salary), like **New month** with both copies ticked. The first month is always created by hand, and running it again changes nothing. Celery uses RabbitMQ as broker, late acks, and no result backend. |
 | Processes | Compose runs the API image as separate processes: `api`, `relay`, `consumer-cache`, `consumer-limits`, `consumer-goals`, `worker` and `beat`; the background ones start once the API is healthy (migrations done). RabbitMQ 4 refuses transient non-exclusive queues, so the Celery worker runs without remote control, mingle, gossip and event heartbeats. Queue arguments cannot change once a queue exists: changing them means deleting and recreating the queue. |
 
+## Limits, alerts and goals (2026-11-03)
+
+| Topic | Decision |
+|---|---|
+| Limits | Per label: a default amount for every month (`month_id` null) and optional amounts for single months that replace it. They are compared with the label's month total (the same total the month screen shows) and only warn, never block. Thresholds are fixed: `warning` from 80%, `exceeded` from 100%, compared exactly. A closed month's limits cannot change. |
+| Alerts | Raised by the `limits` consumer on `entry.*` and `limit.*` events (a default limit change checks every open month). One row per label, month and level (`warning`, `exceeded`), never repeated, with the limit and total at that moment. Pushed live with Server-Sent Events: the consumer publishes to Redis channel `alerts:<user>` only after its transaction commits, and `GET /alerts/stream` relays it. SSE over WebSocket: one-way is all alerts need, and it goes through nginx and plain HTTP. The stream gives its database connection back before streaming. |
+| Goals | A goal gathers money in a label: progress is the label's balance over all months (or a manual amount). One active goal per label. "You need to save €X/month" = remaining / months left, counting the current month and the deadline's month, rounded up to the cent so following it always reaches the target. A passed deadline without the target is `overdue`. The `goals` consumer (on `entry.*` and `goal.*` events) marks reached goals as completed; they stay in the history even if the balance drops later. |
+| Emergency fund | A goal of type `emergency_fund`: target = N months (1–24) of average expenses, averaged over the 6 complete months before the current one that have a sheet (months without a sheet do not pull the average down). Recomputed on every read, so it follows spending. |
+
 ## Future ideas
 
 Ideas left for later live in [`docs/FUTURE_IMPLEMENTATIONS.md`](FUTURE_IMPLEMENTATIONS.md).

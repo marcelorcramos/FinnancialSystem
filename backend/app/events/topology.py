@@ -19,8 +19,8 @@ DELIVERY_LIMIT = 10
 # Consumer queue -> event types it receives.
 BINDINGS: dict[str, tuple[str, ...]] = {
     "cache": ("entry.*", "income.*", "month.*", "label.*"),
-    "limits": ("entry.*",),
-    "goals": ("entry.*",),
+    "limits": ("entry.*", "limit.*"),
+    "goals": ("entry.*", "goal.*"),
 }
 
 
