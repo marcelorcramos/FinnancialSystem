@@ -1,0 +1,91 @@
+<section class="dialog">
+  <header class="head">
+    <h2 id="limit-title">Limit for {{ data.labelName }}</h2>
+    <button type="button" class="btn btn--icon btn--quiet" aria-label="Close" (click)="ref.close()">
+      <app-icon name="close" />
+    </button>
+  </header>
+
+  <p class="muted">
+    A limit only warns you: at 80% and when it is passed. You can still put in as much as you want.
+  </p>
+
+  @if (error(); as message) {
+    <div class="alert" role="alert">
+      <app-icon name="alert" [size]="18" />
+      <span>{{ message }}</span>
+    </div>
+  }
+
+  @if (loading()) {
+    <p class="muted" role="status">Loading…</p>
+  } @else {
+    <fieldset class="group">
+      <legend>Applies to</legend>
+      <div class="origins">
+        <label class="choice">
+          <input
+            type="radio"
+            name="scope"
+            [checked]="scope() === 'default'"
+            (change)="setScope('default')"
+          />
+          <strong>Every month</strong>
+          <span>
+            @if (defaultLimit(); as limit) {
+              Now {{ money(limit.amount) }}.
+            }
+            Months without their own limit use this one.
+          </span>
+        </label>
+        <label class="choice">
+          <input
+            type="radio"
+            name="scope"
+            [checked]="scope() === 'month'"
+            (change)="setScope('month')"
+          />
+          <strong>Only {{ data.monthTitle }}</strong>
+          <span>
+            @if (monthLimit(); as limit) {
+              Now {{ money(limit.amount) }}.
+            }
+            Replaces the monthly limit for this month.
+          </span>
+        </label>
+      </div>
+    </fieldset>
+
+    <div class="field">
+      <label for="limit-amount">Limit (€)</label>
+      <input
+        id="limit-amount"
+        class="field__input num"
+        inputmode="decimal"
+        placeholder="300.00"
+        aria-describedby="limit-preview"
+        [value]="amountText()"
+        [attr.aria-invalid]="amountText() !== '' && !cents()"
+        (input)="amountText.set($any($event.target).value)"
+      />
+      <span id="limit-preview" class="muted">{{ preview() ?? ' ' }}</span>
+    </div>
+  }
+
+  <footer class="actions">
+    @if (current()) {
+      <button type="button" class="btn btn--quiet" [disabled]="pending()" (click)="remove()">
+        Remove {{ scope() === 'month' ? 'this month’s limit' : 'monthly limit' }}
+      </button>
+    }
+    <button type="button" class="btn" (click)="ref.close()">Cancel</button>
+    <button
+      type="button"
+      class="btn btn--primary"
+      [disabled]="!cents() || pending() || loading()"
+      (click)="save()"
+    >
+      Save limit
+    </button>
+  </footer>
+</section>

@@ -13,7 +13,7 @@ import { Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
 import { apiErrorMessage } from '../../core/api/api-errors';
-import { EntryListItem, MonthRead, MonthSummary } from '../../core/api/types';
+import { EntryListItem, LimitStatus, MonthRead, MonthSummary } from '../../core/api/types';
 import { readPreference, writePreference } from '../../core/storage/preferences';
 import { Donut } from '../../shared/charts/donut';
 import { Evolution } from './evolution';
@@ -22,6 +22,8 @@ import { dialogA11y } from '../../shared/ui/dialog-a11y';
 import { Icon, IconName, isIconName } from '../../shared/ui/icon';
 import { ToastService } from '../../shared/ui/toast.service';
 import { AddMoneyData, AddMoneyDialog } from './add-money-dialog';
+import { LimitDialog, LimitDialogData } from './limit-dialog';
+import { LimitsApi } from './limits-api';
 import { NewMonthData, NewMonthDialog } from './new-month-dialog';
 import { PlanMonthData, PlanMonthDialog } from './plan-month-dialog';
 import { monthPath, monthTitle, shiftMonth } from './month-route';
@@ -44,6 +46,7 @@ const DONUT_MODE_KEY = 'fs.month.donut';
 })
 export default class MonthPage {
   private readonly api = inject(MonthsApi);
+  private readonly limitsApi = inject(LimitsApi);
   private readonly dialog = inject(Dialog);
   private readonly router = inject(Router);
   private readonly toasts = inject(ToastService);
@@ -56,12 +59,18 @@ export default class MonthPage {
   protected readonly sheet = signal<MonthRead | null>(null);
   protected readonly summary = signal<MonthSummary | null>(null);
   private readonly entries = signal<EntryListItem[]>([]);
+  private readonly limits = signal<LimitStatus[]>([]);
   protected readonly showAllLabels = signal(false);
   protected readonly showAllEntries = signal(false);
   protected readonly view = computed<MonthView | null>(() => {
     const summary = this.summary();
     if (!summary) return null;
-    return buildMonthView(summary, this.entries(), this.showAllEntries() ? Infinity : 6);
+    return buildMonthView(
+      summary,
+      this.entries(),
+      this.showAllEntries() ? Infinity : 6,
+      this.limits(),
+    );
   });
   protected readonly donutMode = signal<DonutMode>(
     readPreference(DONUT_MODE_KEY) === 'detailed' ? 'detailed' : 'overview',
@@ -135,6 +144,22 @@ export default class MonthPage {
       .closed.subscribe((done) => {
         if (!done) return;
         this.toasts.show('Money added');
+        this.reload();
+      });
+  }
+
+  /** Sets the label's limit, for every month or only this one. */
+  protected setLimit(labelId: string, labelName: string, total: string): void {
+    const sheet = this.sheet();
+    if (!sheet) return;
+    this.dialog
+      .open<boolean, LimitDialogData>(LimitDialog, {
+        data: { monthId: sheet.id, monthTitle: this.title(), labelId, labelName, total },
+        ...dialogA11y('limit-title'),
+      })
+      .closed.subscribe((saved) => {
+        if (!saved) return;
+        this.toasts.show(`Limit for ${labelName} saved`);
         this.reload();
       });
   }
@@ -240,9 +265,14 @@ export default class MonthPage {
           this.state.set('missing');
           return;
         }
-        forkJoin([this.api.summary(sheet.id), this.api.entries(sheet.id)]).subscribe({
-          next: ([summary, entries]) => {
+        forkJoin([
+          this.api.summary(sheet.id),
+          this.api.entries(sheet.id),
+          this.limitsApi.status(sheet.id),
+        ]).subscribe({
+          next: ([summary, entries, limits]) => {
             this.entries.set(entries);
+            this.limits.set(limits);
             this.summary.set(summary);
             this.state.set('ready');
           },
