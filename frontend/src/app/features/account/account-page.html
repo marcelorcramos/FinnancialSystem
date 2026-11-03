@@ -75,6 +75,28 @@
             >Sets what "this month" means in reports</span
           >
         </div>
+        <div class="switch-row grid__full">
+          <span class="switch-row__text">
+            <span id="account-auto-month" class="switch-row__title"
+              >Start each month automatically</span
+            >
+            <span id="account-auto-month-hint" class="hint">
+              On the first day of a month, in your time zone, create it from the previous one: same
+              distribution and recurring incomes (rent, salary). You can still change it.
+            </span>
+          </span>
+          <button
+            type="button"
+            role="switch"
+            class="switch"
+            aria-labelledby="account-auto-month"
+            aria-describedby="account-auto-month-hint"
+            [attr.aria-checked]="autoNewMonth()"
+            (click)="autoNewMonth.set(!autoNewMonth())"
+          >
+            <span class="switch__knob" aria-hidden="true"></span>
+          </button>
+        </div>
         @if (profileError(); as message) {
           <p class="error" role="alert">{{ message }}</p>
         }

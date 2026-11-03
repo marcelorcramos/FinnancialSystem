@@ -9,6 +9,8 @@ export interface UserRead {
   locale: string;
   timezone: string;
   email_verified_at: string | null;
+  /** Create each month automatically from the previous one. */
+  auto_new_month: boolean;
 }
 
 export interface RegisterRequest {
@@ -31,4 +33,5 @@ export interface TokenResponse {
 export interface ProfileUpdate {
   name?: string;
   timezone?: string;
+  auto_new_month?: boolean;
 }
