@@ -145,10 +145,37 @@
               <span class="label-row__text">
                 <span class="label-row__name">{{ label.name }}</span>
                 <span class="label-row__detail">{{ label.detail }}</span>
+                @if (label.limit; as limit) {
+                  <span class="limit" [attr.data-level]="limit.level">
+                    <span class="limit__track" aria-hidden="true">
+                      <span class="limit__fill" [style.width.%]="limit.width"></span>
+                    </span>
+                    <span class="limit__text">
+                      @if (limit.level === 'exceeded') {
+                        <app-icon name="alert" [size]="14" />
+                        Over the limit:
+                      } @else if (limit.level === 'warning') {
+                        <app-icon name="alert" [size]="14" />
+                        Near the limit:
+                      } @else {
+                        Limit:
+                      }
+                      {{ limit.text }}
+                    </span>
+                  </span>
+                }
               </span>
               <span class="num label-row__total">{{ label.total }}</span>
               <span class="num label-row__share">{{ label.share }}</span>
               @if (!sheet()?.closed_at) {
+                <button
+                  type="button"
+                  class="btn btn--icon btn--quiet"
+                  [attr.aria-label]="'Limit for ' + label.name"
+                  (click)="setLimit(label.id, label.name, label.totalValue)"
+                >
+                  <app-icon name="gauge" [size]="18" />
+                </button>
                 <button
                   type="button"
                   class="btn btn--icon btn--quiet"

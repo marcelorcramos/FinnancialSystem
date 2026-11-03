@@ -3,10 +3,17 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
-import { EntryListItem, MonthRead, MonthSummary, ReportSeries } from '../../core/api/types';
+import {
+  EntryListItem,
+  LimitStatus,
+  MonthRead,
+  MonthSummary,
+  ReportSeries,
+} from '../../core/api/types';
 import { ToastService } from '../../shared/ui/toast.service';
 import MonthPage from './month-page';
 import { ReportsApi } from '../reports/reports-api';
+import { LimitsApi } from './limits-api';
 import { MonthsApi } from './months-api';
 import { PlanMonthDialog } from './plan-month-dialog';
 
@@ -75,6 +82,10 @@ describe('MonthPage', () => {
   let fixture: ComponentFixture<MonthPage>;
   let el: HTMLElement;
   let api: Record<string, ReturnType<typeof vi.fn>>;
+  let limitsApi: { status: ReturnType<typeof vi.fn> };
+  let limitsApiFailing = false;
+
+  afterEach(() => (limitsApiFailing = false));
   let dialog: { open: ReturnType<typeof vi.fn>; openDialogs: unknown[] };
 
   async function render(find = vi.fn(() => of(OCTOBER))) {
@@ -89,6 +100,11 @@ describe('MonthPage', () => {
       reopen: vi.fn(() => of(OCTOBER)),
     };
     dialog = { open: vi.fn(() => ({ closed: of(OCTOBER) })), openDialogs: [] };
+    limitsApi = {
+      status: vi.fn(() =>
+        limitsApiFailing ? throwError(() => new Error('limits are down')) : of([] as LimitStatus[]),
+      ),
+    };
     TestBed.configureTestingModule({
       imports: [MonthPage],
       providers: [
@@ -96,6 +112,7 @@ describe('MonthPage', () => {
         { provide: MonthsApi, useValue: api },
         { provide: Dialog, useValue: dialog },
         { provide: ReportsApi, useValue: { series: vi.fn(() => of(SERIES)) } },
+        { provide: LimitsApi, useValue: limitsApi },
       ],
     });
     fixture = TestBed.createComponent(MonthPage);
@@ -275,6 +292,55 @@ describe('MonthPage', () => {
     const undo = vi.spyOn(toasts, 'undoLatest').mockReturnValue(true);
     press('z', { ctrlKey: true });
     expect(undo).toHaveBeenCalledOnce();
+  });
+
+  it('shows how much of its limit a label used and opens the limit dialog', async () => {
+    await render();
+    limitsApi.status.mockReturnValue(
+      of([
+        {
+          label_id: 'food',
+          name: 'Food',
+          color: '#FFB74D',
+          limit_id: 'l1',
+          limit: '250.00',
+          source: 'default',
+          total: '212.00',
+          remaining: '38.00',
+          percent: '84.80',
+          level: 'warning',
+        },
+      ] as LimitStatus[]),
+    );
+    fixture.componentInstance['reload']();
+    await fixture.whenStable();
+
+    const usage = el.querySelector('.limit');
+    expect(usage?.getAttribute('data-level')).toBe('warning');
+    expect(usage?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Near the limit: €212.00 of €250.00 · 85%',
+    );
+    el.querySelector<HTMLButtonElement>('[aria-label="Limit for Food"]')!.click();
+    expect(dialog.open).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        data: {
+          monthId: 'm10',
+          monthTitle: 'October 2026',
+          labelId: 'food',
+          labelName: 'Food',
+          total: '212.00',
+        },
+      }),
+    );
+  });
+
+  it('still shows the month when the limits cannot load', async () => {
+    limitsApiFailing = true;
+    await render();
+    expect(el.querySelector('h1')?.textContent).toBe('October 2026');
+    expect(el.querySelector('.limit')).toBeNull();
+    expect(el.querySelectorAll('.label-row').length).toBeGreaterThan(0);
   });
 
   it('reports a failure to load', async () => {

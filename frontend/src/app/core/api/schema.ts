@@ -72,6 +72,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/auth/logout-others': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Logout Others
+     * @description Sign out every other device; this session (its refresh cookie) stays signed in.
+     */
+    post: operations['logout_others_api_v1_auth_logout_others_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/users/me': {
     parameters: {
       query?: never;
@@ -575,6 +595,221 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/limits': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Limits
+     * @description Every default and per-month limit of the user.
+     */
+    get: operations['list_limits_api_v1_limits_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/labels/{label_id}/limit': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Set Default Limit
+     * @description The label's limit for every month that has none of its own.
+     */
+    put: operations['set_default_limit_api_v1_labels__label_id__limit_put'];
+    post?: never;
+    /** Remove Default Limit */
+    delete: operations['remove_default_limit_api_v1_labels__label_id__limit_delete'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/months/{month_id}/limits/{label_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Set Month Limit
+     * @description A limit for this month only, replacing the default one.
+     */
+    put: operations['set_month_limit_api_v1_months__month_id__limits__label_id__put'];
+    post?: never;
+    /** Remove Month Limit */
+    delete: operations['remove_month_limit_api_v1_months__month_id__limits__label_id__delete'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/months/{month_id}/limits': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Month Limits
+     * @description Labels with a limit this month, most used first.
+     */
+    get: operations['month_limits_api_v1_months__month_id__limits_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/alerts': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Alerts
+     * @description The 50 newest alerts (or only the unseen ones).
+     */
+    get: operations['list_alerts_api_v1_alerts_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/alerts/seen': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Mark All Seen */
+    post: operations['mark_all_seen_api_v1_alerts_seen_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/alerts/{alert_id}/seen': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Mark Seen */
+    post: operations['mark_seen_api_v1_alerts__alert_id__seen_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/alerts/stream': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Stream Alerts
+     * @description Server-Sent Events: `event: alert` with an AlertRead each time a limit is reached.
+     *
+     *     Send the access token as a Bearer header (read the stream with fetch). A comment
+     *     line every 15 s keeps proxies from closing an idle connection.
+     */
+    get: operations['stream_alerts_api_v1_alerts_stream_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/goals': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Goals
+     * @description Active goals with their pace, and the history of completed ones.
+     */
+    get: operations['list_goals_api_v1_goals_get'];
+    put?: never;
+    /** Create Goal */
+    post: operations['create_goal_api_v1_goals_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/goals/{goal_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete Goal */
+    delete: operations['delete_goal_api_v1_goals__goal_id__delete'];
+    options?: never;
+    head?: never;
+    /** Update Goal */
+    patch: operations['update_goal_api_v1_goals__goal_id__patch'];
+    trace?: never;
+  };
+  '/api/v1/goals/{goal_id}/restore': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Restore Goal */
+    post: operations['restore_goal_api_v1_goals__goal_id__restore_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/health': {
     parameters: {
       query?: never;
@@ -671,6 +906,55 @@ export interface components {
       created_at: string;
       /** Source */
       source: string;
+    };
+    /**
+     * AlertLevel
+     * @enum {string}
+     */
+    AlertLevel: 'warning' | 'exceeded';
+    /** AlertRead */
+    AlertRead: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      level: components['schemas']['AlertLevel'];
+      /**
+       * Label Id
+       * Format: uuid
+       */
+      label_id: string;
+      /** Label Name */
+      label_name: string;
+      /** Color */
+      color: string;
+      /**
+       * Month Id
+       * Format: uuid
+       */
+      month_id: string;
+      /** Year */
+      year: number;
+      /** Month */
+      month: number;
+      /**
+       * Limit Amount
+       * @description The limit when the alert was raised
+       */
+      limit_amount: string;
+      /**
+       * Total
+       * @description The label's month total when the alert was raised
+       */
+      total: string;
+      /** Seen At */
+      seen_at: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
     };
     /** AllocationSet */
     AllocationSet: {
@@ -797,6 +1081,130 @@ export interface components {
       source?: string | null;
       /** Note */
       note?: string | null;
+    };
+    /** GoalCreate */
+    GoalCreate: {
+      /**
+       * Label Id
+       * Format: uuid
+       */
+      label_id: string;
+      /** @default normal */
+      type: components['schemas']['GoalType'];
+      /**
+       * Target Amount
+       * @description Required for normal
+       */
+      target_amount?: number | string | null;
+      /**
+       * Months Of Expenses
+       * @description Required for emergency_fund (e.g. 6)
+       */
+      months_of_expenses?: number | null;
+      /** Deadline */
+      deadline?: string | null;
+      /**
+       * Manual Progress
+       * @description Set to track progress by hand instead of the label balance
+       */
+      manual_progress?: number | string | null;
+    };
+    /** GoalList */
+    GoalList: {
+      /** Active */
+      active: components['schemas']['GoalRead'][];
+      /**
+       * Completed
+       * @description History of reached goals, newest first
+       */
+      completed: components['schemas']['GoalRead'][];
+    };
+    /** GoalRead */
+    GoalRead: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Label Id
+       * Format: uuid
+       */
+      label_id: string;
+      /** Label Name */
+      label_name: string;
+      /** Color */
+      color: string;
+      /** Icon */
+      icon: string;
+      type: components['schemas']['GoalType'];
+      /**
+       * Target Amount
+       * @description The fixed target, or for the emergency fund N months of average expenses (null until there is a complete month to average)
+       */
+      target_amount: string | null;
+      /** Months Of Expenses */
+      months_of_expenses: number | null;
+      /**
+       * Average Expenses
+       * @description Emergency fund: monthly average used
+       */
+      average_expenses: string | null;
+      /** Deadline */
+      deadline: string | null;
+      /** Manual Progress */
+      manual_progress: string | null;
+      /**
+       * Progress
+       * @description manual_progress, or the label's balance over all months
+       */
+      progress: string;
+      /** Remaining */
+      remaining: string;
+      /** Percent */
+      percent: string;
+      /**
+       * Months Left
+       * @description Months to save in, the current one included
+       */
+      months_left: number | null;
+      /** Days Left */
+      days_left: number | null;
+      /**
+       * Per Month
+       * @description What to save each month to finish on time
+       */
+      per_month: string | null;
+      /** Reached */
+      reached: boolean;
+      /** Overdue */
+      overdue: boolean;
+      /** Completed At */
+      completed_at: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+    };
+    /**
+     * GoalType
+     * @enum {string}
+     */
+    GoalType: 'normal' | 'emergency_fund';
+    /**
+     * GoalUpdate
+     * @description Only the fields sent change; send null to clear deadline or manual_progress.
+     */
+    GoalUpdate: {
+      /** Target Amount */
+      target_amount?: number | string | null;
+      /** Months Of Expenses */
+      months_of_expenses?: number | null;
+      /** Deadline */
+      deadline?: string | null;
+      /** Manual Progress */
+      manual_progress?: number | string | null;
     };
     /** HTTPValidationError */
     HTTPValidationError: {
@@ -941,6 +1349,75 @@ export interface components {
       color?: string | null;
       /** Icon */
       icon?: string | null;
+    };
+    /** LimitRead */
+    LimitRead: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Label Id
+       * Format: uuid
+       */
+      label_id: string;
+      /**
+       * Month Id
+       * @description null = the label's default limit
+       */
+      month_id: string | null;
+      /** Amount */
+      amount: string;
+    };
+    /** LimitSet */
+    LimitSet: {
+      /** Amount */
+      amount: number | string;
+    };
+    /**
+     * LimitStatus
+     * @description How much of its limit a label used in a month.
+     */
+    LimitStatus: {
+      /**
+       * Label Id
+       * Format: uuid
+       */
+      label_id: string;
+      /** Name */
+      name: string;
+      /** Color */
+      color: string;
+      /**
+       * Limit Id
+       * Format: uuid
+       */
+      limit_id: string;
+      /** Limit */
+      limit: string;
+      /**
+       * Source
+       * @description "month" (set for this month) or "default"
+       */
+      source: string;
+      /**
+       * Total
+       * @description The label's total in the month
+       */
+      total: string;
+      /**
+       * Remaining
+       * @description limit - total; negative when exceeded
+       */
+      remaining: string;
+      /**
+       * Percent
+       * @description Share of the limit used (2 decimals)
+       */
+      percent: string;
+      /** @description warning from 80%, exceeded from 100% */
+      level: components['schemas']['AlertLevel'] | null;
     };
     /** LoginRequest */
     LoginRequest: {
@@ -1416,6 +1893,11 @@ export interface components {
       timezone: string;
       /** Email Verified At */
       email_verified_at: string | null;
+      /**
+       * Auto New Month
+       * @description Create each month automatically from the previous one (rent, salary...)
+       */
+      auto_new_month: boolean;
     };
     /** UserUpdate */
     UserUpdate: {
@@ -1427,6 +1909,8 @@ export interface components {
       locale?: ('pt-PT' | 'en') | null;
       /** Timezone */
       timezone?: string | null;
+      /** Auto New Month */
+      auto_new_month?: boolean | null;
     };
     /** ValidationError */
     ValidationError: {
@@ -1548,6 +2032,35 @@ export interface operations {
     };
   };
   logout_api_v1_auth_logout_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: {
+        refresh_token?: string | null;
+      };
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  logout_others_api_v1_auth_logout_others_post: {
     parameters: {
       query?: never;
       header?: never;
@@ -2837,6 +3350,433 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['ReportEntries'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  list_limits_api_v1_limits_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LimitRead'][];
+        };
+      };
+    };
+  };
+  set_default_limit_api_v1_labels__label_id__limit_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        label_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['LimitSet'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LimitRead'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  remove_default_limit_api_v1_labels__label_id__limit_delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        label_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  set_month_limit_api_v1_months__month_id__limits__label_id__put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        month_id: string;
+        label_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['LimitSet'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LimitRead'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  remove_month_limit_api_v1_months__month_id__limits__label_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        month_id: string;
+        label_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  month_limits_api_v1_months__month_id__limits_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        month_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LimitStatus'][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  list_alerts_api_v1_alerts_get: {
+    parameters: {
+      query?: {
+        unseen?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AlertRead'][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  mark_all_seen_api_v1_alerts_seen_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  mark_seen_api_v1_alerts__alert_id__seen_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        alert_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  stream_alerts_api_v1_alerts_stream_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': unknown;
+        };
+      };
+    };
+  };
+  list_goals_api_v1_goals_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GoalList'];
+        };
+      };
+    };
+  };
+  create_goal_api_v1_goals_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['GoalCreate'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GoalRead'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  delete_goal_api_v1_goals__goal_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        goal_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  update_goal_api_v1_goals__goal_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        goal_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['GoalUpdate'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GoalRead'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  restore_goal_api_v1_goals__goal_id__restore_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        goal_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GoalRead'];
         };
       };
       /** @description Validation Error */

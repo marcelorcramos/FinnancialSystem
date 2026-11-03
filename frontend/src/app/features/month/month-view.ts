@@ -1,4 +1,10 @@
-import { EntryListItem, LabelSummary, MonthSummary } from '../../core/api/types';
+import {
+  AlertLevel,
+  EntryListItem,
+  LabelSummary,
+  LimitStatus,
+  MonthSummary,
+} from '../../core/api/types';
 import { DonutSegment } from '../../shared/charts/donut';
 import { formatMoney } from '../../shared/money/format-money';
 import { Kind } from '../../shared/money/kind';
@@ -14,9 +20,31 @@ export interface LabelRow {
   color: string;
   icon: string;
   total: string;
+  /** The API decimal, for the limit dialog. */
+  totalValue: string;
   share: string;
   /** "Base €200.00 · +€12.00 from transfers", the base + adjustments story. */
   detail: string;
+  /** Usage of the label's limit this month, when it has one. */
+  limit: LimitUsage | null;
+}
+
+export interface LimitUsage {
+  /** "€250.00 of €300.00 · 83%" */
+  text: string;
+  /** Bar width, capped at 100. */
+  width: number;
+  level: AlertLevel | null;
+}
+
+function limitUsage(status: LimitStatus | undefined): LimitUsage | null {
+  if (!status) return null;
+  const percent = Number(status.percent);
+  return {
+    text: `${formatMoney(status.total)} of ${formatMoney(status.limit)} · ${Math.round(percent)}%`,
+    width: Math.min(percent, 100),
+    level: status.level ?? null,
+  };
 }
 
 export interface RecentEntry {
@@ -133,7 +161,9 @@ export function buildMonthView(
   summary: MonthSummary,
   entries: EntryListItem[],
   recentLimit = 6,
+  limits: LimitStatus[] = [],
 ): MonthView {
+  const limitByLabel = new Map(limits.map((status) => [status.label_id, status]));
   const distributed = amount(summary.distributed);
   const byKind = summary.by_kind as Record<Kind, string>;
   const names = new Map(summary.labels.map((label) => [label.label_id, label.name]));
@@ -173,8 +203,10 @@ export function buildMonthView(
       color: label.color,
       icon: label.icon,
       total: formatMoney(label.total),
+      totalValue: label.total,
       share: percent(Math.max(amount(label.total), 0), positiveTotal),
       detail: labelDetail(label),
+      limit: limitUsage(limitByLabel.get(label.label_id)),
     })),
     recent: recentEntries(entries, names, recentLimit),
     entryCount: entries.filter((entry) => entry.origin !== 'transfer_in').length,

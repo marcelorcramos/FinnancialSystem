@@ -23,6 +23,17 @@
   </nav>
 
   <div class="actions">
+    <button
+      type="button"
+      class="btn btn--icon btn--quiet bell"
+      [cdkMenuTriggerFor]="alertsMenu"
+      [attr.aria-label]="bellLabel()"
+    >
+      <app-icon name="bell" />
+      @if (alerts.unseen(); as count) {
+        <span class="bell__badge" aria-hidden="true">{{ count > 9 ? '9+' : count }}</span>
+      }
+    </button>
     <app-theme-toggle />
     <button
       type="button"
@@ -56,6 +67,40 @@
       <app-icon name="logout" [size]="18" />
       Sign out
     </button>
+  </div>
+</ng-template>
+
+<ng-template #alertsMenu>
+  <div class="menu alerts" cdkMenu>
+    <div class="alerts__head">
+      <strong>Alerts</strong>
+      @if (alerts.unseen()) {
+        <button
+          type="button"
+          class="alerts__seen"
+          cdkMenuItem
+          (cdkMenuItemTriggered)="alerts.markAllSeen()"
+        >
+          Mark all as seen
+        </button>
+      }
+    </div>
+    @for (alert of alerts.alerts().slice(0, 8); track alert.id) {
+      <a
+        class="menu__item alert"
+        cdkMenuItem
+        [routerLink]="monthPath(alert.year, alert.month)"
+        [class.alert--unseen]="!alert.seen_at"
+        [attr.data-level]="alert.level"
+      >
+        <app-icon name="alert" [size]="18" />
+        <span>{{ alertText(alert) }}</span>
+      </a>
+    } @empty {
+      <p class="alerts__empty">
+        No alerts. Set limits on your labels to get one when a label reaches 80% or goes over.
+      </p>
+    }
   </div>
 </ng-template>
 

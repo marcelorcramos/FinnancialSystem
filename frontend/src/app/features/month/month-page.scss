@@ -176,7 +176,7 @@
 
 .label-row {
   display: grid;
-  grid-template-columns: auto 1fr auto 56px auto;
+  grid-template-columns: auto 1fr auto 56px auto auto;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
@@ -288,4 +288,42 @@
   .total__value {
     font-size: 1.25rem;
   }
+}
+
+.limit {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: var(--space-1);
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+
+  &[data-level='warning'] {
+    color: var(--color-accent-text);
+  }
+
+  &[data-level='exceeded'] {
+    color: var(--color-danger);
+  }
+}
+
+.limit__track {
+  display: block;
+  height: 4px;
+  max-width: 240px;
+  border-radius: 2px;
+  background: var(--color-bg-deep);
+}
+
+.limit__fill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+.limit__text {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
 }

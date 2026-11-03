@@ -37,3 +37,13 @@ export type ReportPeriod = Schemas['Period'];
 export type ReportSeries = Schemas['ReportSeries'];
 export type SeriesLabel = Schemas['SeriesLabel'];
 export type SeriesPoint = Schemas['SeriesPoint'];
+
+export type LimitRead = Schemas['LimitRead'];
+export type LimitStatus = Schemas['LimitStatus'];
+export type AlertRead = Schemas['AlertRead'];
+export type AlertLevel = Schemas['AlertLevel'];
+export type GoalRead = Schemas['GoalRead'];
+export type GoalList = Schemas['GoalList'];
+export type GoalCreate = Schemas['GoalCreate'];
+export type GoalUpdate = Schemas['GoalUpdate'];
+export type GoalType = Schemas['GoalType'];

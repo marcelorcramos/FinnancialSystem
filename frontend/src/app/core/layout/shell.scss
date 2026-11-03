@@ -170,3 +170,77 @@
     outline: none;
   }
 }
+
+.bell {
+  position: relative;
+}
+
+.bell__badge {
+  position: absolute;
+  top: 4px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--color-danger);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+.alerts {
+  width: min(360px, calc(100vw - 32px));
+}
+
+.alerts__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+}
+
+.alerts__seen {
+  border: none;
+  background: none;
+  color: var(--color-accent-text);
+  font: inherit;
+  font-size: var(--text-s);
+  cursor: pointer;
+}
+
+.alert {
+  align-items: flex-start;
+  padding-block: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-s);
+  line-height: 1.4;
+
+  app-icon {
+    flex: none;
+    margin-top: 1px;
+  }
+
+  &[data-level='warning'] app-icon {
+    color: var(--color-accent-text);
+  }
+
+  &[data-level='exceeded'] app-icon {
+    color: var(--color-danger);
+  }
+}
+
+.alert--unseen {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.alerts__empty {
+  margin: 0;
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  color: var(--color-text-subtle);
+  font-size: var(--text-s);
+}
