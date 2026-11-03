@@ -11,6 +11,7 @@ export const USER: UserRead = {
   locale: 'pt-PT',
   timezone: 'Europe/Lisbon',
   email_verified_at: null,
+  auto_new_month: false,
 };
 
 export function tokens(accessToken: string): TokenResponse {

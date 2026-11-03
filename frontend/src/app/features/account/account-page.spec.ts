@@ -69,9 +69,24 @@ describe('AccountPage', () => {
     expect(auth.updateProfile).toHaveBeenCalledWith({
       name: 'Ana Silva',
       timezone: 'Europe/Madrid',
+      auto_new_month: false,
     });
     expect(toasts.show).toHaveBeenCalledWith('Profile saved');
     expect(button('Save changes').disabled).toBe(true);
+  });
+
+  it('turns on starting each month automatically', async () => {
+    const toggle = el.querySelector<HTMLButtonElement>('[aria-labelledby="account-auto-month"]')!;
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+    toggle.click();
+    await fixture.whenStable();
+    expect(toggle.getAttribute('aria-checked')).toBe('true');
+    expect(button('Save changes').disabled).toBe(false);
+    button('Save changes').click();
+    await fixture.whenStable();
+    expect(auth.updateProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ auto_new_month: true }),
+    );
   });
 
   it('checks the new password live and updates it', async () => {
