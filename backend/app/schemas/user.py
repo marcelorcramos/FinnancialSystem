@@ -50,6 +50,9 @@ class UserRead(BaseModel):
     locale: str
     timezone: str
     email_verified_at: datetime | None
+    auto_new_month: bool = Field(
+        description="Create each month automatically from the previous one (rent, salary...)"
+    )
 
 
 class UserUpdate(BaseModel):
@@ -57,6 +60,7 @@ class UserUpdate(BaseModel):
     currency: SupportedCurrency | None = None
     locale: SupportedLocale | None = None
     timezone: str | None = None
+    auto_new_month: bool | None = None
 
     @field_validator("timezone")
     @classmethod
