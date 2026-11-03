@@ -83,6 +83,9 @@ describe('MonthPage', () => {
   let el: HTMLElement;
   let api: Record<string, ReturnType<typeof vi.fn>>;
   let limitsApi: { status: ReturnType<typeof vi.fn> };
+  let limitsApiFailing = false;
+
+  afterEach(() => (limitsApiFailing = false));
   let dialog: { open: ReturnType<typeof vi.fn>; openDialogs: unknown[] };
 
   async function render(find = vi.fn(() => of(OCTOBER))) {
@@ -97,7 +100,11 @@ describe('MonthPage', () => {
       reopen: vi.fn(() => of(OCTOBER)),
     };
     dialog = { open: vi.fn(() => ({ closed: of(OCTOBER) })), openDialogs: [] };
-    limitsApi = { status: vi.fn(() => of([] as LimitStatus[])) };
+    limitsApi = {
+      status: vi.fn(() =>
+        limitsApiFailing ? throwError(() => new Error('limits are down')) : of([] as LimitStatus[]),
+      ),
+    };
     TestBed.configureTestingModule({
       imports: [MonthPage],
       providers: [
@@ -326,6 +333,14 @@ describe('MonthPage', () => {
         },
       }),
     );
+  });
+
+  it('still shows the month when the limits cannot load', async () => {
+    limitsApiFailing = true;
+    await render();
+    expect(el.querySelector('h1')?.textContent).toBe('October 2026');
+    expect(el.querySelector('.limit')).toBeNull();
+    expect(el.querySelectorAll('.label-row').length).toBeGreaterThan(0);
   });
 
   it('reports a failure to load', async () => {

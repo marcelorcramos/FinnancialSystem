@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { Dialog } from '@angular/cdk/dialog';
 import { Router, RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { catchError, forkJoin, of } from 'rxjs';
 
 import { apiErrorMessage } from '../../core/api/api-errors';
 import { EntryListItem, LimitStatus, MonthRead, MonthSummary } from '../../core/api/types';
@@ -268,7 +268,8 @@ export default class MonthPage {
         forkJoin([
           this.api.summary(sheet.id),
           this.api.entries(sheet.id),
-          this.limitsApi.status(sheet.id),
+          // Limits are extra information: the month still loads without them.
+          this.limitsApi.status(sheet.id).pipe(catchError(() => of([] as LimitStatus[]))),
         ]).subscribe({
           next: ([summary, entries, limits]) => {
             this.entries.set(entries);
