@@ -1,8 +1,10 @@
 """RabbitMQ topology: one topic exchange, a queue per consumer and a dead-letter queue.
 
 Routing keys are the event types ("entry.create", "month.close", ...). Queues are
-quorum queues: RabbitMQ counts redeliveries, and after DELIVERY_LIMIT failed
-attempts a message goes to the dead-letter queue instead of looping forever.
+quorum queues with a dead-letter exchange. Consumers retry a failed message up to
+MAX_ATTEMPTS times (an `x-attempts` header, see consumers.py) and then reject it
+to the dead-letter queue. RabbitMQ 4 does not count a requeueing nack towards
+x-delivery-limit, so that limit only catches consumers that crash mid-message.
 """
 
 from aio_pika import ExchangeType
@@ -11,7 +13,8 @@ from aio_pika.abc import AbstractChannel, AbstractExchange
 EXCHANGE = "finance.events"
 DEAD_LETTER_EXCHANGE = "finance.events.dead"
 DEAD_LETTER_QUEUE = "finance.events.dead"
-DELIVERY_LIMIT = 5
+MAX_ATTEMPTS = 5
+DELIVERY_LIMIT = 10
 
 # Consumer queue -> event types it receives.
 BINDINGS: dict[str, tuple[str, ...]] = {
