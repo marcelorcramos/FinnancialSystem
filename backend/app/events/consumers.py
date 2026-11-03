@@ -34,7 +34,7 @@ from app.db.session import SessionLocal
 from app.events import topology
 from app.models import ProcessedEvent
 from app.repositories import users as users_repo
-from app.services import alerts
+from app.services import alerts, goals
 
 log = structlog.get_logger(__name__)
 
@@ -101,17 +101,18 @@ def limits_handler(
     return handle
 
 
-async def _waits_for_goals(_: AsyncSession, event: Event) -> None:
-    # Goal progress is computed when read (services/goals.py); completed goals are
-    # recorded by the goals consumer in the next step of Phase 8.
-    log.debug("event.no_action_yet", type=event.type)
+async def goals_handler(session: AsyncSession, event: Event) -> None:
+    """Move goals whose target is now reached to the history (completed)."""
+    user = await users_repo.get_active_by_id(session, event.user_id)
+    if user is not None:
+        await goals.complete_reached(session, user)
 
 
 def handlers(cache: Cache) -> dict[str, Handler]:
     return {
         "cache": cache_handler(cache),
         "limits": limits_handler(cache.redis),
-        "goals": _waits_for_goals,
+        "goals": goals_handler,
     }
 
 

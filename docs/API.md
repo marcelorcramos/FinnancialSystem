@@ -294,3 +294,19 @@ The `limits` consumer raises an alert when a label reaches a level of its limit 
 
 The stream needs the Bearer header, so read it with `fetch` (the browser's `EventSource` cannot send headers). Alerts raised while it was closed are in `GET /alerts`.
 
+## Goals
+
+A goal gathers money in a label, optionally by a deadline. One active goal per label (they would count the same money). Progress is the label's balance over all months, unless `manual_progress` is set.
+
+| Method | Route | Body | Response |
+|---|---|---|---|
+| GET | `/goals` | | 200 `{active: Goal[], completed: Goal[]}` (completed newest first) |
+| POST | `/goals` | `{label_id, type?, target_amount?, months_of_expenses?, deadline?, manual_progress?}` | 201 `Goal`; 409 if the label has an active goal |
+| PATCH | `/goals/{id}` | `{target_amount?, months_of_expenses?, deadline?, manual_progress?}` (null clears deadline or manual_progress) | 200 `Goal` |
+| DELETE | `/goals/{id}` | | 204 (soft delete) |
+| POST | `/goals/{id}/restore` | | 200 `Goal` |
+
+- `type`: `normal` needs `target_amount`; `emergency_fund` needs `months_of_expenses` (1–24) and its target is that many months of average expenses (expense labels, the 6 complete months before the current one that have a sheet). Without such a month the target is `null`.
+- Computed fields: `progress`, `remaining`, `percent`, `months_left` (the current month and the deadline's month included), `days_left`, `per_month` (what to save each month to finish on time, rounded up to the cent), `reached`, `overdue`.
+- The `goals` consumer moves a goal to `completed` when its progress reaches the target.
+

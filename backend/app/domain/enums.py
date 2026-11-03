@@ -24,3 +24,8 @@ class AuditAction(StrEnum):
 class AlertLevel(StrEnum):
     WARNING = "warning"  # 80% of the limit or more
     EXCEEDED = "exceeded"  # 100% or more
+
+
+class GoalType(StrEnum):
+    NORMAL = "normal"
+    EMERGENCY_FUND = "emergency_fund"  # target = N months of average expenses

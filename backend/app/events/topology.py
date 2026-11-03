@@ -20,7 +20,7 @@ DELIVERY_LIMIT = 10
 BINDINGS: dict[str, tuple[str, ...]] = {
     "cache": ("entry.*", "income.*", "month.*", "label.*"),
     "limits": ("entry.*", "limit.*"),
-    "goals": ("entry.*",),
+    "goals": ("entry.*", "goal.*"),
 }
 
 

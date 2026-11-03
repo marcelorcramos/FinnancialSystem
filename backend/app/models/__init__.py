@@ -2,6 +2,7 @@
 
 from app.models.audit import AuditLog
 from app.models.entry import Entry
+from app.models.goal import Goal
 from app.models.label import Label
 from app.models.limit import Alert, Limit
 from app.models.month import Income, Month
@@ -12,6 +13,7 @@ __all__ = [
     "Alert",
     "AuditLog",
     "Entry",
+    "Goal",
     "Income",
     "Label",
     "Limit",
