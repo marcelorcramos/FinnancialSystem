@@ -11,6 +11,9 @@ A personal finance app that works month by month: each month's income is distrib
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.162-009688?logo=fastapi&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-7-FF4438?logo=redis&logoColor=white)
+![RabbitMQ](https://img.shields.io/badge/RabbitMQ-4-FF6600?logo=rabbitmq&logoColor=white)
+![Celery](https://img.shields.io/badge/Celery-5.6-37814A?logo=celery&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 ![Angular](https://img.shields.io/badge/Angular-22-DD0031?logo=angular&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white)
@@ -29,6 +32,9 @@ A personal finance app that works month by month: each month's income is distrib
 | Pydantic + pydantic-settings | 2.14 / 2.16 | Request and response schemas (money as `Decimal`), configuration from the environment |
 | PyJWT + argon2-cffi | 2.15 / 25.1 | Short-lived access tokens, rotating refresh tokens in an HttpOnly cookie, Argon2 password hashes |
 | structlog | 26.1 | Structured logs (JSON outside development) |
+| aio-pika | 10.1 | Outbox relay and idempotent event consumers (`cache`, `limits`, `goals`) |
+| Celery + Celery beat | 5.6 | Background tasks; beat starts each new month from the previous one (opt-in) |
+| redis-py | 8.1 | Async Redis client for the cache and the rate limits |
 
 ### Frontend
 
@@ -46,9 +52,9 @@ A personal finance app that works month by month: each month's income is distrib
 | Technology | Version | What it does here |
 |---|---|---|
 | PostgreSQL | 16 | Main database: `NUMERIC(14,2)` money, UUID keys, soft delete, audit log |
-| Docker + Docker Compose | | The whole stack locally (`deploy/docker-compose.yml`), with healthchecks |
-| Redis | 7 | In the stack; cache and rate limiting arrive in Phase 7 |
-| RabbitMQ | 4 | In the stack; domain events (outbox) and the Celery broker arrive in Phase 7 |
+| Docker + Docker Compose | | The whole stack locally (`deploy/docker-compose.yml`): API, web, outbox relay, one process per consumer, Celery worker and beat, with healthchecks on the services |
+| Redis | 7 | Per-user cache of summaries and reports, and rate limits on the auth routes (both fail open) |
+| RabbitMQ | 4 | Domain events from the transactional outbox (topic exchange, quorum queues, dead-letter queue) and the Celery broker |
 | SeaweedFS (S3-compatible) | 4.50 | In the stack for file exports (Phase 9) |
 | Mailpit | 1.32 | Catches outgoing email in development |
 
@@ -57,7 +63,7 @@ A personal finance app that works month by month: each month's income is distrib
 | Technology | Version | What it does here |
 |---|---|---|
 | pytest + pytest-asyncio + httpx | | Backend unit and integration tests through the real ASGI app |
-| testcontainers | 4.15 | A real PostgreSQL per test run, locally and in CI |
+| testcontainers | 4.15 | Real PostgreSQL, Redis and RabbitMQ in the tests, locally and in CI |
 | pytest-cov | | Coverage, with a 95% floor (99% today) |
 | Ruff + mypy | | Python lint, formatting and strict type checks |
 | Vitest + jsdom | 5 / 30 | Frontend unit tests |
@@ -68,7 +74,7 @@ A personal finance app that works month by month: each month's income is distrib
 
 ### Planned
 
-Celery and Celery beat (recurring entries, Phase 7), Kubernetes with Helm (Phase 13) and an AI chat over the reports with the Claude API (Phase 11). See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full plan.
+Limits, alerts and goals on top of the event consumers (Phase 8), Kubernetes with Helm (Phase 13) and an AI chat over the reports with the Claude API (Phase 11). See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full plan.
 
 ## Run it
 

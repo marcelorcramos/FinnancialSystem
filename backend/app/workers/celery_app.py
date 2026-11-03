@@ -14,6 +14,8 @@ celery_app.conf.update(
     task_reject_on_worker_lost=True,
     worker_prefetch_multiplier=1,
     task_ignore_result=True,
+    # Remote control uses transient non-exclusive queues, which RabbitMQ 4 refuses.
+    worker_enable_remote_control=False,
     timezone="UTC",
     beat_schedule={
         # Hourly, so each user's month starts at midnight in their own time zone.
