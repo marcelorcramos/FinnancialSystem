@@ -30,3 +30,11 @@ class MonthClosedError(ConflictError):
 
     def __init__(self) -> None:
         super().__init__("The month is closed. Reopen it to make changes.")
+
+
+class RateLimitedError(DomainError):
+    code = "rate_limited"
+
+    def __init__(self, retry_after: int) -> None:
+        super().__init__("Too many attempts. Try again later.")
+        self.retry_after = retry_after

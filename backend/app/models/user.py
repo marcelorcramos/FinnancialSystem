@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, SoftDelete, Timestamps, UUIDPrimaryKey
@@ -34,6 +34,10 @@ class User(UUIDPrimaryKey, Timestamps, SoftDelete, Base):
         String(50), default="Europe/Lisbon", server_default="Europe/Lisbon"
     )
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Create each new month automatically, copying the previous one (Celery beat).
+    auto_new_month: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false")
+    )
     google_id: Mapped[str | None] = mapped_column(String(255))
 
 

@@ -10,6 +10,7 @@
 ![nginx](https://img.shields.io/badge/nginx-1.29-009639?logo=nginx&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-7-FF4438?logo=redis&logoColor=white)
 ![RabbitMQ](https://img.shields.io/badge/RabbitMQ-4-FF6600?logo=rabbitmq&logoColor=white)
+![Celery](https://img.shields.io/badge/Celery-5.6-37814A?logo=celery&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker_Compose-2496ED?logo=docker&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-1.64-2EAD33?logo=playwright&logoColor=white)
 ![Vitest](https://img.shields.io/badge/Vitest-5-6E9F18?logo=vitest&logoColor=white)
@@ -30,7 +31,7 @@ Everything is entered by hand: no bank connections, no bots, no guessing.
 
 ### Months
 
-Each month has its incomes (salary, extras…) and an initial distribution of that money across your labels. A new month can copy the previous one, so you only review what changed: every label shows last month's value next to the new one, adjustable with −/+ or by typing.
+Each month has its incomes (salary, extras…) and an initial distribution of that money across your labels. A new month can copy the previous one, so you only review what changed: every label shows last month's value next to the new one, adjustable with −/+ or by typing. If you prefer, the app can start each month on its own, at midnight in your time zone, with the same distribution and recurring incomes (rent, salary).
 
 Whatever you have not distributed yet shows up as **unallocated**. When the month is over you **close** it, and a closed month accepts no more changes until you reopen it.
 
@@ -76,13 +77,13 @@ Color is never the only signal: amounts always carry an icon and text, charts ca
 
 ### Safe by default
 
-Each user sees only their own data, and tests try to break that on every endpoint. Amounts are exact decimals, never floating point. Nothing is hard-deleted, and every change is written to an audit log. Sessions use short-lived access tokens with rotating refresh tokens.
+Each user sees only their own data, and tests try to break that on every endpoint. Amounts are exact decimals, never floating point. Nothing is hard-deleted, and every change is written to an audit log. Sessions use short-lived access tokens with rotating refresh tokens, and repeated sign-in attempts are slowed down.
 
 ## Status
 
-The core product works end to end: accounts, labels, months, entries, transfers, reports and the dashboard, covered by unit, integration and end-to-end tests.
+The core product works end to end: accounts, labels, months, entries, transfers, reports and the dashboard, covered by unit, integration and end-to-end tests. Behind it, summaries and reports are cached in Redis, every change is published as an event through RabbitMQ (transactional outbox, idempotent consumers), and Celery starts new months for those who opt in.
 
-Next on the roadmap: recurring entries and background jobs, spending limits with alerts, goals and an emergency fund, receipts and exports, Google sign-in with a demo mode, an AI chat over your reports, observability, and deployment to Kubernetes and Azure. The full plan is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+Next on the roadmap: spending limits with alerts, goals and an emergency fund, receipts and exports, Google sign-in with a demo mode, an AI chat over your reports, observability, and deployment to Kubernetes and Azure. The full plan is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Run it
 
@@ -98,7 +99,7 @@ Then open the app at http://localhost:8080. The API and its interactive docs are
 
 | What | Command |
 |---|---|
-| Backend tests (real PostgreSQL via testcontainers) | `cd backend && pytest --cov=app` |
+| Backend tests (real PostgreSQL, Redis and RabbitMQ via testcontainers) | `cd backend && pytest --cov=app` |
 | Backend lint and types | `cd backend && ruff check . && ruff format --check . && mypy app` |
 | Frontend unit tests and lint | `cd frontend && npm run test:ci && npm run lint` |
 | End-to-end, against the running stack | `cd frontend && npx playwright test` |

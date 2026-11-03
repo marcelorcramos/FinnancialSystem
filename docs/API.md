@@ -31,6 +31,7 @@ Domain errors share one shape:
 | 409 | `month_closed` | Any write to a closed month |
 | 422 | `validation_failed` | A domain rule failed (date outside the month, same label on both sides of a transfer, archived label...) |
 | 422 | *(FastAPI shape)* | Request body/query does not match the schema: `{"detail": [{"loc": [...], "msg": "..."}]}` |
+| 429 | `rate_limited` | Too many attempts on `/auth/register`, `/auth/login` or `/auth/refresh`; the `Retry-After` header says how many seconds to wait |
 
 ## Auth and profile
 
@@ -44,7 +45,7 @@ The access token lasts 15 minutes and comes in the response body. The refresh to
 | POST | `/auth/logout` | cookie | 204, cookie cleared |
 | POST | `/auth/logout-others` | Bearer + cookie | 204, ends every other session; this one stays signed in |
 | GET | `/users/me` | | 200 `User` |
-| PATCH | `/users/me` | `{name?, currency?: "EUR", locale?, timezone?}` | 200 `User` |
+| PATCH | `/users/me` | `{name?, currency?: "EUR", locale?, timezone?, auto_new_month?}` | 200 `User` |
 | POST | `/users/me/password` | `{current_password, new_password}` | 204, ends every session |
 
 - `Token` = `{access_token, token_type: "bearer", expires_in}` (seconds).

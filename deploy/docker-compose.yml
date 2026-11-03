@@ -5,6 +5,23 @@ x-healthcheck: &healthcheck
   timeout: 5s
   retries: 20
 
+x-backend-env: &backend-env
+  ENVIRONMENT: dev
+  DATABASE_URL: postgresql+asyncpg://finance:finance_dev@postgres:5432/finance
+  REDIS_URL: redis://redis:6379/0
+  RABBITMQ_URL: amqp://finance:finance_dev@rabbitmq:5672/
+  SECRET_KEY: dev-secret-key-change-me-0123456789abcdef
+
+# Background processes run the API image with another command. They start once the
+# API is healthy, which means the migrations have run.
+x-backend-process: &backend-process
+  build: ../backend
+  image: finnancial-backend:dev
+  environment: *backend-env
+  restart: unless-stopped
+  depends_on:
+    api: { condition: service_healthy }
+
 services:
   postgres:
     image: postgres:16
@@ -54,13 +71,12 @@ services:
 
   api:
     build: ../backend
+    image: finnancial-backend:dev
     environment:
-      ENVIRONMENT: dev
-      DATABASE_URL: postgresql+asyncpg://finance:finance_dev@postgres:5432/finance
-      REDIS_URL: redis://redis:6379/0
-      RABBITMQ_URL: amqp://finance:finance_dev@rabbitmq:5672/
-      SECRET_KEY: dev-secret-key-change-me-0123456789abcdef
+      <<: *backend-env
       CORS_ORIGINS: http://localhost:4200
+      # Trust X-Forwarded-For from the web container (nginx), so rate limits see the real client.
+      FORWARDED_ALLOW_IPS: "*"
     ports: ["8000:8000"]
     depends_on:
       postgres: { condition: service_healthy }
@@ -69,6 +85,44 @@ services:
     healthcheck:
       <<: *healthcheck
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+
+  # Publishes outbox_events to RabbitMQ.
+  relay:
+    <<: *backend-process
+    command: ["python", "-m", "app.events.relay"]
+
+  # One consumer process per queue.
+  consumer-cache:
+    <<: *backend-process
+    command: ["python", "-m", "app.events.consumers", "cache"]
+
+  consumer-limits:
+    <<: *backend-process
+    command: ["python", "-m", "app.events.consumers", "limits"]
+
+  consumer-goals:
+    <<: *backend-process
+    command: ["python", "-m", "app.events.consumers", "goals"]
+
+  worker:
+    <<: *backend-process
+    # Mingle, gossip and event heartbeats talk through transient queues, which RabbitMQ 4
+    # refuses (remote control is off in celery_app.py for the same reason).
+    command:
+      - celery
+      - -A
+      - app.workers.celery_app
+      - worker
+      - --loglevel=INFO
+      - --concurrency=2
+      - --without-mingle
+      - --without-gossip
+      - --without-heartbeat
+
+  beat:
+    <<: *backend-process
+    # The schedule file lives in /tmp: the image runs as a non-root user.
+    command: ["celery", "-A", "app.workers.celery_app", "beat", "--loglevel=INFO", "--schedule=/tmp/celerybeat-schedule"]
 
   web:
     build: ../frontend
