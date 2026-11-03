@@ -79,6 +79,7 @@ Icon names are Material Symbols for now; they will change with the frontend rede
 | Topic | Decision |
 |---|---|
 | Limits | Per label: a default amount for every month (`month_id` null) and optional amounts for single months that replace it. They are compared with the label's month total (the same total the month screen shows) and only warn, never block. Thresholds are fixed: `warning` from 80%, `exceeded` from 100%, compared exactly. A closed month's limits cannot change. |
+| Alerts | Raised by the `limits` consumer on `entry.*` and `limit.*` events (a default limit change checks every open month). One row per label, month and level (`warning`, `exceeded`), never repeated, with the limit and total at that moment. Pushed live with Server-Sent Events: the consumer publishes to Redis channel `alerts:<user>` only after its transaction commits, and `GET /alerts/stream` relays it. SSE over WebSocket: one-way is all alerts need, and it goes through nginx and plain HTTP. The stream gives its database connection back before streaming. |
 
 ## Future ideas
 

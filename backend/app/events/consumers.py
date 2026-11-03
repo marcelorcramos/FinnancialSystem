@@ -22,15 +22,19 @@ from typing import Any
 import aio_pika
 import structlog
 from aio_pika.abc import AbstractExchange, AbstractIncomingMessage
+from redis.asyncio import Redis
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.core import notifications
 from app.core.cache import Cache, get_cache
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.db.session import SessionLocal
 from app.events import topology
 from app.models import ProcessedEvent
+from app.repositories import users as users_repo
+from app.services import alerts
 
 log = structlog.get_logger(__name__)
 
@@ -51,7 +55,10 @@ class Event:
         return cls(uuid.UUID(data["id"]), str(data["type"]), dict(data["payload"]))
 
 
-Handler = Callable[[AsyncSession, Event], Awaitable[None]]
+AfterCommit = Callable[[], Awaitable[None]]
+# A handler does its database work in the given session and may return what to do
+# once that work is committed (e.g. push a notification): never before it is saved.
+Handler = Callable[[AsyncSession, Event], Awaitable[AfterCommit | None]]
 
 
 def cache_handler(cache: Cache) -> Handler:
@@ -63,17 +70,48 @@ def cache_handler(cache: Cache) -> Handler:
     return handle
 
 
-async def _waits_for_phase_8(_: AsyncSession, event: Event) -> None:
-    # Limits (alerts at 80% and 100%) and goals (progress) arrive in Phase 8. The
-    # queues already receive entry events, so they are handled (and deduplicated) now.
+def limits_handler(
+    redis: Redis | None, sessions: async_sessionmaker[AsyncSession] = SessionLocal
+) -> Handler:
+    """Raise the alerts the touched month's limits reach, then push them live."""
+
+    async def handle(session: AsyncSession, event: Event) -> AfterCommit | None:
+        user = await users_repo.get_active_by_id(session, event.user_id)
+        if user is None:
+            return None
+        month_id = event.payload.get("month_id")
+        created: list[uuid.UUID] = []
+        for month in await alerts.months_to_check(
+            session, user, uuid.UUID(month_id) if month_id else None
+        ):
+            created += await alerts.raise_alerts(session, user, month)
+        if not created:
+            return None
+
+        async def push() -> None:
+            async with sessions() as fresh:
+                # Oldest first, so a jump past 100% reads "warning" then "exceeded".
+                for alert in reversed(await alerts.get_many(fresh, user, created)):
+                    await notifications.publish(
+                        redis, notifications.alerts_channel(user.id), alert.model_dump(mode="json")
+                    )
+
+        return push
+
+    return handle
+
+
+async def _waits_for_goals(_: AsyncSession, event: Event) -> None:
+    # Goal progress is computed when read (services/goals.py); completed goals are
+    # recorded by the goals consumer in the next step of Phase 8.
     log.debug("event.no_action_yet", type=event.type)
 
 
 def handlers(cache: Cache) -> dict[str, Handler]:
     return {
         "cache": cache_handler(cache),
-        "limits": _waits_for_phase_8,
-        "goals": _waits_for_phase_8,
+        "limits": limits_handler(cache.redis),
+        "goals": _waits_for_goals,
     }
 
 
@@ -92,11 +130,17 @@ async def handle_once(session: AsyncSession, consumer: str, event: Event, handle
         await session.rollback()
         return False
     try:
-        await handler(session, event)
+        after_commit = await handler(session, event)
     except BaseException:
         await session.rollback()
         raise
     await session.commit()
+    if after_commit is not None:
+        try:
+            await after_commit()
+        except Exception:
+            # The work is saved and marked processed; a failed side effect is logged only.
+            log.exception("event.after_commit_failed", consumer=consumer, type=event.type)
     return True
 
 

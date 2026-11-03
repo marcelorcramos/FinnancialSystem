@@ -275,3 +275,22 @@ A limit is a maximum for a label: a default for every month, or one for a single
 - `level` is `warning` from 80% and `exceeded` from 100%, compared exactly (`percent` is rounded for display), otherwise `null`.
 - `total` is the label's month total, as in the month summary.
 
+## Alerts
+
+The `limits` consumer raises an alert when a label reaches a level of its limit in a month: `warning` (80%) and `exceeded` (100%), each at most once per label and month. Jumping straight past 100% raises both.
+
+| Method | Route | Response |
+|---|---|---|
+| GET | `/alerts?unseen=` | 200 `Alert[]`, the 50 newest (`unseen=true`: only those not seen yet) |
+| POST | `/alerts/{id}/seen` | 204 (seen already is fine; someone else's or unknown: 404) |
+| POST | `/alerts/seen` | 204: every alert seen |
+| GET | `/alerts/stream` | `text/event-stream`: `event: alert` with an `Alert` as `data` each time one is raised; a `: ping` comment line every 15 s |
+
+```json
+{ "id": "…", "level": "exceeded", "label_id": "…", "label_name": "Food", "color": "#FFB74D",
+  "month_id": "…", "year": 2026, "month": 11, "limit_amount": "300.00", "total": "320.00",
+  "seen_at": null, "created_at": "2026-11-03T20:15:02Z" }
+```
+
+The stream needs the Bearer header, so read it with `fetch` (the browser's `EventSource` cannot send headers). Alerts raised while it was closed are in `GET /alerts`.
+
