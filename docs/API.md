@@ -252,3 +252,61 @@ Windows are rolling and include the current month (in the user's time zone). Del
 - `total` is the net sum of every matching entry (transfers out subtract), not just this page, and equals the `/reports/summary` total. `count` is the number of matching entries across all pages.
 - `counterpart_label_id` names the other label of a transfer even when that label is outside the filter.
 - Sorted by `occurred_on`, newest first; ties keep creation order, newest first.
+
+## Limits
+
+A limit is a maximum for a label: a default for every month, or one for a single month that replaces the default. Limits only warn, never block a write.
+
+| Method | Route | Body | Response |
+|---|---|---|---|
+| GET | `/limits` | | 200 `Limit[]` (defaults have `month_id: null`) |
+| PUT | `/labels/{label_id}/limit` | `{amount}` | 200 `Limit`: creates or changes the default |
+| DELETE | `/labels/{label_id}/limit` | | 204 |
+| PUT | `/months/{month_id}/limits/{label_id}` | `{amount}` | 200 `Limit`; 409 `month_closed` on a closed month |
+| DELETE | `/months/{month_id}/limits/{label_id}` | | 204: the default applies again |
+| GET | `/months/{month_id}/limits` | | 200 `LimitStatus[]`, most used first |
+
+```json
+{ "label_id": "…", "name": "Food", "color": "#FFB74D", "limit_id": "…",
+  "limit": "300.00", "source": "default", "total": "250.00", "remaining": "50.00",
+  "percent": "83.33", "level": "warning" }
+```
+
+- `level` is `warning` from 80% and `exceeded` from 100%, compared exactly (`percent` is rounded for display), otherwise `null`.
+- `total` is the label's month total, as in the month summary.
+
+## Alerts
+
+The `limits` consumer raises an alert when a label reaches a level of its limit in a month: `warning` (80%) and `exceeded` (100%), each at most once per label and month. Jumping straight past 100% raises both.
+
+| Method | Route | Response |
+|---|---|---|
+| GET | `/alerts?unseen=` | 200 `Alert[]`, the 50 newest (`unseen=true`: only those not seen yet) |
+| POST | `/alerts/{id}/seen` | 204 (seen already is fine; someone else's or unknown: 404) |
+| POST | `/alerts/seen` | 204: every alert seen |
+| GET | `/alerts/stream` | `text/event-stream`: `event: alert` with an `Alert` as `data` each time one is raised; a `: ping` comment line every 15 s |
+
+```json
+{ "id": "…", "level": "exceeded", "label_id": "…", "label_name": "Food", "color": "#FFB74D",
+  "month_id": "…", "year": 2026, "month": 11, "limit_amount": "300.00", "total": "320.00",
+  "seen_at": null, "created_at": "2026-11-03T20:15:02Z" }
+```
+
+The stream needs the Bearer header, so read it with `fetch` (the browser's `EventSource` cannot send headers). Alerts raised while it was closed are in `GET /alerts`.
+
+## Goals
+
+A goal gathers money in a label, optionally by a deadline. One active goal per label (they would count the same money). Progress is the label's balance over all months, unless `manual_progress` is set.
+
+| Method | Route | Body | Response |
+|---|---|---|---|
+| GET | `/goals` | | 200 `{active: Goal[], completed: Goal[]}` (completed newest first) |
+| POST | `/goals` | `{label_id, type?, target_amount?, months_of_expenses?, deadline?, manual_progress?}` | 201 `Goal`; 409 if the label has an active goal |
+| PATCH | `/goals/{id}` | `{target_amount?, months_of_expenses?, deadline?, manual_progress?}` (null clears deadline or manual_progress) | 200 `Goal` |
+| DELETE | `/goals/{id}` | | 204 (soft delete) |
+| POST | `/goals/{id}/restore` | | 200 `Goal` |
+
+- `type`: `normal` needs `target_amount`; `emergency_fund` needs `months_of_expenses` (1–24) and its target is that many months of average expenses (expense labels, the 6 complete months before the current one that have a sheet). Without such a month the target is `null`.
+- Computed fields: `progress`, `remaining`, `percent`, `months_left` (the current month and the deadline's month included), `days_left`, `per_month` (what to save each month to finish on time, rounded up to the cent), `reached`, `overdue`.
+- The `goals` consumer moves a goal to `completed` when its progress reaches the target.
+

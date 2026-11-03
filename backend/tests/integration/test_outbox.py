@@ -88,4 +88,4 @@ async def test_the_relay_publishes_pending_events_once(
     # Sign-up creates the default labels, then the month: one message each, in order.
     assert types[-1] == "month.create"
     assert set(types[:-1]) == {"label.create"} and len(types) == len(set(m["id"] for m in mine))
-    assert await goals.get(fail=False) is None  # goals only listens to entries
+    assert await goals.get(fail=False) is None  # goals only listens to entries and goals
