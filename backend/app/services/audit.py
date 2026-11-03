@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import Base
 from app.domain.enums import AuditAction
-from app.models import AuditLog
+from app.models import AuditLog, OutboxEvent
 
 _EXCLUDED = {"password_hash"}
 
@@ -33,6 +33,7 @@ def record(
     before: dict[str, Any] | None = None,
     after: dict[str, Any] | None = None,
 ) -> None:
+    """Audit a write and emit its domain event (outbox), both in the caller's transaction."""
     session.add(
         AuditLog(
             user_id=user_id,
@@ -41,6 +42,19 @@ def record(
             action=action,
             before=before,
             after=after,
+        )
+    )
+    month_id = (after or before or {}).get("month_id")
+    session.add(
+        OutboxEvent(
+            type=f"{entity}.{action.value}",
+            payload={
+                "user_id": str(user_id),
+                "entity": entity,
+                "entity_id": str(entity_id),
+                "action": action.value,
+                "month_id": str(month_id) if month_id else None,
+            },
         )
     )
 

@@ -6,6 +6,7 @@ from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from testcontainers.community.postgres import PostgresContainer
+from testcontainers.community.rabbitmq import RabbitMqContainer
 from testcontainers.community.redis import RedisContainer
 
 from alembic import command
@@ -42,6 +43,14 @@ def redis_url() -> Iterator[str]:
     with RedisContainer("redis:7-alpine") as container:
         host, port = container.get_container_host_ip(), container.get_exposed_port(6379)
         yield f"redis://{host}:{port}/0"
+
+
+@pytest.fixture(scope="session")
+def rabbitmq_url() -> Iterator[str]:
+    """A real RabbitMQ, started only by the tests that ask for it."""
+    with RabbitMqContainer("rabbitmq:4", username="test", password="test") as container:
+        host, port = container.get_container_host_ip(), container.get_exposed_port(5672)
+        yield f"amqp://test:test@{host}:{port}/"
 
 
 @pytest.fixture(scope="session")
