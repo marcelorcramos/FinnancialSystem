@@ -1,0 +1,124 @@
+<section class="dialog">
+  <header class="head">
+    <h2 id="goal-title">{{ editing ? 'Edit goal' : 'New goal' }}</h2>
+    <button type="button" class="btn btn--icon btn--quiet" aria-label="Close" (click)="ref.close()">
+      <app-icon name="close" />
+    </button>
+  </header>
+
+  @if (error(); as message) {
+    <div class="alert" role="alert">
+      <app-icon name="alert" [size]="18" />
+      <span>{{ message }}</span>
+    </div>
+  }
+
+  @if (!editing) {
+    <fieldset class="group">
+      <legend>What kind of goal?</legend>
+      <div class="origins">
+        <label class="choice">
+          <input
+            type="radio"
+            name="goal-type"
+            [checked]="type() === 'normal'"
+            (change)="setType('normal')"
+          />
+          <strong>An amount</strong>
+          <span>A trip, a car, a deposit: gather a fixed amount, by a date if you like.</span>
+        </label>
+        <label class="choice">
+          <input
+            type="radio"
+            name="goal-type"
+            [checked]="type() === 'emergency_fund'"
+            (change)="setType('emergency_fund')"
+          />
+          <strong>Emergency fund</strong>
+          <span>Enough to live on for some months, from your average expenses.</span>
+        </label>
+      </div>
+    </fieldset>
+  }
+
+  <div class="grid">
+    <div class="field">
+      <label for="goal-label">Label</label>
+      <select
+        id="goal-label"
+        class="field__input"
+        [disabled]="editing"
+        (change)="labelId.set($any($event.target).value)"
+      >
+        @for (label of data.labels; track label.id) {
+          <option [value]="label.id" [selected]="label.id === labelId()">{{ label.name }}</option>
+        }
+      </select>
+    </div>
+    @if (type() === 'normal') {
+      <div class="field">
+        <label for="goal-target">Target (€)</label>
+        <input
+          id="goal-target"
+          class="field__input num"
+          inputmode="decimal"
+          placeholder="2000.00"
+          [value]="targetText()"
+          (input)="targetText.set($any($event.target).value)"
+        />
+      </div>
+    } @else {
+      <div class="field">
+        <label for="goal-months">Months of expenses</label>
+        <input
+          id="goal-months"
+          class="field__input num"
+          type="number"
+          min="1"
+          max="24"
+          [value]="monthsText()"
+          (input)="monthsText.set($any($event.target).value)"
+        />
+      </div>
+    }
+    <div class="field">
+      <label for="goal-deadline">Deadline (optional)</label>
+      <input
+        id="goal-deadline"
+        class="field__input num"
+        type="date"
+        [value]="deadline()"
+        (input)="deadline.set($any($event.target).value)"
+      />
+    </div>
+  </div>
+
+  <label class="check">
+    <input type="checkbox" [checked]="manual()" (change)="manual.set(!manual())" />
+    Track the progress by hand instead of the label's balance
+  </label>
+  @if (manual()) {
+    <div class="field">
+      <label for="goal-manual">Saved so far (€)</label>
+      <input
+        id="goal-manual"
+        class="field__input num"
+        inputmode="decimal"
+        [value]="manualText()"
+        (input)="manualText.set($any($event.target).value)"
+      />
+    </div>
+  }
+
+  <footer class="actions">
+    <button type="button" class="btn" (click)="ref.close()">Cancel</button>
+    <button
+      type="button"
+      class="btn btn--primary"
+      [disabled]="!valid() || pending()"
+      (click)="save()"
+    >
+      {{ editing ? 'Save goal' : 'Create goal' }}
+    </button>
+  </footer>
+</section>

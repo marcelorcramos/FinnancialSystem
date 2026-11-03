@@ -11,5 +11,6 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { path: '/month', label: 'Month', icon: 'month' },
   { path: '/reports', label: 'Reports', icon: 'reports' },
+  { path: '/goals', label: 'Goals', icon: 'target' },
   { path: '/labels', label: 'Labels', icon: 'labels' },
 ];

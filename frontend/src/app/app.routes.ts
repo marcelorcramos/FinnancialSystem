@@ -33,6 +33,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/account/preferences-page'),
       },
       {
+        path: 'goals',
+        title: 'Goals',
+        loadComponent: () => import('./features/goals/goals-page'),
+      },
+      {
         path: 'labels',
         title: 'Labels',
         loadComponent: () => import('./features/labels/labels-page'),

@@ -1,0 +1,15 @@
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  color: var(--color-text-muted);
+  font-size: var(--text-s);
+  cursor: pointer;
+
+  input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-accent);
+  }
+}

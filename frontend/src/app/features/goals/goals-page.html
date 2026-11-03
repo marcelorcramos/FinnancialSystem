@@ -1,0 +1,103 @@
+<header class="head">
+  <h1>Goals</h1>
+  @if (state() === 'ready') {
+    <button type="button" class="btn btn--primary" (click)="create()">
+      <app-icon name="plus" [size]="18" />
+      New goal
+    </button>
+  }
+</header>
+
+@switch (state()) {
+  @case ('loading') {
+    <p class="muted" role="status">Loading goals…</p>
+  }
+  @case ('error') {
+    <div class="alert" role="alert">
+      <app-icon name="alert" [size]="18" />
+      <span>Could not load your goals.</span>
+      <button type="button" class="btn" (click)="load()">Try again</button>
+    </div>
+  }
+  @default {
+    @if (!active().length) {
+      <section class="empty panel">
+        <app-icon name="target" [size]="40" />
+        <h2>No goals yet</h2>
+        <p>
+          Save towards something: a trip, a deposit, or an emergency fund of a few months of
+          expenses.
+        </p>
+        <button type="button" class="btn btn--primary" (click)="create()">Create a goal</button>
+      </section>
+    }
+
+    <div class="cards">
+      @for (item of active(); track item.goal.id) {
+        <article class="panel goal" [class.goal--overdue]="item.card.overdue">
+          <header class="goal__head">
+            <span class="swatch" [style.background]="item.card.color" aria-hidden="true">
+              <app-icon [name]="iconOf(item.card.icon)" [size]="18" />
+            </span>
+            <h2>{{ item.card.title }}</h2>
+            <button
+              type="button"
+              class="btn btn--icon btn--quiet"
+              [attr.aria-label]="'Edit goal for ' + item.goal.label_name"
+              (click)="edit(item.goal)"
+            >
+              <app-icon name="edit" [size]="18" />
+            </button>
+            <button
+              type="button"
+              class="btn btn--icon btn--quiet"
+              [attr.aria-label]="'Delete goal for ' + item.goal.label_name"
+              (click)="remove(item.goal)"
+            >
+              <app-icon name="trash" [size]="18" />
+            </button>
+          </header>
+          <div class="goal__numbers">
+            <span class="num goal__amounts">{{ item.card.amounts }}</span>
+            <span class="num goal__percent">{{ item.card.percent }}</span>
+          </div>
+          <div
+            class="goal__bar"
+            role="progressbar"
+            [attr.aria-label]="item.card.title"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            [attr.aria-valuenow]="item.card.width"
+          >
+            <span class="goal__fill" [style.width.%]="item.card.width"></span>
+          </div>
+          <p class="goal__pace">
+            @if (item.card.overdue) {
+              <app-icon name="alert" [size]="16" />
+            }
+            {{ item.card.pace }}
+          </p>
+          @for (note of item.card.notes; track note) {
+            <p class="goal__note">{{ note }}</p>
+          }
+        </article>
+      }
+    </div>
+
+    @if (completed().length) {
+      <section class="panel history" aria-labelledby="history-title">
+        <h2 id="history-title">Completed</h2>
+        @for (item of completed(); track item.goal.id) {
+          <div class="done">
+            <app-icon name="check" [size]="18" />
+            <span class="done__text">
+              <strong>{{ item.card.title }}</strong>
+              <span class="muted">{{ item.when }}</span>
+            </span>
+            <span class="num">{{ item.card.amounts }}</span>
+          </div>
+        }
+      </section>
+    }
+  }
+}
