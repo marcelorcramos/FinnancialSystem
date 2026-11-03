@@ -40,9 +40,15 @@ export default class AccountPage {
   protected readonly name = signal(this.user()?.name ?? '');
   protected readonly timezone = signal(this.user()?.timezone ?? 'Europe/Lisbon');
   protected readonly zones = timeZones(this.timezone());
+  protected readonly autoNewMonth = signal(this.user()?.auto_new_month ?? false);
   protected readonly profileChanged = computed(() => {
     const user = this.user();
-    return !!user && (this.name().trim() !== user.name || this.timezone() !== user.timezone);
+    return (
+      !!user &&
+      (this.name().trim() !== user.name ||
+        this.timezone() !== user.timezone ||
+        this.autoNewMonth() !== user.auto_new_month)
+    );
   });
   protected readonly profileValid = computed(() => this.name().trim().length > 0);
   protected readonly savingProfile = signal(false);
@@ -65,7 +71,12 @@ export default class AccountPage {
     if (!this.profileChanged() || !this.profileValid() || this.savingProfile()) return;
     this.savingProfile.set(true);
     this.profileError.set(null);
-    this.auth.updateProfile({ name: this.name().trim(), timezone: this.timezone() }).subscribe({
+    const changes = {
+      name: this.name().trim(),
+      timezone: this.timezone(),
+      auto_new_month: this.autoNewMonth(),
+    };
+    this.auth.updateProfile(changes).subscribe({
       next: (user) => {
         this.savingProfile.set(false);
         this.name.set(user.name);
