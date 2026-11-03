@@ -1,23 +1,15 @@
 """Redis read cache for summaries and reports (Phase 7)."""
 
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator
 from typing import Any
 
 import pytest
 from httpx import AsyncClient
 from redis.asyncio import Redis
-from testcontainers.community.redis import RedisContainer
 
 from app.core.cache import Cache, get_cache
 from app.main import app
 from tests.integration.helpers import ApiUser, create_month, label_id, new_user
-
-
-@pytest.fixture(scope="module")
-def redis_url() -> Iterator[str]:
-    with RedisContainer("redis:7-alpine") as container:
-        host, port = container.get_container_host_ip(), container.get_exposed_port(6379)
-        yield f"redis://{host}:{port}/0"
 
 
 @pytest.fixture

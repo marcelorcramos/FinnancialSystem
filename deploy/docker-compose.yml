@@ -61,6 +61,8 @@ services:
       RABBITMQ_URL: amqp://finance:finance_dev@rabbitmq:5672/
       SECRET_KEY: dev-secret-key-change-me-0123456789abcdef
       CORS_ORIGINS: http://localhost:4200
+      # Trust X-Forwarded-For from the web container (nginx), so rate limits see the real client.
+      FORWARDED_ALLOW_IPS: "*"
     ports: ["8000:8000"]
     depends_on:
       postgres: { condition: service_healthy }

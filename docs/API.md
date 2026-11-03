@@ -31,6 +31,7 @@ Domain errors share one shape:
 | 409 | `month_closed` | Any write to a closed month |
 | 422 | `validation_failed` | A domain rule failed (date outside the month, same label on both sides of a transfer, archived label...) |
 | 422 | *(FastAPI shape)* | Request body/query does not match the schema: `{"detail": [{"loc": [...], "msg": "..."}]}` |
+| 429 | `rate_limited` | Too many attempts on `/auth/register`, `/auth/login` or `/auth/refresh`; the `Retry-After` header says how many seconds to wait |
 
 ## Auth and profile
 

@@ -8,6 +8,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import Cache, get_cache
+from app.core.rate_limit import RateLimiter, get_rate_limiter
 from app.core.security import decode_access_token
 from app.db.session import get_session
 from app.models import User
@@ -62,3 +63,11 @@ async def _invalidate_cache_after_writes(
 
 InvalidatesCache = Depends(_invalidate_cache_after_writes, scope="function")
 """Router dependency for routes that change a user's money: clears their read cache."""
+
+
+RateLimiterDep = Annotated[RateLimiter, Depends(get_rate_limiter)]
+
+
+def client_ip(request: Request) -> str:
+    """The caller's address (Uvicorn resolves X-Forwarded-For from trusted proxies)."""
+    return request.client.host if request.client else "unknown"

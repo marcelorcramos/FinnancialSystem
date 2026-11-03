@@ -67,6 +67,7 @@ Icon names are Material Symbols for now; they will change with the frontend rede
 |---|---|
 | Read cache | Redis caches the month summary and the three report routes per user, keyed by the request's parameters (the report key includes today, so a new day is a new key), for one hour. Each user has a version number in the key: invalidating is one `INCR`, old keys just expire. If Redis is down, reads go to PostgreSQL and nothing fails. |
 | Invalidation | Every successful write on months, incomes, entries, transfers and labels invalidates the user's cache before the response is sent, so the next read is already fresh. The `cache` consumer (outbox events) also invalidates, for writes that do not come through the API, such as Celery tasks. |
+| Auth rate limits | Fixed windows in Redis: login 20 per minute per IP and 10 per 5 minutes per email, sign-up 30 per hour per IP, refresh 60 per minute per IP. Over the limit: 429 `rate_limited` with `Retry-After`. Emails are hashed in the keys. Without Redis there is no limit (fail open), like the cache. |
 
 ## Future ideas
 

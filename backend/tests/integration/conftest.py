@@ -6,9 +6,11 @@ from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from testcontainers.community.postgres import PostgresContainer
+from testcontainers.community.redis import RedisContainer
 
 from alembic import command
 from app.core.cache import Cache, get_cache
+from app.core.rate_limit import RateLimiter, get_rate_limiter
 from app.db.session import get_session
 from app.main import app
 
@@ -32,6 +34,14 @@ def alembic_config(database_url: str) -> Config:
 def postgres() -> Iterator[PostgresContainer]:
     with PostgresContainer("postgres:16", driver="asyncpg") as container:
         yield container
+
+
+@pytest.fixture(scope="session")
+def redis_url() -> Iterator[str]:
+    """A real Redis, started only by the tests that ask for it."""
+    with RedisContainer("redis:7-alpine") as container:
+        host, port = container.get_container_host_ip(), container.get_exposed_port(6379)
+        yield f"redis://{host}:{port}/0"
 
 
 @pytest.fixture(scope="session")
@@ -73,6 +83,7 @@ async def client(session: AsyncSession) -> AsyncIterator[AsyncClient]:
     app.dependency_overrides[get_session] = _session_override
     # No Redis by default: reads go straight to PostgreSQL (see test_cache.py).
     app.dependency_overrides.setdefault(get_cache, lambda: Cache(None))
+    app.dependency_overrides.setdefault(get_rate_limiter, lambda: RateLimiter(None))
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
     app.dependency_overrides.clear()
