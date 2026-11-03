@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engin
 from testcontainers.community.postgres import PostgresContainer
 
 from alembic import command
+from app.core.cache import Cache, get_cache
 from app.db.session import get_session
 from app.main import app
 
@@ -70,6 +71,8 @@ async def client(session: AsyncSession) -> AsyncIterator[AsyncClient]:
         yield session
 
     app.dependency_overrides[get_session] = _session_override
+    # No Redis by default: reads go straight to PostgreSQL (see test_cache.py).
+    app.dependency_overrides.setdefault(get_cache, lambda: Cache(None))
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
     app.dependency_overrides.clear()

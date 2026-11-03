@@ -3,12 +3,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, status
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import CurrentUser, InvalidatesCache, SessionDep
 from app.repositories import labels as labels_repo
 from app.schemas.label import ColorSuggestions, LabelCreate, LabelRead, LabelUpdate
 from app.services import labels
 
-router = APIRouter(prefix="/labels", tags=["labels"])
+router = APIRouter(prefix="/labels", tags=["labels"], dependencies=[InvalidatesCache])
 
 
 @router.get("")

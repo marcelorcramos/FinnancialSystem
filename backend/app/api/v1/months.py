@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter, status
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import CacheDep, CurrentUser, InvalidatesCache, SessionDep
 from app.repositories import months as months_repo
 from app.schemas.month import (
     IncomeCreate,
@@ -15,7 +15,7 @@ from app.schemas.month import (
 from app.schemas.summary import MonthSummary
 from app.services import incomes, months, summary
 
-router = APIRouter(tags=["months"])
+router = APIRouter(tags=["months"], dependencies=[InvalidatesCache])
 
 
 @router.get("/months")
@@ -38,10 +38,16 @@ async def get_month(month_id: uuid.UUID, user: CurrentUser, session: SessionDep)
 
 @router.get("/months/{month_id}/summary")
 async def month_summary(
-    month_id: uuid.UUID, user: CurrentUser, session: SessionDep
+    month_id: uuid.UUID, user: CurrentUser, session: SessionDep, cache: CacheDep
 ) -> MonthSummary:
     """Totals per label ("base + adjustments") and per kind, income and unallocated."""
-    return await summary.month_summary(session, user, month_id)
+    return await cache.get_or_set(
+        user.id,
+        "month_summary",
+        {"month_id": month_id},
+        MonthSummary,
+        lambda: summary.month_summary(session, user, month_id),
+    )
 
 
 @router.patch("/months/{month_id}")

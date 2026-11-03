@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter, Response, status
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import CurrentUser, InvalidatesCache, SessionDep
 from app.schemas.entry import (
     AdditionCreate,
     AdditionRead,
@@ -16,7 +16,7 @@ from app.schemas.entry import (
 )
 from app.services import entries
 
-router = APIRouter(tags=["entries"])
+router = APIRouter(tags=["entries"], dependencies=[InvalidatesCache])
 
 
 @router.put(

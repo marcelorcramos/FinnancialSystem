@@ -61,6 +61,13 @@ Icon names are Material Symbols for now; they will change with the frontend rede
 - `GET /labels/color-suggestions` returns 8 colors not used by any of the user's labels: a curated palette first, then generated hues.
 - Color picker (frontend): when creating or editing a label, a small pop-up shows the 8 suggestions as square swatches, plus a field to type any `#RRGGBB` code. A full-spectrum picker may come later.
 
+## Cache, events and tasks (2026-11-03)
+
+| Topic | Decision |
+|---|---|
+| Read cache | Redis caches the month summary and the three report routes per user, keyed by the request's parameters (the report key includes today, so a new day is a new key), for one hour. Each user has a version number in the key: invalidating is one `INCR`, old keys just expire. If Redis is down, reads go to PostgreSQL and nothing fails. |
+| Invalidation | Every successful write on months, incomes, entries, transfers and labels invalidates the user's cache before the response is sent, so the next read is already fresh. The `cache` consumer (outbox events) also invalidates, for writes that do not come through the API, such as Celery tasks. |
+
 ## Future ideas
 
 Ideas left for later live in [`docs/FUTURE_IMPLEMENTATIONS.md`](FUTURE_IMPLEMENTATIONS.md).

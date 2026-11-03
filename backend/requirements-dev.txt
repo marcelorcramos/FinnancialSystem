@@ -3,7 +3,7 @@ pytest
 pytest-asyncio
 pytest-cov
 httpx
-testcontainers[postgres]
+testcontainers[postgres,redis]
 ruff
 mypy
 pre-commit
