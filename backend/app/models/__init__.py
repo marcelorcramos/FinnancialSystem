@@ -3,6 +3,7 @@
 from app.models.attachment import Attachment
 from app.models.audit import AuditLog
 from app.models.entry import Entry
+from app.models.export import Export
 from app.models.goal import Goal
 from app.models.label import Label
 from app.models.limit import Alert, Limit
@@ -15,6 +16,7 @@ __all__ = [
     "Attachment",
     "AuditLog",
     "Entry",
+    "Export",
     "Goal",
     "Income",
     "Label",

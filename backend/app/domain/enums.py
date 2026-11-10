@@ -34,3 +34,21 @@ class GoalType(StrEnum):
 class TokenPurpose(StrEnum):
     VERIFY_EMAIL = "verify_email"
     RESET_PASSWORD = "reset_password"  # noqa: S105  (a purpose, not a secret)
+
+
+class ExportKind(StrEnum):
+    REPORT = "report"  # entries of a report window, as CSV or PDF
+    ACCOUNT = "account"  # every piece of the user's data (GDPR), as a ZIP
+
+
+class ExportFormat(StrEnum):
+    CSV = "csv"
+    PDF = "pdf"
+    ZIP = "zip"
+
+
+class ExportStatus(StrEnum):
+    PENDING = "pending"
+    READY = "ready"
+    FAILED = "failed"
+    EXPIRED = "expired"  # the file was removed after its retention

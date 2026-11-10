@@ -276,6 +276,25 @@ Photos and PDFs of a month, optionally tied to one of its entries. Files live in
 - `url` works for 5 minutes and opens the file inline, or as a download with `download=true`. Another user's receipt is a 404, and storage refuses unsigned or altered links.
 - Receipts of a deleted entry are hidden from the list and come back with the entry.
 
+## Exports
+
+Files built in the background by the Celery worker: a report's entries as CSV or PDF, or all of the account's data (GDPR) as a ZIP. Ask for one, poll it until `status` is `ready`, then download it through a signed link.
+
+| Method | Route | Body | Response |
+|---|---|---|---|
+| POST | `/exports` | `{format: "csv" \| "pdf", period?, label_ids?, kinds?}` | 202 `Export` (pending) |
+| POST | `/users/me/export` | | 202 `Export` (pending ZIP of the whole account) |
+| GET | `/exports` | | 200 `Export[]`, latest 20, newest first |
+| GET | `/exports/{id}` | | 200 `Export` |
+| GET | `/exports/{id}/url` | | 200 `{url, expires_in}`; 409 until ready (or once failed or expired) |
+
+- `Export` = `{id, kind: "report" | "account", format, status: "pending" | "ready" | "failed" | "expired", period, label_ids, kinds, reference_date, filename, size, error, created_at, completed_at, expires_at}`.
+- Report filters work like `/reports/*`; the window is fixed on the day of the request (`reference_date`). Someone else's label is a 404.
+- CSV: one row per entry, newest first, with month, date, label, kind, movement, amount, signed amount (money moved out is negative), the other label of a transfer, the income source and the note. UTF-8 with a BOM; notes that start like a formula get a leading `'`.
+- PDF: totals by kind, the labels with total and share, and the entries.
+- ZIP: `data.json` with the profile and every label, month, income, entry, limit, alert, goal and receipt record (deleted ones too), plus the receipt files under `receipts/`.
+- At most 3 exports can wait at once (409). Files are removed 7 days after they are ready (`status` becomes `expired`).
+
 ## Limits
 
 A limit is a maximum for a label: a default for every month, or one for a single month that replaces the default. Limits only warn, never block a write.

@@ -16,7 +16,8 @@ def test_money_code_never_uses_float() -> None:
                     offenders.append(f"{path.relative_to(APP)}:{node.lineno}")
                 if isinstance(node, ast.Constant) and type(node.value) is float:
                     offenders.append(f"{path.relative_to(APP)}:{node.lineno}")
-    # money.py mentions float only to reject it; colors.py computes hues, not money.
-    allowed = ("domain/money.py", "domain/colors.py")
+    # money.py mentions float only to reject it; colors.py computes hues, not money;
+    # export_files.py lays the PDF out in millimetres (its amounts stay Decimal).
+    allowed = ("domain/money.py", "domain/colors.py", "services/export_files.py")
     offenders = [o for o in offenders if not o.startswith(allowed)]
     assert offenders == []

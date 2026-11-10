@@ -5,6 +5,7 @@ from app.api.v1 import (
     attachments,
     auth,
     entries,
+    exports,
     goals,
     labels,
     limits,
@@ -24,3 +25,4 @@ api_router.include_router(limits.router)
 api_router.include_router(alerts.router)
 api_router.include_router(goals.router)
 api_router.include_router(attachments.router)
+api_router.include_router(exports.router)

@@ -2,6 +2,7 @@
 fresh event loop and an engine that does not outlive it."""
 
 import asyncio
+import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 
@@ -10,7 +11,8 @@ from sqlalchemy.pool import NullPool
 
 from app.core import mail
 from app.core.config import settings
-from app.services import recurring
+from app.core.storage import get_storage
+from app.services import exports, recurring
 from app.workers.celery_app import celery_app
 
 
@@ -42,3 +44,19 @@ def create_due_months() -> int:
 )
 def send_email(to: str, subject: str, body: str) -> None:
     mail.send(to, subject, body)
+
+
+@celery_app.task(name="app.workers.tasks.run_export")
+def run_export(export_id: str) -> str:
+    """Build an export's file (see services/exports.py); returns its final status."""
+    status = _run_with_session(
+        lambda session: exports.build(session, get_storage(), uuid.UUID(export_id))
+    )
+    return status.value
+
+
+@celery_app.task(name="app.workers.tasks.remove_expired_exports")
+def remove_expired_exports() -> int:
+    return _run_with_session(
+        lambda session: exports.remove_expired(session, get_storage(), datetime.now(UTC))
+    )

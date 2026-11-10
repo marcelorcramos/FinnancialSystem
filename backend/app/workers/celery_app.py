@@ -23,5 +23,9 @@ celery_app.conf.update(
             "task": "app.workers.tasks.create_due_months",
             "schedule": crontab(minute=5),
         },
+        "remove-expired-exports": {
+            "task": "app.workers.tasks.remove_expired_exports",
+            "schedule": crontab(hour=3, minute=15),
+        },
     },
 )

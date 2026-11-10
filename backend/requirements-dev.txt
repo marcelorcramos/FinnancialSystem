@@ -7,3 +7,4 @@ testcontainers[postgres,rabbitmq,redis]
 ruff
 mypy
 pre-commit
+pypdf==6.21.2
