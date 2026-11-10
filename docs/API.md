@@ -259,6 +259,23 @@ Windows are rolling and include the current month (in the user's time zone). Del
 - `counterpart_label_id` names the other label of a transfer even when that label is outside the filter.
 - Sorted by `occurred_on`, newest first; ties keep creation order, newest first.
 
+## Receipts
+
+Photos and PDFs of a month, optionally tied to one of its entries. Files live in private S3 storage; the browser opens them through short-lived signed links that the API makes only for the owner.
+
+| Method | Route | Body | Response |
+|---|---|---|---|
+| POST | `/months/{month_id}/attachments` | multipart: `file`, `entry_id?` | 201 `Attachment`; 409 `month_closed` |
+| GET | `/months/{month_id}/attachments` | `?entry_id=` | 200 `Attachment[]`, oldest first |
+| GET | `/attachments/{id}/url` | `?download=true` | 200 `{url, expires_in}` |
+| DELETE | `/attachments/{id}` | | 204 (soft delete); 409 on a closed month |
+| POST | `/attachments/{id}/restore` | | 200 `Attachment` |
+
+- `Attachment` = `{id, month_id, entry_id, filename, mime, size, created_at}`.
+- Accepted: JPEG, PNG, WebP and PDF up to 10 MB, recognized by the file's first bytes (not its name or declared type). Anything else gives 422. The stored name drops folders and control characters and gets the extension of the real type.
+- `url` works for 5 minutes and opens the file inline, or as a download with `download=true`. Another user's receipt is a 404, and storage refuses unsigned or altered links.
+- Receipts of a deleted entry are hidden from the list and come back with the entry.
+
 ## Limits
 
 A limit is a maximum for a label: a default for every month, or one for a single month that replaces the default. Limits only warn, never block a write.

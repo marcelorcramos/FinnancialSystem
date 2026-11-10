@@ -89,6 +89,8 @@ Icon names are Material Symbols for now; they will change with the frontend rede
 |---|---|
 | Email | Sent by the Celery worker (`send_email` task, SMTP; Mailpit in dev at http://localhost:8025), retried with backoff when SMTP fails. The API sends tasks by name after its transaction commits; if the broker is down the request still succeeds and the user can ask again. |
 | Email verification | Sign-up emails a confirmation link (48 hours). It does not block sign-in: the app shows a reminder with **Resend** until the email is confirmed. Proposed and accepted on 2026-11-10. |
+| Receipts | JPEG, PNG, WebP or PDF up to 10 MB per file, checked by magic bytes (HEIC is left out: browsers cannot show it). Uploads go through the API, which validates and stores them under `users/<user_id>/attachments/<attachment_id>`: random keys without names. Views and downloads are 5-minute signed links that the API issues only to the owner; storage has no anonymous access, so a guessed or altered link gets 403. Deletes are soft for Undo, and the file stays until the account is deleted. A closed month rejects uploads, deletes and restores. |
+| Storage in production | The code speaks S3 (boto3). Azure Blob through its own SDK or an S3 gateway is decided in Phase 14; proposed and accepted on 2026-11-10. |
 | Password recovery | `POST /auth/password-reset` always answers 202 (no account discovery) and emails a 1-hour link. Tokens are random, stored as SHA-256 hashes in `user_tokens`, single use, and a new link spends the older ones of the same kind. Setting the new password ends every session and confirms the email. |
 
 ## Future ideas
@@ -131,7 +133,7 @@ Screens agreed in the mockups:
 - SQLAlchemy 2.0 async with `asyncpg`.
 - Integration tests with testcontainers (real PostgreSQL); Docker must be running.
 - Frontend: Angular (latest stable), standalone components, Signals, zoneless, new control flow, own components on Angular CDK (no Angular Material), charts as own SVG components (donut, line) instead of ECharts.
-- Dev file storage: SeaweedFS (S3-compatible) instead of MinIO, because MinIO Docker images are no longer public. The code speaks S3, so production can still use Azure Blob (through an S3 gateway or its own SDK, decided in Phase 9).
+- Dev file storage: SeaweedFS (S3-compatible) instead of MinIO, because MinIO Docker images are no longer public. The code speaks S3, so production can still use Azure Blob (through an S3 gateway or its own SDK, decided in Phase 14).
 - CI split by area: `.github/workflows/backend.yml` and `frontend.yml`.
 - Node 24 for the frontend (Angular 22 needs Node ≥ 22.22).
 

@@ -1,5 +1,6 @@
 """SQLAlchemy models. Every model must be imported here so Alembic can see it."""
 
+from app.models.attachment import Attachment
 from app.models.audit import AuditLog
 from app.models.entry import Entry
 from app.models.goal import Goal
@@ -11,6 +12,7 @@ from app.models.user import RefreshToken, User, UserToken
 
 __all__ = [
     "Alert",
+    "Attachment",
     "AuditLog",
     "Entry",
     "Goal",

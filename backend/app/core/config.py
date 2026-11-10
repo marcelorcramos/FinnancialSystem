@@ -28,6 +28,15 @@ class Settings(BaseSettings):
     SMTP_STARTTLS: bool = False
     MAIL_FROM: str = "FinnancialSystem <no-reply@finnancial.local>"
 
+    # S3-compatible file storage (SeaweedFS in dev). Signed links use the public URL,
+    # the address the browser reaches; the API talks to S3_ENDPOINT_URL.
+    S3_ENDPOINT_URL: str = "http://localhost:8333"
+    S3_PUBLIC_URL: str | None = None
+    S3_REGION: str = "us-east-1"
+    S3_ACCESS_KEY: str = "finance"
+    S3_SECRET_KEY: str = "finance_dev_secret"  # noqa: S105  (dev default, like the DB password)
+    S3_BUCKET: str = "finnancial"
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @cached_property

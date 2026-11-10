@@ -1,3 +1,4 @@
+import time
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 from typing import Any
@@ -9,15 +10,18 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engin
 from testcontainers.community.postgres import PostgresContainer
 from testcontainers.community.rabbitmq import RabbitMqContainer
 from testcontainers.community.redis import RedisContainer
+from testcontainers.core.container import DockerContainer
 
 from alembic import command
 from app.core.cache import Cache, get_cache
 from app.core.jobs import JobQueue, get_job_queue
 from app.core.rate_limit import RateLimiter, get_rate_limiter
+from app.core.storage import Storage, get_storage
 from app.db.session import get_session
 from app.main import app
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
+SEAWEEDFS_CONFIG = BACKEND_DIR.parent / "deploy" / "seaweedfs" / "s3.json"
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
@@ -53,6 +57,36 @@ def rabbitmq_url() -> Iterator[str]:
     with RabbitMqContainer("rabbitmq:4", username="test", password="test") as container:
         host, port = container.get_container_host_ip(), container.get_exposed_port(5672)
         yield f"amqp://test:test@{host}:{port}/"
+
+
+@pytest.fixture(scope="session")
+def s3_url() -> Iterator[str]:
+    """A real SeaweedFS S3 with the same credentials as Compose (anonymous access denied)."""
+    container = (
+        DockerContainer("chrislusf/seaweedfs:4.50")
+        .with_command("server -dir=/data -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json")
+        .with_volume_mapping(str(SEAWEEDFS_CONFIG), "/etc/seaweedfs/s3.json")
+        .with_exposed_ports(8333)
+    )
+    with container:
+        url = f"http://{container.get_container_host_ip()}:{container.get_exposed_port(8333)}"
+        storage = Storage(url, url, "probe")
+        for _ in range(300):
+            try:
+                storage._s3.list_buckets()
+                break
+            except Exception:
+                time.sleep(0.1)
+        yield url
+
+
+@pytest.fixture
+def storage(s3_url: str) -> Iterator[Storage]:
+    """Storage on the test S3; the API uses it for this test."""
+    storage = Storage(s3_url, s3_url, "test-bucket")
+    app.dependency_overrides[get_storage] = lambda: storage
+    yield storage
+    app.dependency_overrides.pop(get_storage, None)
 
 
 @pytest.fixture(scope="session")

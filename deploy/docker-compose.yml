@@ -15,6 +15,9 @@ x-backend-env: &backend-env
   SMTP_PORT: "1025"
   # Links in emails open the Compose web app.
   FRONTEND_URL: http://localhost:8080
+  S3_ENDPOINT_URL: http://s3:8333
+  # Signed links are opened by the browser, which reaches S3 on the published port.
+  S3_PUBLIC_URL: http://localhost:8333
 
 # Background processes run the API image with another command. They start once the
 # API is healthy, which means the migrations have run.
@@ -59,9 +62,12 @@ services:
   # S3-compatible storage (replaces MinIO, whose images are no longer public). S3 on :8333.
   s3:
     image: chrislusf/seaweedfs:4.50
-    command: server -dir=/data -s3 -s3.port=8333
+    # Credentials in seaweedfs/s3.json; without them nothing can be read (no anonymous access).
+    command: server -dir=/data -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json
     ports: ["8333:8333", "9333:9333"]
-    volumes: [s3data:/data]
+    volumes:
+      - s3data:/data
+      - ./seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
     healthcheck:
       <<: *healthcheck
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9333/cluster/status"]
@@ -86,6 +92,7 @@ services:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
+      s3: { condition: service_healthy }
     healthcheck:
       <<: *healthcheck
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
