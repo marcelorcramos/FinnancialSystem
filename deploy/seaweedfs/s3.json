@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "finance",
+      "credentials": [{ "accessKey": "finance", "secretKey": "finance_dev_secret" }],
+      "actions": ["Admin", "Read", "List", "Tagging", "Write"]
+    }
+  ]
+}

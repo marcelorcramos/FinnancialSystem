@@ -25,6 +25,13 @@ class ValidationError(DomainError):
     code = "validation_failed"
 
 
+class InvalidTokenError(ValidationError):
+    code = "invalid_token"
+
+    def __init__(self) -> None:
+        super().__init__("This link is invalid or has expired. Ask for a new one.")
+
+
 class MonthClosedError(ConflictError):
     code = "month_closed"
 

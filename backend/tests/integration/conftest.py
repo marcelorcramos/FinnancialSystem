@@ -1,5 +1,7 @@
+import time
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 from alembic.config import Config
@@ -8,14 +10,18 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engin
 from testcontainers.community.postgres import PostgresContainer
 from testcontainers.community.rabbitmq import RabbitMqContainer
 from testcontainers.community.redis import RedisContainer
+from testcontainers.core.container import DockerContainer
 
 from alembic import command
 from app.core.cache import Cache, get_cache
+from app.core.jobs import JobQueue, get_job_queue
 from app.core.rate_limit import RateLimiter, get_rate_limiter
+from app.core.storage import Storage, get_storage
 from app.db.session import get_session
 from app.main import app
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
+SEAWEEDFS_CONFIG = BACKEND_DIR.parent / "deploy" / "seaweedfs" / "s3.json"
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
@@ -54,6 +60,36 @@ def rabbitmq_url() -> Iterator[str]:
 
 
 @pytest.fixture(scope="session")
+def s3_url() -> Iterator[str]:
+    """A real SeaweedFS S3 with the same credentials as Compose (anonymous access denied)."""
+    container = (
+        DockerContainer("chrislusf/seaweedfs:4.50")
+        .with_command("server -dir=/data -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json")
+        .with_volume_mapping(str(SEAWEEDFS_CONFIG), "/etc/seaweedfs/s3.json")
+        .with_exposed_ports(8333)
+    )
+    with container:
+        url = f"http://{container.get_container_host_ip()}:{container.get_exposed_port(8333)}"
+        storage = Storage(url, url, "probe")
+        for _ in range(300):
+            try:
+                storage._s3.list_buckets()
+                break
+            except Exception:
+                time.sleep(0.1)
+        yield url
+
+
+@pytest.fixture
+def storage(s3_url: str) -> Iterator[Storage]:
+    """Storage on the test S3; the API uses it for this test."""
+    storage = Storage(s3_url, s3_url, "test-bucket")
+    app.dependency_overrides[get_storage] = lambda: storage
+    yield storage
+    app.dependency_overrides.pop(get_storage, None)
+
+
+@pytest.fixture(scope="session")
 def database_url(postgres: PostgresContainer) -> str:
     url: str = postgres.get_connection_url()
     command.upgrade(alembic_config(url), "head")
@@ -82,8 +118,26 @@ async def session(engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
         await transaction.rollback()
 
 
+class RecordedJobs(JobQueue):
+    """Keeps the jobs the API sends to Celery instead of sending them."""
+
+    def __init__(self) -> None:
+        self.sent: list[tuple[str, dict[str, Any]]] = []
+
+    async def enqueue(self, task: str, **kwargs: Any) -> None:
+        self.sent.append((task, kwargs))
+
+    def of(self, task: str) -> list[dict[str, Any]]:
+        return [kwargs for name, kwargs in self.sent if name == task]
+
+
 @pytest.fixture
-async def client(session: AsyncSession) -> AsyncIterator[AsyncClient]:
+def jobs() -> RecordedJobs:
+    return RecordedJobs()
+
+
+@pytest.fixture
+async def client(session: AsyncSession, jobs: RecordedJobs) -> AsyncIterator[AsyncClient]:
     """API HTTP client using the test session (everything is rolled back at the end)."""
 
     async def _session_override() -> AsyncIterator[AsyncSession]:
@@ -93,6 +147,7 @@ async def client(session: AsyncSession) -> AsyncIterator[AsyncClient]:
     # No Redis by default: reads go straight to PostgreSQL (see test_cache.py).
     app.dependency_overrides.setdefault(get_cache, lambda: Cache(None))
     app.dependency_overrides.setdefault(get_rate_limiter, lambda: RateLimiter(None))
+    app.dependency_overrides[get_job_queue] = lambda: jobs
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
     app.dependency_overrides.clear()

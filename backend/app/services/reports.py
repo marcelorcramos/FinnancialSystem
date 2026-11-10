@@ -37,7 +37,7 @@ async def summary(
     categories: CategoryFilter,
     today: date,
 ) -> ReportSummary:
-    await _ensure_own_labels(session, user, categories)
+    await ensure_own_labels(session, user, categories)
     months = months_in(period, today)
 
     breakdowns: dict[uuid.UUID, LabelBreakdown] = {}
@@ -80,7 +80,7 @@ async def series(
     today: date,
 ) -> ReportSeries:
     """Net total per label and month (line chart data). Months without money count as zero."""
-    await _ensure_own_labels(session, user, categories)
+    await ensure_own_labels(session, user, categories)
     window = months_in(period, today)
 
     breakdowns: dict[tuple[uuid.UUID, MonthKey], LabelBreakdown] = {}
@@ -146,7 +146,7 @@ async def entries(
     offset: int,
 ) -> ReportEntries:
     """The entries behind the summary, newest first, one page at a time."""
-    await _ensure_own_labels(session, user, categories)
+    await ensure_own_labels(session, user, categories)
     months = months_in(period, today)
 
     breakdown = LabelBreakdown()
@@ -200,7 +200,8 @@ async def _selected_labels(
     return labels
 
 
-async def _ensure_own_labels(session: AsyncSession, user: User, categories: CategoryFilter) -> None:
+async def ensure_own_labels(session: AsyncSession, user: User, categories: CategoryFilter) -> None:
+    """404 when the filter names a label that is not the user's."""
     if await reports_repo.missing_label_ids(session, user.id, categories.label_ids):
         raise NotFoundError("Label not found")
 

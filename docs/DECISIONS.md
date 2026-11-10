@@ -17,7 +17,7 @@ Everything in the repository is in **English**: code, identifiers, comments, doc
 | Allocation | At most one `allocation` per label and month, editable (partial unique index). |
 | Refresh tokens | `refresh_tokens` table (token hash, family, `expires_at`, `revoked_at`, `replaced_by_id`). Rotated on every refresh; reusing an already rotated token revokes the whole family. |
 | Admin | Later. There are no routes that list or edit other users. |
-| Accounts | No email verification for now (it only has to be a valid email). New passwords: at least 8 characters with a lowercase letter, an uppercase letter, a digit and a special character. |
+| Accounts | Emails are confirmed through a link since Phase 9, without blocking sign-in (see "Receipts, exports, data and email"). New passwords: at least 8 characters with a lowercase letter, an uppercase letter, a digit and a special character. |
 | Currency and locale | EUR only in the MVP (the `currency` field exists to change it later). Default time zone `Europe/Lisbon`. |
 
 ## Months, entries and reports (2026-10-26)
@@ -83,6 +83,19 @@ Icon names are Material Symbols for now; they will change with the frontend rede
 | Goals | A goal gathers money in a label: progress is the label's balance over all months (or a manual amount). One active goal per label. "You need to save €X/month" = remaining / months left, counting the current month and the deadline's month, rounded up to the cent so following it always reaches the target. A passed deadline without the target is `overdue`. The `goals` consumer (on `entry.*` and `goal.*` events) marks reached goals as completed; they stay in the history even if the balance drops later. |
 | Emergency fund | A goal of type `emergency_fund`: target = N months (1–24) of average expenses, averaged over the 6 complete months before the current one that have a sheet (months without a sheet do not pull the average down). Recomputed on every read, so it follows spending. |
 
+## Receipts, exports, data and email (2026-11-10)
+
+| Topic | Decision |
+|---|---|
+| Email | Sent by the Celery worker (`send_email` task, SMTP; Mailpit in dev at http://localhost:8025), retried with backoff when SMTP fails. The API sends tasks by name after its transaction commits; if the broker is down the request still succeeds and the user can ask again. |
+| Email verification | Sign-up emails a confirmation link (48 hours). It does not block sign-in: the app shows a reminder with **Resend** until the email is confirmed. Proposed and accepted on 2026-11-10. |
+| Receipts | JPEG, PNG, WebP or PDF up to 10 MB per file, checked by magic bytes (HEIC is left out: browsers cannot show it). Uploads go through the API, which validates and stores them under `users/<user_id>/attachments/<attachment_id>`: random keys without names. Views and downloads are 5-minute signed links that the API issues only to the owner; storage has no anonymous access, so a guessed or altered link gets 403. Deletes are soft for Undo, and the file stays until the account is deleted. A closed month rejects uploads, deletes and restores. |
+| Storage in production | The code speaks S3 (boto3). Azure Blob through its own SDK or an S3 gateway is decided in Phase 14; proposed and accepted on 2026-11-10. |
+| Exports | `exports` rows track each request (`pending` → `ready`/`failed`, then `expired`). The API commits the row and sends `run_export` to Celery; the worker builds the file with the same report service as the screens (CSV with the stdlib, PDF with ReportLab), stores it under `users/<user_id>/exports/` and the user downloads it through a 5-minute signed link. Building twice is a no-op. At most 3 pending per user; a beat task removes files 7 days after they are ready. |
+| Data export (GDPR) | A ZIP with `data.json` (profile and every record of the user, soft-deleted ones included, password hash left out) and the receipt files, built like any export. |
+| Account deletion (GDPR) | The one exception to soft delete: `DELETE /users/me` (password required) erases the user row and everything that cascades from it, audit log included, in one transaction (entries first, because they hold RESTRICT keys to labels and incomes). After the commit the worker deletes the `users/<user_id>/` prefix in storage (retried until storage answers) and a goodbye email is sent. Nothing is kept to undo it. |
+| Password recovery | `POST /auth/password-reset` always answers 202 (no account discovery) and emails a 1-hour link. Tokens are random, stored as SHA-256 hashes in `user_tokens`, single use, and a new link spends the older ones of the same kind. Setting the new password ends every session and confirms the email. |
+
 ## Future ideas
 
 Ideas left for later live in [`docs/FUTURE_IMPLEMENTATIONS.md`](FUTURE_IMPLEMENTATIONS.md).
@@ -123,7 +136,7 @@ Screens agreed in the mockups:
 - SQLAlchemy 2.0 async with `asyncpg`.
 - Integration tests with testcontainers (real PostgreSQL); Docker must be running.
 - Frontend: Angular (latest stable), standalone components, Signals, zoneless, new control flow, own components on Angular CDK (no Angular Material), charts as own SVG components (donut, line) instead of ECharts.
-- Dev file storage: SeaweedFS (S3-compatible) instead of MinIO, because MinIO Docker images are no longer public. The code speaks S3, so production can still use Azure Blob (through an S3 gateway or its own SDK, decided in Phase 9).
+- Dev file storage: SeaweedFS (S3-compatible) instead of MinIO, because MinIO Docker images are no longer public. The code speaks S3, so production can still use Azure Blob (through an S3 gateway or its own SDK, decided in Phase 14).
 - CI split by area: `.github/workflows/backend.yml` and `frontend.yml`.
 - Node 24 for the frontend (Angular 22 needs Node ≥ 22.22).
 

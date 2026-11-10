@@ -69,3 +69,8 @@ def generate_refresh_token() -> str:
 
 def hash_refresh_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
+
+
+# Tokens sent by email are random and stored hashed, like refresh tokens.
+generate_email_token = generate_refresh_token
+hash_email_token = hash_refresh_token

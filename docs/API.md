@@ -47,11 +47,19 @@ The access token lasts 15 minutes and comes in the response body. The refresh to
 | GET | `/users/me` | | 200 `User` |
 | PATCH | `/users/me` | `{name?, currency?: "EUR", locale?, timezone?, auto_new_month?}` | 200 `User` |
 | POST | `/users/me/password` | `{current_password, new_password}` | 204, ends every session |
+| DELETE | `/users/me` | `{password}` | 204, deletes the account and all of its data for good; cookie cleared |
+| POST | `/users/me/verification-email` | | 202, emails a new confirmation link; 409 if already confirmed |
+| POST | `/auth/verify-email` | `{token}` | 204, confirms the email (no sign-in needed) |
+| POST | `/auth/password-reset` | `{email}` | 202, emails a reset link if the email has an account |
+| POST | `/auth/password-reset/confirm` | `{token, new_password}` | 204, sets the password and ends every session |
 
 - `Token` = `{access_token, token_type: "bearer", expires_in}` (seconds).
 - `User` = `{id, email, name, avatar_url, currency, locale, timezone, email_verified_at}`.
 - New passwords: at least 8 characters with a lowercase letter, an uppercase letter, a digit and a special character.
-- Sign-up creates the default labels listed in `DECISIONS.md`.
+- Sign-up creates the default labels listed in `DECISIONS.md` and emails a link to confirm the address (`{FRONTEND_URL}/verify-email?token=…`). Signing in does not wait for it: `email_verified_at` stays null until the link is opened.
+- Reset links (`{FRONTEND_URL}/reset-password?token=…`) last 1 hour, confirmation links 48 hours; both work once, and a new link replaces the previous one of the same kind. A used, expired or unknown token gives 422 `invalid_token`. Resetting the password also confirms the email.
+- `DELETE /users/me` needs the current password (401 otherwise; 10 tries per hour). Every record goes at once, audit log included; receipts and export files are removed by the worker right after, and a goodbye email confirms it. The email can sign up again.
+- `/auth/password-reset` answers 202 whether or not the email has an account, so it cannot be used to find accounts. Rate limits: 20 per hour per IP and 5 per hour per email; resending the confirmation, 5 per hour per user.
 
 ## Labels
 
@@ -252,6 +260,42 @@ Windows are rolling and include the current month (in the user's time zone). Del
 - `total` is the net sum of every matching entry (transfers out subtract), not just this page, and equals the `/reports/summary` total. `count` is the number of matching entries across all pages.
 - `counterpart_label_id` names the other label of a transfer even when that label is outside the filter.
 - Sorted by `occurred_on`, newest first; ties keep creation order, newest first.
+
+## Receipts
+
+Photos and PDFs of a month, optionally tied to one of its entries. Files live in private S3 storage; the browser opens them through short-lived signed links that the API makes only for the owner.
+
+| Method | Route | Body | Response |
+|---|---|---|---|
+| POST | `/months/{month_id}/attachments` | multipart: `file`, `entry_id?` | 201 `Attachment`; 409 `month_closed` |
+| GET | `/months/{month_id}/attachments` | `?entry_id=` | 200 `Attachment[]`, oldest first |
+| GET | `/attachments/{id}/url` | `?download=true` | 200 `{url, expires_in}` |
+| DELETE | `/attachments/{id}` | | 204 (soft delete); 409 on a closed month |
+| POST | `/attachments/{id}/restore` | | 200 `Attachment` |
+
+- `Attachment` = `{id, month_id, entry_id, filename, mime, size, created_at}`.
+- Accepted: JPEG, PNG, WebP and PDF up to 10 MB, recognized by the file's first bytes (not its name or declared type). Anything else gives 422. The stored name drops folders and control characters and gets the extension of the real type.
+- `url` works for 5 minutes and opens the file inline, or as a download with `download=true`. Another user's receipt is a 404, and storage refuses unsigned or altered links.
+- Receipts of a deleted entry are hidden from the list and come back with the entry.
+
+## Exports
+
+Files built in the background by the Celery worker: a report's entries as CSV or PDF, or all of the account's data (GDPR) as a ZIP. Ask for one, poll it until `status` is `ready`, then download it through a signed link.
+
+| Method | Route | Body | Response |
+|---|---|---|---|
+| POST | `/exports` | `{format: "csv" \| "pdf", period?, label_ids?, kinds?}` | 202 `Export` (pending) |
+| POST | `/users/me/export` | | 202 `Export` (pending ZIP of the whole account) |
+| GET | `/exports` | | 200 `Export[]`, latest 20, newest first |
+| GET | `/exports/{id}` | | 200 `Export` |
+| GET | `/exports/{id}/url` | | 200 `{url, expires_in}`; 409 until ready (or once failed or expired) |
+
+- `Export` = `{id, kind: "report" | "account", format, status: "pending" | "ready" | "failed" | "expired", period, label_ids, kinds, reference_date, filename, size, error, created_at, completed_at, expires_at}`.
+- Report filters work like `/reports/*`; the window is fixed on the day of the request (`reference_date`). Someone else's label is a 404.
+- CSV: one row per entry, newest first, with month, date, label, kind, movement, amount, signed amount (money moved out is negative), the other label of a transfer, the income source and the note. UTF-8 with a BOM; notes that start like a formula get a leading `'`.
+- PDF: totals by kind, the labels with total and share, and the entries.
+- ZIP: `data.json` with the profile and every label, month, income, entry, limit, alert, goal and receipt record (deleted ones too), plus the receipt files under `receipts/`.
+- At most 3 exports can wait at once (409). Files are removed 7 days after they are ready (`status` becomes `expired`).
 
 ## Limits
 

@@ -80,3 +80,14 @@ async def test_without_redis_nothing_is_limited(client: AsyncClient) -> None:
             assert response.status_code == 200
     finally:
         app.dependency_overrides.pop(get_rate_limiter, None)
+
+
+async def test_password_reset_requests_are_limited_per_email(
+    client: AsyncClient, redis: Redis, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("app.api.v1.auth.RESET_PER_EMAIL", Limit("reset-email", 2, 3600))
+    body = {"email": "someone@example.com"}
+    statuses = [
+        (await client.post("/api/v1/auth/password-reset", json=body)).status_code for _ in range(3)
+    ]
+    assert statuses == [202, 202, 429]

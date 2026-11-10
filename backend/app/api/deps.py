@@ -8,8 +8,10 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import Cache, get_cache
+from app.core.jobs import JobQueue, get_job_queue
 from app.core.rate_limit import RateLimiter, get_rate_limiter
 from app.core.security import decode_access_token
+from app.core.storage import Storage, get_storage
 from app.db.session import get_session
 from app.models import User
 from app.repositories import users
@@ -66,6 +68,8 @@ InvalidatesCache = Depends(_invalidate_cache_after_writes, scope="function")
 
 
 RateLimiterDep = Annotated[RateLimiter, Depends(get_rate_limiter)]
+JobsDep = Annotated[JobQueue, Depends(get_job_queue)]
+StorageDep = Annotated[Storage, Depends(get_storage)]
 
 
 def client_ip(request: Request) -> str:

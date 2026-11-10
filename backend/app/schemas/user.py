@@ -73,3 +73,22 @@ class UserUpdate(BaseModel):
 class PasswordChange(BaseModel):
     current_password: str = Field(min_length=1, max_length=128)
     new_password: NewPassword
+
+
+class TokenRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=200)
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+    _email = field_validator("email")(_normalize_email)
+
+
+class PasswordReset(BaseModel):
+    token: str = Field(min_length=1, max_length=200)
+    new_password: NewPassword
+
+
+class AccountDeletion(BaseModel):
+    password: str = Field(min_length=1, max_length=128)

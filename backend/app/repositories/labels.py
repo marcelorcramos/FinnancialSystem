@@ -51,3 +51,9 @@ async def used_colors(
     if exclude_id is not None:
         stmt = stmt.where(Label.id != exclude_id)
     return set(await session.scalars(stmt))
+
+
+async def all_for_user(session: AsyncSession, user_id: uuid.UUID) -> list[Label]:
+    """Every label of the user, archived and deleted ones included (exports)."""
+    stmt = select(Label).where(Label.user_id == user_id).order_by(Label.kind, Label.name)
+    return list(await session.scalars(stmt))
