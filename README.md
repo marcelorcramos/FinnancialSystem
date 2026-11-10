@@ -81,9 +81,9 @@ Each user sees only their own data, and tests try to break that on every endpoin
 
 ## Status
 
-The core product works end to end: accounts, labels, months, entries, transfers, reports and the dashboard, covered by unit, integration and end-to-end tests. Behind it, summaries and reports are cached in Redis, every change is published as an event through RabbitMQ (transactional outbox, idempotent consumers), and Celery starts new months for those who opt in.
+The core product works end to end: accounts, labels, months, entries, transfers, reports and the dashboard, covered by unit, integration and end-to-end tests. Behind it, summaries and reports are cached in Redis, every change is published as an event through RabbitMQ (transactional outbox, idempotent consumers), and Celery starts new months for those who opt in. Limits raise live alerts, goals track their pace, and the emergency fund follows your spending. Receipts are kept privately in S3-compatible storage, reports export as CSV or PDF, your whole account downloads as a ZIP or is deleted for good, and emails confirm addresses and recover passwords.
 
-Next on the roadmap: spending limits with alerts, goals and an emergency fund, receipts and exports, Google sign-in with a demo mode, an AI chat over your reports, observability, and deployment to Kubernetes and Azure. The full plan is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+Next on the roadmap: Google sign-in with a demo mode, an AI chat over your reports, observability, and deployment to Kubernetes and Azure. The full plan is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Run it
 
