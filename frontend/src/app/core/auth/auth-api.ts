@@ -55,6 +55,35 @@ export class AuthApi {
     return this.http.patch<UserRead>(`${this.baseUrl}/users/me`, body);
   }
 
+  /** Emails a reset link; the API answers the same whether the email has an account. */
+  requestPasswordReset(email: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/auth/password-reset`, { email });
+  }
+
+  /** Sets a new password with the emailed token; every session ends. */
+  resetPassword(token: string, newPassword: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/auth/password-reset/confirm`, {
+      token,
+      new_password: newPassword,
+    });
+  }
+
+  verifyEmail(token: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/auth/verify-email`, { token });
+  }
+
+  resendVerification(): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/users/me/verification-email`, null);
+  }
+
+  /** Deletes the account and all of its data for good; clears the refresh cookie. */
+  deleteAccount(password: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/users/me`, {
+      body: { password },
+      withCredentials: true,
+    });
+  }
+
   /** Ends every session, this one included (see AuthStore.changePassword). */
   changePassword(currentPassword: string, newPassword: string): Observable<void> {
     return this.http.post<void>(`${this.baseUrl}/users/me/password`, {

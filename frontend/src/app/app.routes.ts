@@ -1,10 +1,22 @@
-import { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { Router, Routes } from '@angular/router';
 
 import { authGuard } from './core/auth/auth.guards';
 import { currentMonthPath } from './features/month/month-route';
 
 export const routes: Routes = [
   { path: 'auth', loadChildren: () => import('./features/auth/auth.routes') },
+  // Links in emails: the query string carries the token, so it must survive the redirect.
+  {
+    path: 'verify-email',
+    redirectTo: ({ queryParams }) =>
+      inject(Router).createUrlTree(['/auth/verify-email'], { queryParams }),
+  },
+  {
+    path: 'reset-password',
+    redirectTo: ({ queryParams }) =>
+      inject(Router).createUrlTree(['/auth/reset-password'], { queryParams }),
+  },
   {
     path: '',
     loadComponent: () => import('./core/layout/shell').then((m) => m.Shell),

@@ -5,6 +5,7 @@
     <a class="side__link" href="#profile">Profile</a>
     <a class="side__link" href="#security">Security</a>
     <a class="side__link" href="#sessions">Sessions</a>
+    <a class="side__link" href="#data">Your data</a>
     <a class="side__link" routerLink="/preferences">Preferences &amp; accessibility</a>
     <a class="side__link" routerLink="/labels">Labels</a>
   </nav>
@@ -41,11 +42,19 @@
             [value]="user()?.email ?? ''"
           />
           <span id="account-email-hint" class="hint">
-            {{
-              user()?.email_verified_at
-                ? 'Verified'
-                : 'Not verified · email verification comes later'
-            }}
+            @if (user()?.email_verified_at) {
+              Confirmed
+            } @else {
+              Not confirmed yet ·
+              <button
+                type="button"
+                class="link-button"
+                [disabled]="resending()"
+                (click)="resendVerification()"
+              >
+                send the link again
+              </button>
+            }
           </span>
         </div>
         <div class="field">
@@ -159,7 +168,11 @@
       </form>
     </section>
 
-    <section id="sessions" class="panel section section--danger" aria-labelledby="sessions-title">
+    <section
+      id="sessions"
+      class="panel section section--row section--danger"
+      aria-labelledby="sessions-title"
+    >
       <div>
         <h2 id="sessions-title">Sign out everywhere</h2>
         <p class="hint">
@@ -173,6 +186,32 @@
         (click)="signOutOthers()"
       >
         Sign out other devices
+      </button>
+    </section>
+
+    <section id="data" class="panel section section--row" aria-labelledby="data-title">
+      <div>
+        <h2 id="data-title">Download your data</h2>
+        <p class="hint">A ZIP with every record of your account and the receipts you attached.</p>
+      </div>
+      <button type="button" class="btn" [disabled]="exporting()" (click)="downloadData()">
+        @if (exporting()) {
+          <span class="spinner" aria-hidden="true"></span>
+          Preparing…
+        } @else {
+          <app-icon name="download" [size]="18" />
+          Download my data
+        }
+      </button>
+    </section>
+
+    <section class="panel section section--row section--danger" aria-labelledby="delete-title">
+      <div>
+        <h2 id="delete-title">Delete account</h2>
+        <p class="hint">Deletes your account and all of its data for good.</p>
+      </div>
+      <button type="button" class="btn btn--danger" (click)="deleteAccount()">
+        Delete account
       </button>
     </section>
   </div>

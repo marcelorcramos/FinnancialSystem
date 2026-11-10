@@ -9,6 +9,7 @@ import { alertText, AlertsService } from '../alerts/alerts.service';
 import { AuthStore } from '../auth/auth-store';
 import { NAV_ITEMS } from './nav-items';
 import { ThemeToggle } from './theme-toggle';
+import { VerifyEmailBanner } from './verify-email-banner';
 
 /**
  * App frame for signed-in pages: a top bar with the brand, the main
@@ -27,6 +28,7 @@ import { ThemeToggle } from './theme-toggle';
     RouterOutlet,
     ThemeToggle,
     ToastOutlet,
+    VerifyEmailBanner,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shell.html',
