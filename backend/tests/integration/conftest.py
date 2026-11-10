@@ -1,5 +1,6 @@
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 from alembic.config import Config
@@ -11,6 +12,7 @@ from testcontainers.community.redis import RedisContainer
 
 from alembic import command
 from app.core.cache import Cache, get_cache
+from app.core.jobs import JobQueue, get_job_queue
 from app.core.rate_limit import RateLimiter, get_rate_limiter
 from app.db.session import get_session
 from app.main import app
@@ -82,8 +84,26 @@ async def session(engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
         await transaction.rollback()
 
 
+class RecordedJobs(JobQueue):
+    """Keeps the jobs the API sends to Celery instead of sending them."""
+
+    def __init__(self) -> None:
+        self.sent: list[tuple[str, dict[str, Any]]] = []
+
+    async def enqueue(self, task: str, **kwargs: Any) -> None:
+        self.sent.append((task, kwargs))
+
+    def of(self, task: str) -> list[dict[str, Any]]:
+        return [kwargs for name, kwargs in self.sent if name == task]
+
+
 @pytest.fixture
-async def client(session: AsyncSession) -> AsyncIterator[AsyncClient]:
+def jobs() -> RecordedJobs:
+    return RecordedJobs()
+
+
+@pytest.fixture
+async def client(session: AsyncSession, jobs: RecordedJobs) -> AsyncIterator[AsyncClient]:
     """API HTTP client using the test session (everything is rolled back at the end)."""
 
     async def _session_override() -> AsyncIterator[AsyncSession]:
@@ -93,6 +113,7 @@ async def client(session: AsyncSession) -> AsyncIterator[AsyncClient]:
     # No Redis by default: reads go straight to PostgreSQL (see test_cache.py).
     app.dependency_overrides.setdefault(get_cache, lambda: Cache(None))
     app.dependency_overrides.setdefault(get_rate_limiter, lambda: RateLimiter(None))
+    app.dependency_overrides[get_job_queue] = lambda: jobs
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
     app.dependency_overrides.clear()

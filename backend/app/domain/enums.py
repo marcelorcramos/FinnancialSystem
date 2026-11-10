@@ -29,3 +29,8 @@ class AlertLevel(StrEnum):
 class GoalType(StrEnum):
     NORMAL = "normal"
     EMERGENCY_FUND = "emergency_fund"  # target = N months of average expenses
+
+
+class TokenPurpose(StrEnum):
+    VERIFY_EMAIL = "verify_email"
+    RESET_PASSWORD = "reset_password"  # noqa: S105  (a purpose, not a secret)

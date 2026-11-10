@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
+from app.core import mail
 from app.core.config import settings
 from app.services import recurring
 from app.workers.celery_app import celery_app
@@ -31,3 +32,13 @@ def create_due_months() -> int:
     return _run_with_session(
         lambda session: recurring.create_due_months(session, datetime.now(UTC))
     )
+
+
+@celery_app.task(
+    name="app.workers.tasks.send_email",
+    autoretry_for=(OSError,),  # SMTP down or refusing: try again later
+    retry_backoff=True,
+    max_retries=5,
+)
+def send_email(to: str, subject: str, body: str) -> None:
+    mail.send(to, subject, body)

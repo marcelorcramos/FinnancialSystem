@@ -17,6 +17,16 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
     CORS_ORIGINS: str = "http://localhost:4200"
+    # Links in emails point here (verify email, reset password).
+    FRONTEND_URL: str = "http://localhost:4200"
+
+    # Outgoing email (Mailpit in dev: http://localhost:8025).
+    SMTP_HOST: str = "localhost"
+    SMTP_PORT: int = 1025
+    SMTP_USERNAME: str | None = None
+    SMTP_PASSWORD: str | None = None
+    SMTP_STARTTLS: bool = False
+    MAIL_FROM: str = "FinnancialSystem <no-reply@finnancial.local>"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

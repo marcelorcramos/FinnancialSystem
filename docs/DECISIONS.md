@@ -17,7 +17,7 @@ Everything in the repository is in **English**: code, identifiers, comments, doc
 | Allocation | At most one `allocation` per label and month, editable (partial unique index). |
 | Refresh tokens | `refresh_tokens` table (token hash, family, `expires_at`, `revoked_at`, `replaced_by_id`). Rotated on every refresh; reusing an already rotated token revokes the whole family. |
 | Admin | Later. There are no routes that list or edit other users. |
-| Accounts | No email verification for now (it only has to be a valid email). New passwords: at least 8 characters with a lowercase letter, an uppercase letter, a digit and a special character. |
+| Accounts | Emails are confirmed through a link since Phase 9, without blocking sign-in (see "Receipts, exports, data and email"). New passwords: at least 8 characters with a lowercase letter, an uppercase letter, a digit and a special character. |
 | Currency and locale | EUR only in the MVP (the `currency` field exists to change it later). Default time zone `Europe/Lisbon`. |
 
 ## Months, entries and reports (2026-10-26)
@@ -82,6 +82,14 @@ Icon names are Material Symbols for now; they will change with the frontend rede
 | Alerts | Raised by the `limits` consumer on `entry.*` and `limit.*` events (a default limit change checks every open month). One row per label, month and level (`warning`, `exceeded`), never repeated, with the limit and total at that moment. Pushed live with Server-Sent Events: the consumer publishes to Redis channel `alerts:<user>` only after its transaction commits, and `GET /alerts/stream` relays it. SSE over WebSocket: one-way is all alerts need, and it goes through nginx and plain HTTP. The stream gives its database connection back before streaming. |
 | Goals | A goal gathers money in a label: progress is the label's balance over all months (or a manual amount). One active goal per label. "You need to save €X/month" = remaining / months left, counting the current month and the deadline's month, rounded up to the cent so following it always reaches the target. A passed deadline without the target is `overdue`. The `goals` consumer (on `entry.*` and `goal.*` events) marks reached goals as completed; they stay in the history even if the balance drops later. |
 | Emergency fund | A goal of type `emergency_fund`: target = N months (1–24) of average expenses, averaged over the 6 complete months before the current one that have a sheet (months without a sheet do not pull the average down). Recomputed on every read, so it follows spending. |
+
+## Receipts, exports, data and email (2026-11-10)
+
+| Topic | Decision |
+|---|---|
+| Email | Sent by the Celery worker (`send_email` task, SMTP; Mailpit in dev at http://localhost:8025), retried with backoff when SMTP fails. The API sends tasks by name after its transaction commits; if the broker is down the request still succeeds and the user can ask again. |
+| Email verification | Sign-up emails a confirmation link (48 hours). It does not block sign-in: the app shows a reminder with **Resend** until the email is confirmed. Proposed and accepted on 2026-11-10. |
+| Password recovery | `POST /auth/password-reset` always answers 202 (no account discovery) and emails a 1-hour link. Tokens are random, stored as SHA-256 hashes in `user_tokens`, single use, and a new link spends the older ones of the same kind. Setting the new password ends every session and confirms the email. |
 
 ## Future ideas
 

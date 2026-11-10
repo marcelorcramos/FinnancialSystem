@@ -11,6 +11,10 @@ x-backend-env: &backend-env
   REDIS_URL: redis://redis:6379/0
   RABBITMQ_URL: amqp://finance:finance_dev@rabbitmq:5672/
   SECRET_KEY: dev-secret-key-change-me-0123456789abcdef
+  SMTP_HOST: mailpit
+  SMTP_PORT: "1025"
+  # Links in emails open the Compose web app.
+  FRONTEND_URL: http://localhost:8080
 
 # Background processes run the API image with another command. They start once the
 # API is healthy, which means the migrations have run.

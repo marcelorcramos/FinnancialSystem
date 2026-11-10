@@ -3,11 +3,25 @@ from typing import Annotated
 from fastapi import APIRouter, Cookie, Depends, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from app.api.deps import CurrentUser, RateLimiterDep, SessionDep, client_ip
+from app.api.deps import CurrentUser, JobsDep, RateLimiterDep, SessionDep, client_ip
 from app.core.config import settings
-from app.core.rate_limit import LOGIN_PER_EMAIL, LOGIN_PER_IP, REFRESH_PER_IP, REGISTER_PER_IP
+from app.core.rate_limit import (
+    LOGIN_PER_EMAIL,
+    LOGIN_PER_IP,
+    REFRESH_PER_IP,
+    REGISTER_PER_IP,
+    RESET_PER_EMAIL,
+    RESET_PER_IP,
+)
 from app.schemas.auth import AccessToken
-from app.schemas.user import LoginRequest, UserCreate, UserRead
+from app.schemas.user import (
+    LoginRequest,
+    PasswordReset,
+    PasswordResetRequest,
+    TokenRequest,
+    UserCreate,
+    UserRead,
+)
 from app.services import auth
 from app.services.auth import IssuedTokens
 
@@ -34,10 +48,15 @@ def _respond_with_tokens(response: Response, tokens: IssuedTokens) -> AccessToke
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 async def register(
-    data: UserCreate, session: SessionDep, request: Request, limiter: RateLimiterDep
+    data: UserCreate,
+    session: SessionDep,
+    request: Request,
+    limiter: RateLimiterDep,
+    jobs: JobsDep,
 ) -> UserRead:
+    """Create the account and email a link to confirm the address (signing in does not wait)."""
     await limiter.hit(REGISTER_PER_IP, client_ip(request))
-    user = await auth.register(session, data)
+    user = await auth.register(session, data, jobs)
     return UserRead.model_validate(user)
 
 
@@ -96,3 +115,29 @@ async def logout_others(
 ) -> None:
     """Sign out every other device; this session (its refresh cookie) stays signed in."""
     await auth.logout_others(session, user, refresh_token)
+
+
+@router.post("/verify-email", status_code=status.HTTP_204_NO_CONTENT)
+async def verify_email(data: TokenRequest, session: SessionDep) -> None:
+    """Confirm the email with the token from the link (works without signing in)."""
+    await auth.verify_email(session, data.token)
+
+
+@router.post("/password-reset", status_code=status.HTTP_202_ACCEPTED)
+async def request_password_reset(
+    data: PasswordResetRequest,
+    session: SessionDep,
+    request: Request,
+    limiter: RateLimiterDep,
+    jobs: JobsDep,
+) -> None:
+    """Email a reset link. The answer is the same whether the email has an account or not."""
+    await limiter.hit(RESET_PER_IP, client_ip(request))
+    await limiter.hit(RESET_PER_EMAIL, data.email)
+    await auth.request_password_reset(session, data.email, jobs)
+
+
+@router.post("/password-reset/confirm", status_code=status.HTTP_204_NO_CONTENT)
+async def reset_password(data: PasswordReset, session: SessionDep) -> None:
+    """Set a new password with the token from the link; every session ends."""
+    await auth.reset_password(session, data.token, data.new_password)

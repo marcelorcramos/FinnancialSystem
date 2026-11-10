@@ -27,6 +27,9 @@ LOGIN_PER_IP = Limit("login-ip", 20, 60)
 LOGIN_PER_EMAIL = Limit("login-email", 10, 300)
 REGISTER_PER_IP = Limit("register-ip", 30, 3600)
 REFRESH_PER_IP = Limit("refresh-ip", 60, 60)
+RESET_PER_IP = Limit("reset-ip", 20, 3600)
+RESET_PER_EMAIL = Limit("reset-email", 5, 3600)
+VERIFY_PER_USER = Limit("verify-user", 5, 3600)
 
 
 class RateLimiter:

@@ -5,6 +5,8 @@ from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, SoftDelete, Timestamps, UUIDPrimaryKey
+from app.db.types import str_enum
+from app.domain.enums import TokenPurpose
 
 
 class User(UUIDPrimaryKey, Timestamps, SoftDelete, Base):
@@ -54,6 +56,23 @@ class RefreshToken(UUIDPrimaryKey, Base):
     replaced_by_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("refresh_tokens.id", ondelete="SET NULL")
     )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+
+
+class UserToken(UUIDPrimaryKey, Base):
+    """One-time token sent by email (verify the address, reset the password)."""
+
+    __tablename__ = "user_tokens"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    purpose: Mapped[TokenPurpose] = mapped_column(str_enum(TokenPurpose, "token_purpose"))
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)  # sha256 hex
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()")
     )
