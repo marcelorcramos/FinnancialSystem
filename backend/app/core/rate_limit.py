@@ -30,6 +30,7 @@ REFRESH_PER_IP = Limit("refresh-ip", 60, 60)
 RESET_PER_IP = Limit("reset-ip", 20, 3600)
 RESET_PER_EMAIL = Limit("reset-email", 5, 3600)
 VERIFY_PER_USER = Limit("verify-user", 5, 3600)
+DELETE_PER_USER = Limit("delete-user", 10, 3600)
 
 
 class RateLimiter:

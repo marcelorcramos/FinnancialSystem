@@ -28,7 +28,7 @@ async def test_a_broker_failure_does_not_fail_the_request(
 def test_every_job_name_is_a_registered_task() -> None:
     import app.workers.tasks  # noqa: F401  (registers the tasks)
 
-    for name in (jobs.SEND_EMAIL, jobs.RUN_EXPORT):
+    for name in (jobs.SEND_EMAIL, jobs.RUN_EXPORT, jobs.DELETE_USER_FILES):
         assert name in jobs.celery_app.tasks, name
     schedule = jobs.celery_app.conf.beat_schedule["remove-expired-exports"]
     assert schedule["task"] in jobs.celery_app.tasks

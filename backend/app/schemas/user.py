@@ -88,3 +88,7 @@ class PasswordResetRequest(BaseModel):
 class PasswordReset(BaseModel):
     token: str = Field(min_length=1, max_length=200)
     new_password: NewPassword
+
+
+class AccountDeletion(BaseModel):
+    password: str = Field(min_length=1, max_length=128)

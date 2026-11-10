@@ -47,6 +47,7 @@ The access token lasts 15 minutes and comes in the response body. The refresh to
 | GET | `/users/me` | | 200 `User` |
 | PATCH | `/users/me` | `{name?, currency?: "EUR", locale?, timezone?, auto_new_month?}` | 200 `User` |
 | POST | `/users/me/password` | `{current_password, new_password}` | 204, ends every session |
+| DELETE | `/users/me` | `{password}` | 204, deletes the account and all of its data for good; cookie cleared |
 | POST | `/users/me/verification-email` | | 202, emails a new confirmation link; 409 if already confirmed |
 | POST | `/auth/verify-email` | `{token}` | 204, confirms the email (no sign-in needed) |
 | POST | `/auth/password-reset` | `{email}` | 202, emails a reset link if the email has an account |
@@ -57,6 +58,7 @@ The access token lasts 15 minutes and comes in the response body. The refresh to
 - New passwords: at least 8 characters with a lowercase letter, an uppercase letter, a digit and a special character.
 - Sign-up creates the default labels listed in `DECISIONS.md` and emails a link to confirm the address (`{FRONTEND_URL}/verify-email?token=…`). Signing in does not wait for it: `email_verified_at` stays null until the link is opened.
 - Reset links (`{FRONTEND_URL}/reset-password?token=…`) last 1 hour, confirmation links 48 hours; both work once, and a new link replaces the previous one of the same kind. A used, expired or unknown token gives 422 `invalid_token`. Resetting the password also confirms the email.
+- `DELETE /users/me` needs the current password (401 otherwise; 10 tries per hour). Every record goes at once, audit log included; receipts and export files are removed by the worker right after, and a goodbye email confirms it. The email can sign up again.
 - `/auth/password-reset` answers 202 whether or not the email has an account, so it cannot be used to find accounts. Rate limits: 20 per hour per IP and 5 per hour per email; resending the confirmation, 5 per hour per user.
 
 ## Labels

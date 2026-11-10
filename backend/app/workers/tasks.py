@@ -60,3 +60,14 @@ def remove_expired_exports() -> int:
     return _run_with_session(
         lambda session: exports.remove_expired(session, get_storage(), datetime.now(UTC))
     )
+
+
+@celery_app.task(
+    name="app.workers.tasks.delete_user_files",
+    autoretry_for=(Exception,),  # storage down: the files must still go
+    retry_backoff=True,
+    max_retries=10,
+)
+def delete_user_files(user_id: str) -> int:
+    """Remove every stored file of a deleted account (receipts and exports)."""
+    return asyncio.run(get_storage().delete_prefix(f"users/{uuid.UUID(user_id)}/"))

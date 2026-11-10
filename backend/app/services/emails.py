@@ -47,5 +47,18 @@ def password_reset(to: str, name: str, token: str) -> Email:
     )
 
 
+def account_deleted(to: str, name: str) -> Email:
+    return Email(
+        to=to,
+        subject="Your account was deleted",
+        body=(
+            f"Hi {name},\n\n"
+            "Your FinnancialSystem account and all of its data, receipts included, "
+            "were deleted as you asked. This cannot be undone.\n\n"
+            "You can create a new account with this email at any time.\n"
+        ),
+    )
+
+
 async def send(jobs: JobQueue, email: Email) -> None:
     await jobs.enqueue(SEND_EMAIL, to=email.to, subject=email.subject, body=email.body)

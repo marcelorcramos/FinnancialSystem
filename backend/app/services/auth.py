@@ -5,19 +5,23 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
+import structlog
+from sqlalchemy import delete
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
 from app.core.config import settings
-from app.core.jobs import JobQueue
+from app.core.jobs import DELETE_USER_FILES, JobQueue
 from app.domain.default_labels import DEFAULT_LABELS
 from app.domain.enums import AuditAction, TokenPurpose
 from app.domain.errors import AuthenticationError, ConflictError, InvalidTokenError
-from app.models import Label, RefreshToken, User, UserToken
+from app.models import Entry, Label, RefreshToken, User, UserToken
 from app.repositories import refresh_tokens, user_tokens, users
 from app.schemas.user import UserCreate
 from app.services import audit, emails
+
+log = structlog.get_logger(__name__)
 
 INVALID_CREDENTIALS = "Incorrect email or password"
 INVALID_SESSION = "Invalid or expired session"
@@ -185,6 +189,23 @@ async def reset_password(session: AsyncSession, raw_token: str, new_password: st
         user.email_verified_at = now
     await refresh_tokens.revoke_all_for_user(session, user.id, now)
     await session.commit()
+
+
+async def delete_account(session: AsyncSession, user: User, password: str, jobs: JobQueue) -> None:
+    """Erase the account for good (GDPR): every record now, the stored files right after.
+
+    The one exception to soft delete: nothing of the user is kept, audit log included.
+    """
+    if not security.verify_password(password, user.password_hash):
+        raise AuthenticationError("Password is incorrect")
+    user_id, email, name = user.id, user.email, user.name
+    # Entries first: they hold RESTRICT keys to labels and incomes; the rest cascades.
+    await session.execute(delete(Entry).where(Entry.user_id == user_id))
+    await session.execute(delete(User).where(User.id == user_id))
+    await session.commit()
+    await jobs.enqueue(DELETE_USER_FILES, user_id=str(user_id))
+    await emails.send(jobs, emails.account_deleted(email, name))
+    log.info("account.deleted", user_id=str(user_id))
 
 
 async def _new_token(session: AsyncSession, user_id: uuid.UUID, purpose: TokenPurpose) -> str:
