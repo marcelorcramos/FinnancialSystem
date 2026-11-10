@@ -21,6 +21,13 @@
       <span class="chip">Closed</span>
     }
     <div class="head__actions">
+      <button type="button" class="btn btn--quiet" (click)="openReceipts()">
+        <app-icon name="paperclip" [size]="18" />
+        Receipts
+        @if (receipts().length) {
+          <span class="count">{{ receipts().length }}</span>
+        }
+      </button>
       @if (sheet()?.closed_at) {
         <button type="button" class="btn btn--quiet" (click)="setClosed(false)">Reopen</button>
       } @else {
@@ -220,6 +227,21 @@
             <span class="num entry__amount" [class.entry__amount--in]="entry.incoming">{{
               entry.amount
             }}</span>
+            @let receiptCount = receiptCounts()[entry.id] ?? 0;
+            <button
+              type="button"
+              class="btn btn--icon btn--quiet entry__receipts"
+              [class.entry__receipts--some]="receiptCount > 0"
+              [attr.aria-label]="
+                'Receipts for ' + entry.title + (receiptCount ? ' (' + receiptCount + ')' : '')
+              "
+              (click)="openReceipts(entry)"
+            >
+              <app-icon name="paperclip" [size]="18" />
+              @if (receiptCount) {
+                <span class="entry__receipt-count" aria-hidden="true">{{ receiptCount }}</span>
+              }
+            </button>
             @if (!sheet()?.closed_at) {
               <button
                 type="button"

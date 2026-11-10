@@ -1,3 +1,4 @@
+import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -18,12 +19,14 @@ import {
   ReportSeries,
   ReportSummary,
 } from '../../core/api/types';
+import { exportErrorMessage, ExportsService } from '../../core/exports/exports.service';
 import { readPreference, writePreference } from '../../core/storage/preferences';
 import { Donut } from '../../shared/charts/donut';
 import { LineChart } from '../../shared/charts/line-chart';
 import { wholeEuros } from '../../shared/charts/month-label';
 import { KIND_NAMES, KINDS } from '../../shared/money/kind';
 import { Icon } from '../../shared/ui/icon';
+import { ToastService } from '../../shared/ui/toast.service';
 import { LabelsApi } from '../labels/labels-api';
 import { ReportFilter, ReportsApi } from './reports-api';
 import { buildReportView, buildTrend, entryRows, LabelInfo, REPORT_PERIODS } from './report-view';
@@ -49,7 +52,7 @@ const many = (value: QueryValue): string[] =>
  */
 @Component({
   selector: 'app-reports-page',
-  imports: [Donut, Icon, LineChart],
+  imports: [CdkMenu, CdkMenuItem, CdkMenuTrigger, Donut, Icon, LineChart],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './reports-page.html',
   styleUrl: './reports-page.scss',
@@ -58,6 +61,9 @@ export default class ReportsPage {
   private readonly api = inject(ReportsApi);
   private readonly labelsApi = inject(LabelsApi);
   private readonly router = inject(Router);
+  private readonly exports = inject(ExportsService);
+  private readonly toasts = inject(ToastService);
+  protected readonly exporting = this.exports.busy;
 
   /** Query params (withComponentInputBinding). */
   readonly period = input<QueryValue>();
@@ -149,6 +155,23 @@ export default class ReportsPage {
       });
       onCleanup(() => request.unsubscribe());
     });
+  }
+
+  /** Exports this report's entries (same period and categories) as CSV or PDF. */
+  protected exportAs(format: 'csv' | 'pdf'): void {
+    const filter = this.filter();
+    this.toasts.show(`Preparing the ${format.toUpperCase()}…`);
+    this.exports
+      .report({
+        format,
+        period: this.activePeriod(),
+        kinds: [...(filter.kinds ?? [])],
+        label_ids: [...(filter.labelIds ?? [])],
+      })
+      .subscribe({
+        next: (done) => this.toasts.show(`${done.filename} downloaded`),
+        error: (error: unknown) => this.toasts.show(exportErrorMessage(error)),
+      });
   }
 
   protected setPeriod(period: ReportPeriod): void {

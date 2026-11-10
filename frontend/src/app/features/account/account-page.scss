@@ -65,16 +65,20 @@ h2 {
   gap: var(--space-4);
   scroll-margin-top: var(--space-5);
 
-  &--danger {
+  // A title and text on one side, one action on the other.
+  &--row {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    border-color: var(--color-danger);
 
     p {
       margin: var(--space-1) 0 0;
     }
+  }
+
+  &--danger {
+    border-color: var(--color-danger);
   }
 }
 

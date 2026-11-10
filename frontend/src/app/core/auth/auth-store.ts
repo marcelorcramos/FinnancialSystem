@@ -126,6 +126,28 @@ export class AuthStore {
     return this.api.logoutOthers();
   }
 
+  /** Confirms the email; a signed-in user's profile is reloaded to show it. */
+  verifyEmail(token: string): Observable<void> {
+    return this.api.verifyEmail(token).pipe(
+      switchMap(() => (this.isAuthenticated() ? this.loadUser() : of(null))),
+      map(() => undefined),
+    );
+  }
+
+  resendVerification(): Observable<void> {
+    return this.api.resendVerification();
+  }
+
+  /** Deletes the account for good and leaves for the sign-in page. */
+  deleteAccount(password: string): Observable<void> {
+    return this.api.deleteAccount(password).pipe(
+      tap(() => {
+        this.clearSession();
+        void this.router.navigateByUrl(LOGIN_PATH);
+      }),
+    );
+  }
+
   /** Called when the API rejects us and the refresh cookie no longer works. */
   expireSession(): void {
     this.clearSession({ expired: this.isAuthenticated() || this.sessionExpired() });

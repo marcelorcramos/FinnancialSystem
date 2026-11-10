@@ -13,7 +13,10 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Register */
+    /**
+     * Register
+     * @description Create the account and email a link to confirm the address (signing in does not wait).
+     */
     post: operations['register_api_v1_auth_register_post'];
     delete?: never;
     options?: never;
@@ -92,6 +95,66 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/auth/verify-email': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Verify Email
+     * @description Confirm the email with the token from the link (works without signing in).
+     */
+    post: operations['verify_email_api_v1_auth_verify_email_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/password-reset': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Request Password Reset
+     * @description Email a reset link. The answer is the same whether the email has an account or not.
+     */
+    post: operations['request_password_reset_api_v1_auth_password_reset_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/password-reset/confirm': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Reset Password
+     * @description Set a new password with the token from the link; every session ends.
+     */
+    post: operations['reset_password_api_v1_auth_password_reset_confirm_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/users/me': {
     parameters: {
       query?: never;
@@ -103,7 +166,11 @@ export interface paths {
     get: operations['read_me_api_v1_users_me_get'];
     put?: never;
     post?: never;
-    delete?: never;
+    /**
+     * Delete Me
+     * @description Delete the account and all of its data for good, after checking the password.
+     */
+    delete: operations['delete_me_api_v1_users_me_delete'];
     options?: never;
     head?: never;
     /** Update Me */
@@ -121,6 +188,26 @@ export interface paths {
     put?: never;
     /** Change Password */
     post: operations['change_password_api_v1_users_me_password_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/users/me/verification-email': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Resend Verification
+     * @description Send the confirmation link again (the previous links stop working).
+     */
+    post: operations['resend_verification_api_v1_users_me_verification_email_post'];
     delete?: never;
     options?: never;
     head?: never;
@@ -810,6 +897,165 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/months/{month_id}/attachments': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Attachments
+     * @description Receipts of the month (or of one entry), oldest first.
+     */
+    get: operations['list_attachments_api_v1_months__month_id__attachments_get'];
+    put?: never;
+    /**
+     * Upload Attachment
+     * @description Attach a receipt to an open month, optionally to one of its entries.
+     */
+    post: operations['upload_attachment_api_v1_months__month_id__attachments_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/attachments/{attachment_id}/url': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Attachment Url
+     * @description A signed link to view (or, with download=true, save) the file; it expires in minutes.
+     */
+    get: operations['attachment_url_api_v1_attachments__attachment_id__url_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/attachments/{attachment_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete Attachment */
+    delete: operations['delete_attachment_api_v1_attachments__attachment_id__delete'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/attachments/{attachment_id}/restore': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Restore Attachment */
+    post: operations['restore_attachment_api_v1_attachments__attachment_id__restore_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/exports': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Exports
+     * @description The latest 20 exports, newest first.
+     */
+    get: operations['list_exports_api_v1_exports_get'];
+    put?: never;
+    /**
+     * Export Report
+     * @description Build a report's entries as CSV or PDF in the background; poll the export until ready.
+     */
+    post: operations['export_report_api_v1_exports_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/users/me/export': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Export Account
+     * @description Every piece of the account's data and its receipts, as a ZIP (GDPR).
+     */
+    post: operations['export_account_api_v1_users_me_export_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/exports/{export_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Export */
+    get: operations['get_export_api_v1_exports__export_id__get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/exports/{export_id}/url': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Export Url
+     * @description A signed download link (5 minutes); 409 until the export is ready.
+     */
+    get: operations['export_url_api_v1_exports__export_id__url_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/health': {
     parameters: {
       query?: never;
@@ -842,6 +1088,11 @@ export interface components {
       token_type: string;
       /** Expires In */
       expires_in: number;
+    };
+    /** AccountDeletion */
+    AccountDeletion: {
+      /** Password */
+      password: string;
     };
     /**
      * AdditionCreate
@@ -966,6 +1217,48 @@ export interface components {
       /** Note */
       note?: string | null;
     };
+    /** AttachmentRead */
+    AttachmentRead: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Month Id
+       * Format: uuid
+       */
+      month_id: string;
+      /** Entry Id */
+      entry_id: string | null;
+      /** Filename */
+      filename: string;
+      /**
+       * Mime
+       * @description image/jpeg, image/png, image/webp or application/pdf
+       */
+      mime: string;
+      /**
+       * Size
+       * @description Bytes
+       */
+      size: number;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+    };
+    /** Body_upload_attachment_api_v1_months__month_id__attachments_post */
+    Body_upload_attachment_api_v1_months__month_id__attachments_post: {
+      /**
+       * File
+       * @description JPEG, PNG, WebP or PDF, up to 10 MB
+       */
+      file: string;
+      /** Entry Id */
+      entry_id?: string | null;
+    };
     /** ColorSuggestions */
     ColorSuggestions: {
       /**
@@ -1082,6 +1375,63 @@ export interface components {
       /** Note */
       note?: string | null;
     };
+    /**
+     * ExportFormat
+     * @enum {string}
+     */
+    ExportFormat: 'csv' | 'pdf' | 'zip';
+    /**
+     * ExportKind
+     * @enum {string}
+     */
+    ExportKind: 'report' | 'account';
+    /** ExportRead */
+    ExportRead: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      kind: components['schemas']['ExportKind'];
+      format: components['schemas']['ExportFormat'];
+      status: components['schemas']['ExportStatus'];
+      period: components['schemas']['Period'] | null;
+      /** Label Ids */
+      label_ids: string[];
+      /** Kinds */
+      kinds: components['schemas']['LabelKind'][];
+      /**
+       * Reference Date
+       * Format: date
+       */
+      reference_date: string;
+      /** Filename */
+      filename: string | null;
+      /**
+       * Size
+       * @description Bytes, once ready
+       */
+      size: number | null;
+      /** Error */
+      error: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Completed At */
+      completed_at: string | null;
+      /**
+       * Expires At
+       * @description The file is removed after this moment
+       */
+      expires_at: string | null;
+    };
+    /**
+     * ExportStatus
+     * @enum {string}
+     */
+    ExportStatus: 'pending' | 'ready' | 'failed' | 'expired';
     /** GoalCreate */
     GoalCreate: {
       /**
@@ -1525,6 +1875,21 @@ export interface components {
       /** New Password */
       new_password: string;
     };
+    /** PasswordReset */
+    PasswordReset: {
+      /** Token */
+      token: string;
+      /** New Password */
+      new_password: string;
+    };
+    /** PasswordResetRequest */
+    PasswordResetRequest: {
+      /**
+       * Email
+       * Format: email
+       */
+      email: string;
+    };
     /**
      * Period
      * @enum {string}
@@ -1625,6 +1990,17 @@ export interface components {
        * @description Month of the sheet the entry belongs to (YYYY-MM)
        */
       month: string;
+    };
+    /** ReportExportCreate */
+    ReportExportCreate: {
+      /** @description csv or pdf */
+      format: components['schemas']['ExportFormat'];
+      /** @default all */
+      period: components['schemas']['Period'];
+      /** Label Ids */
+      label_ids?: string[];
+      /** Kinds */
+      kinds?: components['schemas']['LabelKind'][];
     };
     /** ReportLabel */
     ReportLabel: {
@@ -1776,6 +2152,24 @@ export interface components {
        * @description Net total of the label in that month
        */
       total: string;
+    };
+    /** SignedUrl */
+    SignedUrl: {
+      /**
+       * Url
+       * @description Opens the file directly from storage; works only briefly
+       */
+      url: string;
+      /**
+       * Expires In
+       * @description Seconds
+       */
+      expires_in: number;
+    };
+    /** TokenRequest */
+    TokenRequest: {
+      /** Token */
+      token: string;
     };
     /**
      * TransferCreate
@@ -2089,6 +2483,101 @@ export interface operations {
       };
     };
   };
+  verify_email_api_v1_auth_verify_email_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TokenRequest'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  request_password_reset_api_v1_auth_password_reset_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PasswordResetRequest'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  reset_password_api_v1_auth_password_reset_confirm_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PasswordReset'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
   read_me_api_v1_users_me_get: {
     parameters: {
       query?: never;
@@ -2105,6 +2594,37 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['UserRead'];
+        };
+      };
+    };
+  };
+  delete_me_api_v1_users_me_delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AccountDeletion'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
         };
       };
     };
@@ -2169,6 +2689,26 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  resend_verification_api_v1_users_me_verification_email_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': unknown;
         };
       };
     };
@@ -3777,6 +4317,302 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['GoalRead'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  list_attachments_api_v1_months__month_id__attachments_get: {
+    parameters: {
+      query?: {
+        entry_id?: string | null;
+      };
+      header?: never;
+      path: {
+        month_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AttachmentRead'][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  upload_attachment_api_v1_months__month_id__attachments_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        month_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'multipart/form-data': components['schemas']['Body_upload_attachment_api_v1_months__month_id__attachments_post'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AttachmentRead'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  attachment_url_api_v1_attachments__attachment_id__url_get: {
+    parameters: {
+      query?: {
+        download?: boolean;
+      };
+      header?: never;
+      path: {
+        attachment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SignedUrl'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  delete_attachment_api_v1_attachments__attachment_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        attachment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  restore_attachment_api_v1_attachments__attachment_id__restore_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        attachment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AttachmentRead'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  list_exports_api_v1_exports_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ExportRead'][];
+        };
+      };
+    };
+  };
+  export_report_api_v1_exports_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReportExportCreate'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ExportRead'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  export_account_api_v1_users_me_export_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ExportRead'];
+        };
+      };
+    };
+  };
+  get_export_api_v1_exports__export_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        export_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ExportRead'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  export_url_api_v1_exports__export_id__url_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        export_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SignedUrl'];
         };
       };
       /** @description Validation Error */

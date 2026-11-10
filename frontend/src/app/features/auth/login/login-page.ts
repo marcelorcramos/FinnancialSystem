@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AuthStore } from '../../../core/auth/auth-store';
@@ -11,7 +11,7 @@ import { authErrorMessage } from '../auth-errors';
 
 @Component({
   selector: 'app-login-page',
-  imports: [Icon, ReactiveFormsModule],
+  imports: [Icon, ReactiveFormsModule, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login-page.html',
   styleUrl: '../auth-form.scss',

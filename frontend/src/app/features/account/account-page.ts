@@ -1,11 +1,15 @@
+import { Dialog } from '@angular/cdk/dialog';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { apiErrorMessage } from '../../core/api/api-errors';
 import { AuthStore } from '../../core/auth/auth-store';
+import { exportErrorMessage, ExportsService } from '../../core/exports/exports.service';
+import { dialogA11y } from '../../shared/ui/dialog-a11y';
 import { passwordRules } from '../../shared/forms/password-policy';
 import { Icon } from '../../shared/ui/icon';
 import { ToastService } from '../../shared/ui/toast.service';
+import { DeleteAccountDialog } from './delete-account-dialog';
 
 /** Every IANA time zone the browser knows, with the user's own first if it is missing. */
 function timeZones(current: string): string[] {
@@ -21,7 +25,7 @@ function initials(name: string): string {
   ).toUpperCase();
 }
 
-/** Profile, password and sessions of the signed-in user. */
+/** Profile, password, sessions and data of the signed-in user. */
 @Component({
   selector: 'app-account-page',
   imports: [Icon, RouterLink],
@@ -32,6 +36,8 @@ function initials(name: string): string {
 export default class AccountPage {
   private readonly auth = inject(AuthStore);
   private readonly toasts = inject(ToastService);
+  private readonly exports = inject(ExportsService);
+  private readonly dialog = inject(Dialog);
 
   protected readonly user = this.auth.user;
   protected readonly initials = computed(() => initials(this.user()?.name ?? ''));
@@ -66,6 +72,10 @@ export default class AccountPage {
 
   // Sessions
   protected readonly signingOut = signal(false);
+
+  // Email and data
+  protected readonly resending = signal(false);
+  protected readonly exporting = this.exports.busy;
 
   protected saveProfile(): void {
     if (!this.profileChanged() || !this.profileValid() || this.savingProfile()) return;
@@ -120,5 +130,37 @@ export default class AccountPage {
         this.toasts.show(apiErrorMessage(error));
       },
     });
+  }
+
+  protected resendVerification(): void {
+    this.resending.set(true);
+    this.auth.resendVerification().subscribe({
+      next: () => {
+        this.resending.set(false);
+        this.toasts.show(`A new link is on its way to ${this.user()?.email}`);
+      },
+      error: (error: unknown) => {
+        this.resending.set(false);
+        this.toasts.show(apiErrorMessage(error));
+      },
+    });
+  }
+
+  protected downloadData(): void {
+    this.toasts.show('Preparing your data…');
+    this.exports.account().subscribe({
+      next: (done) => this.toasts.show(`${done.filename} downloaded`),
+      error: (error: unknown) => this.toasts.show(exportErrorMessage(error)),
+    });
+  }
+
+  protected deleteAccount(): void {
+    this.dialog
+      .open<boolean>(DeleteAccountDialog, {
+        ...dialogA11y('delete-account-title', { alert: true, describedBy: 'delete-account-text' }),
+      })
+      .closed.subscribe((deleted) => {
+        if (deleted) this.toasts.show('Your account was deleted');
+      });
   }
 }

@@ -1,5 +1,20 @@
 <header class="head">
   <h1>Reports</h1>
+  <button
+    type="button"
+    class="btn export"
+    [cdkMenuTriggerFor]="exportMenu"
+    [disabled]="exporting()"
+    [attr.aria-busy]="exporting()"
+  >
+    @if (exporting()) {
+      <span class="spinner" aria-hidden="true"></span>
+      Preparing…
+    } @else {
+      <app-icon name="download" [size]="18" />
+      Export
+    }
+  </button>
   <div class="toggle" role="group" aria-label="Period">
     @for (option of periods; track option.value) {
       <button
@@ -13,6 +28,29 @@
     }
   </div>
 </header>
+
+<ng-template #exportMenu>
+  <div class="popover-menu" cdkMenu>
+    <button
+      type="button"
+      class="popover-menu__item"
+      cdkMenuItem
+      (cdkMenuItemTriggered)="exportAs('csv')"
+    >
+      <app-icon name="file" [size]="18" />
+      <span>CSV <span class="popover-menu__hint">entries, for spreadsheets</span></span>
+    </button>
+    <button
+      type="button"
+      class="popover-menu__item"
+      cdkMenuItem
+      (cdkMenuItemTriggered)="exportAs('pdf')"
+    >
+      <app-icon name="file" [size]="18" />
+      <span>PDF <span class="popover-menu__hint">totals, labels and entries</span></span>
+    </button>
+  </div>
+</ng-template>
 
 <section class="panel filters" aria-labelledby="filters-title">
   <div class="filters__head">

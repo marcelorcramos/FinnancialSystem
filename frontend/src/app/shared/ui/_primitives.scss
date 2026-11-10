@@ -50,6 +50,7 @@
   }
 
   &--block {
+    box-sizing: border-box; // links styled as buttons too
     width: 100%;
   }
 
@@ -135,6 +136,22 @@
     border-color: var(--color-border-strong);
     background: var(--color-surface-raised);
   }
+
+  &--success {
+    border-color: var(--kind-saving);
+    background: var(--kind-saving-container);
+  }
+}
+
+// A button that reads like a link, for actions inside a sentence.
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent-text);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .panel {
@@ -263,4 +280,44 @@
   border-radius: 50%;
   background: var(--color-text-muted);
   transition: transform var(--motion);
+}
+
+// A small menu opened from a button (CDK menu).
+.popover-menu {
+  display: flex;
+  flex-direction: column;
+  min-width: 240px;
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.popover-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: none;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover,
+  &:focus {
+    background: var(--color-surface-raised);
+    outline: none;
+  }
+}
+
+.popover-menu__hint {
+  display: block;
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
 }

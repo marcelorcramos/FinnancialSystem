@@ -4,10 +4,11 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { APP_NAME } from '../../core/app-title-strategy';
 import { ThemeToggle } from '../../core/layout/theme-toggle';
 import { Icon } from '../../shared/ui/icon';
+import { ToastOutlet } from '../../shared/ui/toast-outlet';
 
 @Component({
   selector: 'app-auth-layout',
-  imports: [Icon, RouterLink, RouterLinkActive, RouterOutlet, ThemeToggle],
+  imports: [Icon, RouterLink, RouterLinkActive, RouterOutlet, ThemeToggle, ToastOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="intro">
@@ -62,6 +63,8 @@ import { Icon } from '../../shared/ui/icon';
         <router-outlet />
       </main>
     </section>
+    <!-- Messages that follow the user here (password changed, account deleted). -->
+    <app-toast-outlet />
   `,
   styleUrl: './auth-layout.scss',
 })

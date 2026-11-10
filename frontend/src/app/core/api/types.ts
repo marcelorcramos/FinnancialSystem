@@ -47,3 +47,8 @@ export type GoalList = Schemas['GoalList'];
 export type GoalCreate = Schemas['GoalCreate'];
 export type GoalUpdate = Schemas['GoalUpdate'];
 export type GoalType = Schemas['GoalType'];
+
+export type AttachmentRead = Schemas['AttachmentRead'];
+export type SignedUrl = Schemas['SignedUrl'];
+export type ExportRead = Schemas['ExportRead'];
+export type ReportExportCreate = Schemas['ReportExportCreate'];

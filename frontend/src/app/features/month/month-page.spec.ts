@@ -4,6 +4,7 @@ import { provideRouter, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
 import {
+  AttachmentRead,
   EntryListItem,
   LimitStatus,
   MonthRead,
@@ -16,6 +17,8 @@ import { ReportsApi } from '../reports/reports-api';
 import { LimitsApi } from './limits-api';
 import { MonthsApi } from './months-api';
 import { PlanMonthDialog } from './plan-month-dialog';
+import { ReceiptsApi } from './receipts-api';
+import { ReceiptsDialog } from './receipts-dialog';
 
 const OCTOBER: MonthRead = { id: 'm10', year: 2026, month: 10, note: null, closed_at: null };
 
@@ -63,6 +66,16 @@ const ENTRY: EntryListItem = {
   counterpart_label_id: null,
 };
 
+const RECEIPT: AttachmentRead = {
+  id: 'r1',
+  month_id: 'm10',
+  entry_id: 'e1',
+  filename: 'groceries.pdf',
+  mime: 'application/pdf',
+  size: 2048,
+  created_at: '2026-10-02T09:00:00Z',
+};
+
 const SERIES = {
   months: ['2026-09', '2026-10'],
   labels: [
@@ -84,6 +97,7 @@ describe('MonthPage', () => {
   let api: Record<string, ReturnType<typeof vi.fn>>;
   let limitsApi: { status: ReturnType<typeof vi.fn> };
   let limitsApiFailing = false;
+  let receiptsApi: { list: ReturnType<typeof vi.fn> };
 
   afterEach(() => (limitsApiFailing = false));
   let dialog: { open: ReturnType<typeof vi.fn>; openDialogs: unknown[] };
@@ -105,6 +119,7 @@ describe('MonthPage', () => {
         limitsApiFailing ? throwError(() => new Error('limits are down')) : of([] as LimitStatus[]),
       ),
     };
+    receiptsApi = { list: vi.fn(() => of([] as AttachmentRead[])) };
     TestBed.configureTestingModule({
       imports: [MonthPage],
       providers: [
@@ -113,6 +128,7 @@ describe('MonthPage', () => {
         { provide: Dialog, useValue: dialog },
         { provide: ReportsApi, useValue: { series: vi.fn(() => of(SERIES)) } },
         { provide: LimitsApi, useValue: limitsApi },
+        { provide: ReceiptsApi, useValue: receiptsApi },
       ],
     });
     fixture = TestBed.createComponent(MonthPage);
@@ -341,6 +357,39 @@ describe('MonthPage', () => {
     expect(el.querySelector('h1')?.textContent).toBe('October 2026');
     expect(el.querySelector('.limit')).toBeNull();
     expect(el.querySelectorAll('.label-row').length).toBeGreaterThan(0);
+  });
+
+  it('counts receipts per entry and opens them for one entry or the whole month', async () => {
+    const entries = vi.fn(() => of([ENTRY]));
+    await render();
+    api['entries'] = entries;
+    receiptsApi.list.mockReturnValue(of([RECEIPT, { ...RECEIPT, id: 'r2', entry_id: null }]));
+    fixture.componentInstance['reload']();
+    await fixture.whenStable();
+
+    const button = el.querySelector<HTMLButtonElement>('.entry__receipts')!;
+    expect(button.getAttribute('aria-label')).toBe('Receipts for Food (1)');
+    expect(el.querySelector('.head__actions .count')?.textContent).toBe('2');
+
+    button.click();
+    expect(dialog.open).toHaveBeenLastCalledWith(
+      ReceiptsDialog,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          monthId: 'm10',
+          entry: { id: 'e1', title: 'Food' },
+          closed: false,
+        }),
+      }),
+    );
+    // Closing the dialog reloads the receipts.
+    expect(receiptsApi.list).toHaveBeenLastCalledWith('m10');
+
+    el.querySelector<HTMLButtonElement>('.head__actions .btn')!.click();
+    expect(dialog.open).toHaveBeenLastCalledWith(
+      ReceiptsDialog,
+      expect.objectContaining({ data: expect.objectContaining({ entry: null }) }),
+    );
   });
 
   it('reports a failure to load', async () => {

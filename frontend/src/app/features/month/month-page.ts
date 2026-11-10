@@ -13,7 +13,13 @@ import { Router, RouterLink } from '@angular/router';
 import { catchError, forkJoin, of } from 'rxjs';
 
 import { apiErrorMessage } from '../../core/api/api-errors';
-import { EntryListItem, LimitStatus, MonthRead, MonthSummary } from '../../core/api/types';
+import {
+  AttachmentRead,
+  EntryListItem,
+  LimitStatus,
+  MonthRead,
+  MonthSummary,
+} from '../../core/api/types';
 import { readPreference, writePreference } from '../../core/storage/preferences';
 import { Donut } from '../../shared/charts/donut';
 import { Evolution } from './evolution';
@@ -26,6 +32,8 @@ import { LimitDialog, LimitDialogData } from './limit-dialog';
 import { LimitsApi } from './limits-api';
 import { NewMonthData, NewMonthDialog } from './new-month-dialog';
 import { PlanMonthData, PlanMonthDialog } from './plan-month-dialog';
+import { ReceiptsApi } from './receipts-api';
+import { ReceiptsDialog, ReceiptsDialogData } from './receipts-dialog';
 import { monthPath, monthTitle, shiftMonth } from './month-route';
 import { buildMonthView, MonthView, RecentEntry } from './month-view';
 import { MonthsApi } from './months-api';
@@ -47,6 +55,7 @@ const DONUT_MODE_KEY = 'fs.month.donut';
 export default class MonthPage {
   private readonly api = inject(MonthsApi);
   private readonly limitsApi = inject(LimitsApi);
+  private readonly receiptsApi = inject(ReceiptsApi);
   private readonly dialog = inject(Dialog);
   private readonly router = inject(Router);
   private readonly toasts = inject(ToastService);
@@ -60,6 +69,15 @@ export default class MonthPage {
   protected readonly summary = signal<MonthSummary | null>(null);
   private readonly entries = signal<EntryListItem[]>([]);
   private readonly limits = signal<LimitStatus[]>([]);
+  protected readonly receipts = signal<AttachmentRead[]>([]);
+  /** Receipts per entry id. */
+  protected readonly receiptCounts = computed(() => {
+    const counts: Record<string, number> = {};
+    for (const receipt of this.receipts()) {
+      if (receipt.entry_id) counts[receipt.entry_id] = (counts[receipt.entry_id] ?? 0) + 1;
+    }
+    return counts;
+  });
   protected readonly showAllLabels = signal(false);
   protected readonly showAllEntries = signal(false);
   protected readonly view = computed<MonthView | null>(() => {
@@ -204,6 +222,35 @@ export default class MonthPage {
     });
   }
 
+  /** Receipts of the whole month, or of one entry. */
+  protected openReceipts(entry: RecentEntry | null = null): void {
+    const sheet = this.sheet();
+    const summary = this.summary();
+    if (!sheet || !summary) return;
+    const entryTitles = Object.fromEntries(
+      buildMonthView(summary, this.entries(), Infinity).recent.map((e) => [e.id, e.title]),
+    );
+    this.dialog
+      .open<void, ReceiptsDialogData>(ReceiptsDialog, {
+        data: {
+          monthId: sheet.id,
+          monthTitle: this.title(),
+          entry: entry && { id: entry.id, title: entry.title },
+          closed: !!sheet.closed_at,
+          entryTitles,
+        },
+        ...dialogA11y('receipts-title'),
+      })
+      .closed.subscribe(() => this.loadReceipts(sheet.id));
+  }
+
+  private loadReceipts(monthId: string): void {
+    this.receiptsApi
+      .list(monthId)
+      .pipe(catchError(() => of([] as AttachmentRead[])))
+      .subscribe((receipts) => this.receipts.set(receipts));
+  }
+
   /** Closes the month (no more changes) or reopens it. */
   protected setClosed(closed: boolean): void {
     const sheet = this.sheet();
@@ -270,10 +317,12 @@ export default class MonthPage {
           this.api.entries(sheet.id),
           // Limits are extra information: the month still loads without them.
           this.limitsApi.status(sheet.id).pipe(catchError(() => of([] as LimitStatus[]))),
+          this.receiptsApi.list(sheet.id).pipe(catchError(() => of([] as AttachmentRead[]))),
         ]).subscribe({
-          next: ([summary, entries, limits]) => {
+          next: ([summary, entries, limits, receipts]) => {
             this.entries.set(entries);
             this.limits.set(limits);
+            this.receipts.set(receipts);
             this.summary.set(summary);
             this.state.set('ready');
           },

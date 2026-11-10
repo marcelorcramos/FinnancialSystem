@@ -115,6 +115,38 @@ describe('AuthStore', () => {
     expect(store.isAuthenticated()).toBe(true);
   });
 
+  it('confirms the email and reloads a signed-in user to show it', async () => {
+    await signIn();
+    const result = firstValueFrom(store.verifyEmail('tok'));
+    const verify = http.expectOne(`${API}/auth/verify-email`);
+    expect(verify.request.body).toEqual({ token: 'tok' });
+    verify.flush(null);
+    http.expectOne(`${API}/users/me`).flush({ ...USER, email_verified_at: '2026-11-10T00:00:00Z' });
+    await result;
+    expect(store.user()?.email_verified_at).toBe('2026-11-10T00:00:00Z');
+  });
+
+  it('confirms the email without a session too', async () => {
+    const result = firstValueFrom(store.verifyEmail('tok'));
+    http.expectOne(`${API}/auth/verify-email`).flush(null);
+    await result;
+    http.expectNone(`${API}/users/me`);
+  });
+
+  it('deletes the account with the password, clears the session and goes to sign in', async () => {
+    await signIn();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    const result = firstValueFrom(store.deleteAccount('Secret-1'));
+    const request = http.expectOne(`${API}/users/me`);
+    expect(request.request.method).toBe('DELETE');
+    expect(request.request.body).toEqual({ password: 'Secret-1' });
+    expect(request.request.withCredentials).toBe(true);
+    request.flush(null);
+    await result;
+    expect(store.isAuthenticated()).toBe(false);
+    expect(navigate).toHaveBeenCalledWith('/auth/login');
+  });
+
   it('does not log in when the credentials are rejected', async () => {
     const result = firstValueFrom(store.login({ email: USER.email, password: 'wrong' }));
     http

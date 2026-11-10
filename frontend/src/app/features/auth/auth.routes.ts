@@ -15,7 +15,29 @@ export default [
         title: 'Create account',
         loadComponent: () => import('./register/register-page'),
       },
+      {
+        path: 'forgot-password',
+        title: 'Reset password',
+        loadComponent: () => import('./forgot-password/forgot-password-page'),
+      },
       { path: '', pathMatch: 'full', redirectTo: 'login' },
+    ],
+  },
+  // Opened from emailed links, signed in or not.
+  {
+    path: '',
+    component: AuthLayout,
+    children: [
+      {
+        path: 'reset-password',
+        title: 'Choose a new password',
+        loadComponent: () => import('./reset-password/reset-password-page'),
+      },
+      {
+        path: 'verify-email',
+        title: 'Confirm your email',
+        loadComponent: () => import('./verify-email/verify-email-page'),
+      },
     ],
   },
 ] satisfies Routes;
