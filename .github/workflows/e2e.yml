@@ -26,8 +26,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # The worker sends emails and builds exports; Mailpit receives the emails.
       - name: Start the stack
-        run: docker compose -f deploy/docker-compose.yml up -d --build --wait web
+        run: docker compose -f deploy/docker-compose.yml up -d --build --wait web worker mailpit
 
       - uses: actions/setup-node@v5
         with:
@@ -47,7 +48,7 @@ jobs:
 
       - name: Stack logs
         if: failure()
-        run: docker compose -f deploy/docker-compose.yml logs --no-color api web
+        run: docker compose -f deploy/docker-compose.yml logs --no-color api worker web
 
       - name: Playwright report
         if: failure()
