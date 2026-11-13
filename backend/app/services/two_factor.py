@@ -34,7 +34,7 @@ async def start_setup(session: AsyncSession, user: User) -> TwoFactorSetup:
     user.totp_last_step = None
     await session.commit()
     uri = totp.provisioning_uri(secret, user.email)
-    return TwoFactorSetup(secret=secret, otpauth_uri=uri, qr_svg=totp.qr_svg(uri))
+    return TwoFactorSetup(secret=secret, otpauth_uri=uri, qr_code=totp.qr_data_uri(uri))
 
 
 async def enable(session: AsyncSession, user: User, code: str) -> RecoveryCodes:

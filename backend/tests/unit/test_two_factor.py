@@ -47,7 +47,7 @@ def test_the_qr_code_carries_the_provisioning_uri() -> None:
     assert uri.startswith(
         "otpauth://totp/FinnancialSystem:ana%40example.com?secret=JBSWY3DPEHPK3PXP"
     )
-    assert two_factor.qr_svg(uri).startswith("<svg")
+    assert two_factor.qr_data_uri(uri).startswith("data:image/svg+xml")
 
 
 def test_recovery_codes() -> None:

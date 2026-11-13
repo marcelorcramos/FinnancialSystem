@@ -20,7 +20,7 @@ async def turn_on(client: AsyncClient, user: ApiUser) -> tuple[str, list[str]]:
     assert setup.status_code == 200, setup.text
     secret = setup.json()["secret"]
     assert setup.json()["otpauth_uri"].startswith("otpauth://totp/FinnancialSystem:")
-    assert setup.json()["qr_svg"].startswith("<svg")
+    assert setup.json()["qr_code"].startswith("data:image/svg+xml")
     enable = await client.post(
         "/api/v1/users/me/2fa/enable",
         headers=user.headers,

@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 class TwoFactorSetup(BaseModel):
     secret: str = Field(description="Base32 secret, for apps that cannot scan the QR code")
     otpauth_uri: str
-    qr_svg: str = Field(description="The otpauth URI as an inline SVG QR code")
+    qr_code: str = Field(description="The otpauth URI as a QR code: an SVG data: URI for an <img>")
 
 
 class TwoFactorCode(BaseModel):

@@ -74,7 +74,7 @@ The access token lasts 15 minutes and comes in the response body. The refresh to
 | Method | Route | Body | Response |
 |---|---|---|---|
 | GET | `/users/me/2fa` | | 200 `{enabled, recovery_codes_left}` |
-| POST | `/users/me/2fa/setup` | | 200 `{secret, otpauth_uri, qr_svg}`; 409 if already on or a demo account |
+| POST | `/users/me/2fa/setup` | | 200 `{secret, otpauth_uri, qr_code}` (`qr_code`: an SVG `data:` URI for an `<img>`); 409 if already on or a demo account |
 | POST | `/users/me/2fa/enable` | `{code}` | 200 `{codes}`: 10 recovery codes, shown once |
 | POST | `/users/me/2fa/disable` | `{code}` | 204 |
 | POST | `/users/me/2fa/recovery-codes` | `{code}` | 200 `{codes}`: new codes, the old ones stop working |

@@ -48,8 +48,9 @@ def provisioning_uri(secret: str, email: str) -> str:
     return pyotp.TOTP(secret).provisioning_uri(name=email, issuer_name=ISSUER)
 
 
-def qr_svg(uri: str) -> str:
-    return str(segno.make(uri, error="m").svg_inline(scale=4, border=2))
+def qr_data_uri(uri: str) -> str:
+    """The QR code as a standalone SVG image (data: URI), safe to show in an <img>."""
+    return str(segno.make(uri, error="m").svg_data_uri(scale=4, border=2))
 
 
 @dataclass(frozen=True, slots=True)
