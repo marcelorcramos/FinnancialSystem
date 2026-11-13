@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
     CORS_ORIGINS: str = "http://localhost:4200"
+    # Scales every auth rate limit. 1 in real use; the end-to-end tests, which sign in
+    # many times from one address at once, raise it.
+    RATE_LIMIT_MULTIPLIER: int = Field(default=1, ge=1, le=1000)
     # Links in emails point here (verify email, reset password).
     FRONTEND_URL: str = "http://localhost:4200"
 
