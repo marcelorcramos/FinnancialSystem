@@ -33,8 +33,31 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Login */
+    /**
+     * Login
+     * @description Tokens, or `two_factor_required` with a ticket when the account has 2FA on.
+     */
     post: operations['login_api_v1_auth_login_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/login/2fa': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Login Two Factor
+     * @description Second step: the ticket from /login and a code from the app (or a recovery code).
+     */
+    post: operations['login_two_factor_api_v1_auth_login_2fa_post'];
     delete?: never;
     options?: never;
     head?: never;
@@ -155,6 +178,87 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/auth/demo': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Try Demo
+     * @description A fresh demo account with six months of data, signed in; it is deleted after 24 hours.
+     */
+    post: operations['try_demo_api_v1_auth_demo_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/providers': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Providers
+     * @description Which sign-in options this server offers (the Google button shows only when set up).
+     */
+    get: operations['providers_api_v1_auth_providers_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/google/login': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Google Login
+     * @description Send the browser to Google's account chooser.
+     */
+    get: operations['google_login_api_v1_auth_google_login_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/google/callback': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Google Callback
+     * @description Google sends the browser here. Success goes to the app's /auth/google page, which
+     *     picks up the session; with 2FA on, to the code page with a ticket.
+     */
+    get: operations['google_callback_api_v1_auth_google_callback_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/users/me': {
     parameters: {
       query?: never;
@@ -168,7 +272,8 @@ export interface paths {
     post?: never;
     /**
      * Delete Me
-     * @description Delete the account and all of its data for good, after checking the password.
+     * @description Delete the account and all of its data for good, after checking the password
+     *     (or, for accounts without one, the typed email).
      */
     delete: operations['delete_me_api_v1_users_me_delete'];
     options?: never;
@@ -208,6 +313,100 @@ export interface paths {
      * @description Send the confirmation link again (the previous links stop working).
      */
     post: operations['resend_verification_api_v1_users_me_verification_email_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/users/me/2fa': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Two Factor Status */
+    get: operations['two_factor_status_api_v1_users_me_2fa_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/users/me/2fa/setup': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Two Factor Setup
+     * @description A new secret and its QR code; nothing changes until a code is confirmed.
+     */
+    post: operations['two_factor_setup_api_v1_users_me_2fa_setup_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/users/me/2fa/enable': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Two Factor Enable
+     * @description Turn 2FA on with a code from the app; returns the recovery codes (shown once).
+     */
+    post: operations['two_factor_enable_api_v1_users_me_2fa_enable_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/users/me/2fa/disable': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Two Factor Disable */
+    post: operations['two_factor_disable_api_v1_users_me_2fa_disable_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/users/me/2fa/recovery-codes': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Two Factor Recovery Codes
+     * @description New recovery codes; the old ones stop working.
+     */
+    post: operations['two_factor_recovery_codes_api_v1_users_me_2fa_recovery_codes_post'];
     delete?: never;
     options?: never;
     head?: never;
@@ -1092,7 +1291,12 @@ export interface components {
     /** AccountDeletion */
     AccountDeletion: {
       /** Password */
-      password: string;
+      password?: string | null;
+      /**
+       * Confirm Email
+       * @description For accounts without a password
+       */
+      confirm_email?: string | null;
     };
     /**
      * AdditionCreate
@@ -1895,6 +2099,19 @@ export interface components {
      * @enum {string}
      */
     Period: 'last_month' | 'last_6_months' | 'last_12_months' | 'all';
+    /** Providers */
+    Providers: {
+      /** Google */
+      google: boolean;
+    };
+    /** RecoveryCodes */
+    RecoveryCodes: {
+      /**
+       * Codes
+       * @description Shown once: each works a single time instead of a code
+       */
+      codes: string[];
+    };
     /** ReportEntries */
     ReportEntries: {
       period: components['schemas']['Period'];
@@ -2251,6 +2468,61 @@ export interface components {
       /** Note */
       note?: string | null;
     };
+    /** TwoFactorCode */
+    TwoFactorCode: {
+      /**
+       * Code
+       * @description 6-digit code or a recovery code
+       */
+      code: string;
+    };
+    /** TwoFactorLogin */
+    TwoFactorLogin: {
+      /** Ticket */
+      ticket: string;
+      /** Code */
+      code: string;
+    };
+    /**
+     * TwoFactorRequired
+     * @description Login answer when the account has 2FA: send the ticket and a code to /auth/login/2fa.
+     */
+    TwoFactorRequired: {
+      /**
+       * Two Factor Required
+       * @default true
+       */
+      two_factor_required: boolean;
+      /** Ticket */
+      ticket: string;
+      /**
+       * Expires In
+       * @description Seconds left to send the code
+       */
+      expires_in: number;
+    };
+    /** TwoFactorSetup */
+    TwoFactorSetup: {
+      /**
+       * Secret
+       * @description Base32 secret, for apps that cannot scan the QR code
+       */
+      secret: string;
+      /** Otpauth Uri */
+      otpauth_uri: string;
+      /**
+       * Qr Code
+       * @description The otpauth URI as a QR code: an SVG data: URI for an <img>
+       */
+      qr_code: string;
+    };
+    /** TwoFactorStatus */
+    TwoFactorStatus: {
+      /** Enabled */
+      enabled: boolean;
+      /** Recovery Codes Left */
+      recovery_codes_left: number;
+    };
     /** UserCreate */
     UserCreate: {
       /**
@@ -2292,6 +2564,20 @@ export interface components {
        * @description Create each month automatically from the previous one (rent, salary...)
        */
       auto_new_month: boolean;
+      /**
+       * Has Password
+       * @description False for accounts created with Google only
+       */
+      has_password: boolean;
+      /** Google Linked */
+      google_linked: boolean;
+      /** Two Factor Enabled */
+      two_factor_enabled: boolean;
+      /**
+       * Demo Expires At
+       * @description Set on demo accounts, which are deleted at this moment
+       */
+      demo_expires_at: string | null;
     };
     /** UserUpdate */
     UserUpdate: {
@@ -2371,6 +2657,40 @@ export interface operations {
     requestBody: {
       content: {
         'application/json': components['schemas']['LoginRequest'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json':
+            components['schemas']['AccessToken'] | components['schemas']['TwoFactorRequired'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  login_two_factor_api_v1_auth_login_2fa_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TwoFactorLogin'];
       };
     };
     responses: {
@@ -2578,6 +2898,101 @@ export interface operations {
       };
     };
   };
+  try_demo_api_v1_auth_demo_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AccessToken'];
+        };
+      };
+    };
+  };
+  providers_api_v1_auth_providers_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Providers'];
+        };
+      };
+    };
+  };
+  google_login_api_v1_auth_google_login_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': unknown;
+        };
+      };
+    };
+  };
+  google_callback_api_v1_auth_google_callback_get: {
+    parameters: {
+      query?: {
+        code?: string | null;
+        state?: string | null;
+        error?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: {
+        google_oauth?: string | null;
+      };
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
   read_me_api_v1_users_me_get: {
     parameters: {
       query?: never;
@@ -2709,6 +3124,143 @@ export interface operations {
         };
         content: {
           'application/json': unknown;
+        };
+      };
+    };
+  };
+  two_factor_status_api_v1_users_me_2fa_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TwoFactorStatus'];
+        };
+      };
+    };
+  };
+  two_factor_setup_api_v1_users_me_2fa_setup_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TwoFactorSetup'];
+        };
+      };
+    };
+  };
+  two_factor_enable_api_v1_users_me_2fa_enable_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TwoFactorCode'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RecoveryCodes'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  two_factor_disable_api_v1_users_me_2fa_disable_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TwoFactorCode'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  two_factor_recovery_codes_api_v1_users_me_2fa_recovery_codes_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TwoFactorCode'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RecoveryCodes'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
         };
       };
     };

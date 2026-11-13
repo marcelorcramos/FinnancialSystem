@@ -91,8 +91,10 @@ describe('AlertsService', () => {
     );
     expect(service.alerts().map((a) => a.id)).toEqual(['new', 'old']);
     expect(service.unseen()).toBe(1);
-    expect(toasts.show).toHaveBeenCalledWith(
-      'Food went over its €300.00 limit in November 2026 (€320.00).',
+    await vi.waitFor(() =>
+      expect(toasts.show).toHaveBeenCalledWith(
+        'Food went over its €300.00 limit in November 2026 (€320.00).',
+      ),
     );
   });
 
@@ -105,8 +107,36 @@ describe('AlertsService', () => {
   });
 
   it('announces each alert once', () => {
+    vi.useFakeTimers();
     service.receive(alert('a', 'warning'));
     service.receive(alert('a', 'warning'));
+    vi.advanceTimersByTime(700);
     expect(toasts.show).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it('announces a burst of alerts in one toast', () => {
+    vi.useFakeTimers();
+    // Spread out, each within the wait of the previous one.
+    for (const id of ['a', 'b', 'c']) {
+      service.receive(alert(id, 'warning'));
+      vi.advanceTimersByTime(400);
+    }
+    expect(toasts.show).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(700);
+    expect(toasts.show).toHaveBeenCalledTimes(1);
+    expect(toasts.show).toHaveBeenCalledWith('3 new alerts. Open the bell to see them.');
+    expect(service.unseen()).toBe(3);
+    vi.useRealTimers();
+  });
+
+  it('does not hold alerts back for ever during a long stream', () => {
+    vi.useFakeTimers();
+    for (let i = 0; i < 10; i++) {
+      service.receive(alert(`x${i}`, 'warning'));
+      vi.advanceTimersByTime(500);
+    }
+    expect(toasts.show).toHaveBeenCalled();
+    vi.useRealTimers();
   });
 });

@@ -5,7 +5,10 @@ import { apiErrorMessage } from '../../core/api/api-errors';
 import { AuthStore } from '../../core/auth/auth-store';
 import { Icon } from '../../shared/ui/icon';
 
-/** Confirms deleting the account for good: the password and an explicit "I understand". */
+/**
+ * Confirms deleting the account for good: the password (or, for accounts without
+ * one, the typed email) and an explicit "I understand".
+ */
 @Component({
   selector: 'app-delete-account-dialog',
   imports: [Icon],
@@ -33,17 +36,31 @@ import { Icon } from '../../shared/ui/icon';
           <span>{{ message }}</span>
         </div>
       }
-      <div class="field">
-        <label for="delete-password">Password</label>
-        <input
-          id="delete-password"
-          class="field__input"
-          type="password"
-          autocomplete="current-password"
-          [value]="password()"
-          (input)="password.set($any($event.target).value)"
-        />
-      </div>
+      @if (hasPassword()) {
+        <div class="field">
+          <label for="delete-password">Password</label>
+          <input
+            id="delete-password"
+            class="field__input"
+            type="password"
+            autocomplete="current-password"
+            [value]="password()"
+            (input)="password.set($any($event.target).value)"
+          />
+        </div>
+      } @else {
+        <div class="field">
+          <label for="delete-email">Type your email ({{ email() }}) to confirm</label>
+          <input
+            id="delete-email"
+            class="field__input"
+            type="email"
+            autocomplete="off"
+            [value]="password()"
+            (input)="password.set($any($event.target).value)"
+          />
+        </div>
+      }
       <label class="check">
         <input
           type="checkbox"
@@ -88,6 +105,9 @@ export class DeleteAccountDialog {
   private readonly auth = inject(AuthStore);
   protected readonly ref = inject<DialogRef<boolean>>(DialogRef);
 
+  protected readonly hasPassword = computed(() => this.auth.user()?.has_password ?? true);
+  protected readonly email = computed(() => this.auth.user()?.email ?? '');
+  /** The password, or the typed email for accounts without a password. */
   protected readonly password = signal('');
   protected readonly understood = signal(false);
   protected readonly pending = signal(false);
@@ -98,7 +118,10 @@ export class DeleteAccountDialog {
     if (!this.ready() || this.pending()) return;
     this.pending.set(true);
     this.error.set(null);
-    this.auth.deleteAccount(this.password()).subscribe({
+    const confirmation = this.hasPassword()
+      ? { password: this.password() }
+      : { confirm_email: this.password() };
+    this.auth.deleteAccount(confirmation).subscribe({
       next: () => this.ref.close(true),
       error: (error: unknown) => {
         this.pending.set(false);

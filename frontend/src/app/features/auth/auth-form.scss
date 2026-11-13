@@ -40,3 +40,25 @@ form {
   font-size: var(--text-s);
   line-height: 1.5;
 }
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+  color: var(--color-text-subtle);
+  font-size: var(--text-s);
+
+  &::before,
+  &::after {
+    flex: 1;
+    height: 1px;
+    background: var(--color-border);
+    content: '';
+  }
+}
+
+.google {
+  gap: var(--space-2);
+  text-decoration: none;
+}

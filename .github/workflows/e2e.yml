@@ -26,8 +26,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # The worker sends emails and builds exports; Mailpit receives the emails.
+      # The worker sends emails and builds exports; Mailpit receives the emails. The tests
+      # sign in many times from one address at once, so the auth rate limits are raised.
       - name: Start the stack
+        env:
+          RATE_LIMIT_MULTIPLIER: 10
         run: docker compose -f deploy/docker-compose.yml up -d --build --wait web worker mailpit
 
       - uses: actions/setup-node@v5

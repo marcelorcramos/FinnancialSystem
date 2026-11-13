@@ -12,6 +12,10 @@ export const USER: UserRead = {
   timezone: 'Europe/Lisbon',
   email_verified_at: null,
   auto_new_month: false,
+  has_password: true,
+  google_linked: false,
+  two_factor_enabled: false,
+  demo_expires_at: null,
 };
 
 export function tokens(accessToken: string): TokenResponse {

@@ -1,3 +1,5 @@
+import { createHmac } from 'node:crypto';
+
 import { expect, Page } from '@playwright/test';
 
 export const PASSWORD = 'E2e-password-1!';
@@ -68,4 +70,20 @@ export async function createCurrentMonth(page: Page): Promise<void> {
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('button', { name: `Create ${title}` }).click();
   await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+}
+
+/** The TOTP code (RFC 6238, SHA-1, 6 digits, 30 s) for a base32 secret, `offset` steps away. */
+export function totp(secret: string, offset = 0, now = Date.now()): string {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = '';
+  for (const char of secret.replace(/=+$/, '').toUpperCase()) {
+    bits += alphabet.indexOf(char).toString(2).padStart(5, '0');
+  }
+  const key = Buffer.from(bits.match(/.{8}/g)!.map((byte) => parseInt(byte, 2)));
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(now / 30_000) + offset));
+  const hmac = createHmac('sha1', key).update(counter).digest();
+  const start = hmac[hmac.length - 1]! & 0x0f;
+  const value = (hmac.readUInt32BE(start) & 0x7fffffff) % 1_000_000;
+  return value.toString().padStart(6, '0');
 }

@@ -8,6 +8,7 @@ import {
   ProfileUpdate,
   RegisterRequest,
   TokenResponse,
+  TwoFactorRequired,
   UserRead,
 } from './auth.models';
 
@@ -24,10 +25,30 @@ export class AuthApi {
     return this.http.post<UserRead>(`${this.baseUrl}/auth/register`, body);
   }
 
-  login(body: LoginRequest): Observable<TokenResponse> {
-    return this.http.post<TokenResponse>(`${this.baseUrl}/auth/login`, body, {
+  /** Tokens, or a ticket when the account has two-factor sign-in on. */
+  login(body: LoginRequest): Observable<TokenResponse | TwoFactorRequired> {
+    return this.http.post<TokenResponse | TwoFactorRequired>(`${this.baseUrl}/auth/login`, body, {
       withCredentials: true,
     });
+  }
+
+  loginTwoFactor(ticket: string, code: string): Observable<TokenResponse> {
+    return this.http.post<TokenResponse>(
+      `${this.baseUrl}/auth/login/2fa`,
+      { ticket, code },
+      { withCredentials: true },
+    );
+  }
+
+  /** A new demo account, signed in (refresh cookie set). */
+  demo(): Observable<TokenResponse> {
+    return this.http.post<TokenResponse>(`${this.baseUrl}/auth/demo`, null, {
+      withCredentials: true,
+    });
+  }
+
+  providers(): Observable<{ google: boolean }> {
+    return this.http.get<{ google: boolean }>(`${this.baseUrl}/auth/providers`);
   }
 
   refresh(): Observable<TokenResponse> {
@@ -76,10 +97,13 @@ export class AuthApi {
     return this.http.post<void>(`${this.baseUrl}/users/me/verification-email`, null);
   }
 
-  /** Deletes the account and all of its data for good; clears the refresh cookie. */
-  deleteAccount(password: string): Observable<void> {
+  /**
+   * Deletes the account and all of its data for good; clears the refresh cookie.
+   * Accounts without a password confirm with their email instead.
+   */
+  deleteAccount(confirmation: { password: string } | { confirm_email: string }): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/users/me`, {
-      body: { password },
+      body: confirmation,
       withCredentials: true,
     });
   }

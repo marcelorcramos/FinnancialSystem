@@ -39,6 +39,10 @@ export function alertText(alert: AlertRead): string {
  * Server-Sent Events. The stream is read with fetch because it needs the Bearer
  * header; it reconnects with a growing pause and refreshes the token on a 401.
  */
+/** How long to wait for more alerts before announcing them, and the longest wait. */
+const ANNOUNCE_DELAY_MS = 600;
+const ANNOUNCE_MAX_WAIT_MS = 2500;
+
 @Injectable({ providedIn: 'root' })
 export class AlertsService {
   private readonly http = inject(HttpClient);
@@ -49,6 +53,11 @@ export class AlertsService {
   private readonly _alerts = signal<AlertRead[]>([]);
   readonly alerts = this._alerts.asReadonly();
   readonly unseen = computed(() => this._alerts().filter((a) => !a.seen_at).length);
+
+  /** Alerts that arrived together wait a moment, to be announced in one toast. */
+  private announcing: AlertRead[] = [];
+  private announceTimer: ReturnType<typeof setTimeout> | null = null;
+  private announcingSince = 0;
 
   private controller: AbortController | null = null;
   private retryMs = 1000;
@@ -71,6 +80,9 @@ export class AlertsService {
     this.controller = null;
     if (this.retryTimer) clearTimeout(this.retryTimer);
     this.retryTimer = null;
+    if (this.announceTimer) clearTimeout(this.announceTimer);
+    this.announceTimer = null;
+    this.announcing = [];
     this._alerts.set([]);
   }
 
@@ -81,11 +93,34 @@ export class AlertsService {
     this.http.post<void>(`${this.url}/seen`, null).subscribe();
   }
 
-  /** A new alert from the stream: listed first and announced once. */
+  /**
+   * A new alert from the stream: listed first and announced once. A burst (a demo
+   * account being filled, a default limit checking every open month) becomes a
+   * single toast instead of a wall of them.
+   */
   receive(alert: AlertRead): void {
     if (this._alerts().some((a) => a.id === alert.id)) return;
     this._alerts.update((list) => [alert, ...list].slice(0, 50));
-    this.toasts.show(alertText(alert));
+    this.announcing.push(alert);
+    if (this.announcing.length === 1) this.announcingSince = Date.now();
+    // Each new alert restarts the wait, up to ANNOUNCE_MAX_WAIT_MS after the first one.
+    if (this.announceTimer) clearTimeout(this.announceTimer);
+    const waited = Date.now() - this.announcingSince;
+    this.announceTimer = setTimeout(
+      () => this.announce(),
+      Math.max(0, Math.min(ANNOUNCE_DELAY_MS, ANNOUNCE_MAX_WAIT_MS - waited)),
+    );
+  }
+
+  private announce(): void {
+    const batch = this.announcing;
+    this.announcing = [];
+    this.announceTimer = null;
+    if (batch.length === 1) {
+      this.toasts.show(alertText(batch[0]!));
+    } else if (batch.length > 1) {
+      this.toasts.show(`${batch.length} new alerts. Open the bell to see them.`);
+    }
   }
 
   private async listen(controller: AbortController): Promise<void> {

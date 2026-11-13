@@ -1,4 +1,4 @@
-@if (error(); as message) {
+@if (message(); as message) {
   <div class="alert" role="alert">
     <app-icon name="alert" [size]="18" />
     <span>{{ message }}</span>
@@ -67,3 +67,16 @@
   </button>
   <p class="note"><a routerLink="/auth/forgot-password">Forgot your password?</a></p>
 </form>
+
+@if (google()) {
+  <div class="divider" role="separator"><span>or</span></div>
+  <a class="btn btn--block google" [href]="googleUrl">
+    <svg class="google__mark" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <path
+        fill="#EA4335"
+        d="M12 10.2v3.9h5.4c-.24 1.38-1.62 4.05-5.4 4.05-3.25 0-5.9-2.69-5.9-6.01S8.75 6.13 12 6.13c1.85 0 3.09.79 3.8 1.47l2.59-2.49C16.73 3.56 14.6 2.6 12 2.6 6.82 2.6 2.62 6.8 2.62 12s4.2 9.4 9.38 9.4c5.41 0 9-3.8 9-9.16 0-.62-.07-1.09-.15-1.56H12z"
+      />
+    </svg>
+    Continue with Google
+  </a>
+}

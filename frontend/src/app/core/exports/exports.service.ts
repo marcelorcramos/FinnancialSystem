@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { filter, map, Observable, switchMap, take, tap, timeout, timer } from 'rxjs';
 
+import { FileOpener } from '../../shared/files/open-file';
 import { API_BASE_URL } from '../api/api-config';
 import { ExportRead, ReportExportCreate, SignedUrl } from '../api/types';
 
@@ -16,6 +17,7 @@ const GIVE_UP_MS = 2 * 60 * 1000;
 export class ExportsService {
   private readonly http = inject(HttpClient);
   private readonly api = inject(API_BASE_URL);
+  private readonly files = inject(FileOpener);
 
   /** True while an export is being prepared, to disable the buttons that ask for one. */
   readonly busy = signal(false);
@@ -53,7 +55,7 @@ export class ExportsService {
           throw new Error(done.error ?? 'The file could not be prepared. Please try again.');
         }
         return this.url(done.id).pipe(
-          tap(({ url }) => window.location.assign(url)),
+          tap(({ url }) => this.files.go(url)),
           map(() => done),
         );
       }),
