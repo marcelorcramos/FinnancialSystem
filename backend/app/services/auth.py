@@ -19,7 +19,7 @@ from app.domain.errors import AuthenticationError, ConflictError, InvalidTokenEr
 from app.models import Entry, Label, RefreshToken, User, UserToken
 from app.repositories import refresh_tokens, user_tokens, users
 from app.schemas.user import UserCreate
-from app.services import audit, emails
+from app.services import audit, emails, two_factor
 
 log = structlog.get_logger(__name__)
 
@@ -37,6 +37,14 @@ class IssuedTokens:
     access_token: str
     expires_in: int
     refresh_token: str
+
+
+@dataclass(frozen=True, slots=True)
+class TwoFactorTicket:
+    """The first step passed; a TOTP or recovery code must follow."""
+
+    ticket: str
+    expires_in: int = security.TWO_FACTOR_TICKET_SECONDS
 
 
 async def register(session: AsyncSession, data: UserCreate, jobs: JobQueue) -> User:
@@ -81,11 +89,30 @@ async def register(session: AsyncSession, data: UserCreate, jobs: JobQueue) -> U
     return user
 
 
-async def login(session: AsyncSession, email: str, password: str) -> IssuedTokens:
+async def login(session: AsyncSession, email: str, password: str) -> IssuedTokens | TwoFactorTicket:
     user = await users.get_active_by_email(session, email)
     if not security.verify_password(password, user.password_hash if user else None):
         raise AuthenticationError(INVALID_CREDENTIALS)
     assert user is not None
+    return await start_session(session, user)
+
+
+async def start_session(session: AsyncSession, user: User) -> IssuedTokens | TwoFactorTicket:
+    """After the first step (password or Google): a session, or the 2FA ticket."""
+    if user.two_factor_enabled:
+        return TwoFactorTicket(security.create_two_factor_ticket(user.id))
+    tokens, _ = await _issue(session, user.id, family_id=uuid.uuid4())
+    await session.commit()
+    return tokens
+
+
+async def complete_two_factor(session: AsyncSession, ticket: str, code: str) -> IssuedTokens:
+    user_id = security.decode_two_factor_ticket(ticket)
+    user = await users.get_active_by_id(session, user_id) if user_id else None
+    if user is None or not user.two_factor_enabled:
+        raise AuthenticationError("The sign-in expired. Start again.")
+    if not await two_factor.check(session, user, code):
+        raise AuthenticationError(two_factor.INVALID_CODE)
     tokens, _ = await _issue(session, user.id, family_id=uuid.uuid4())
     await session.commit()
     return tokens

@@ -40,7 +40,8 @@ The access token lasts 15 minutes and comes in the response body. The refresh to
 | Method | Route | Body | Response |
 |---|---|---|---|
 | POST | `/auth/register` | `{email, password, name}` | 201 `User` |
-| POST | `/auth/login` | `{email, password}` | 200 `Token` + cookie |
+| POST | `/auth/login` | `{email, password}` | 200 `Token` + cookie, or `TwoFactorRequired` when 2FA is on |
+| POST | `/auth/login/2fa` | `{ticket, code}` | 200 `Token` + cookie |
 | POST | `/auth/refresh` | cookie | 200 `Token` + new cookie |
 | POST | `/auth/logout` | cookie | 204, cookie cleared |
 | POST | `/auth/logout-others` | Bearer + cookie | 204, ends every other session; this one stays signed in |
@@ -54,12 +55,26 @@ The access token lasts 15 minutes and comes in the response body. The refresh to
 | POST | `/auth/password-reset/confirm` | `{token, new_password}` | 204, sets the password and ends every session |
 
 - `Token` = `{access_token, token_type: "bearer", expires_in}` (seconds).
-- `User` = `{id, email, name, avatar_url, currency, locale, timezone, email_verified_at}`.
+- `TwoFactorRequired` = `{two_factor_required: true, ticket, expires_in}`: no cookie yet; send the ticket (valid 5 minutes) and a 6-digit code from the authenticator app, or a recovery code, to `/auth/login/2fa`. 10 code attempts per 5 minutes per account.
+- `User` = `{id, email, name, avatar_url, currency, locale, timezone, email_verified_at, auto_new_month, has_password, google_linked, two_factor_enabled, demo_expires_at}`.
 - New passwords: at least 8 characters with a lowercase letter, an uppercase letter, a digit and a special character.
 - Sign-up creates the default labels listed in `DECISIONS.md` and emails a link to confirm the address (`{FRONTEND_URL}/verify-email?token=…`). Signing in does not wait for it: `email_verified_at` stays null until the link is opened.
 - Reset links (`{FRONTEND_URL}/reset-password?token=…`) last 1 hour, confirmation links 48 hours; both work once, and a new link replaces the previous one of the same kind. A used, expired or unknown token gives 422 `invalid_token`. Resetting the password also confirms the email.
 - `DELETE /users/me` needs the current password (401 otherwise; 10 tries per hour). Every record goes at once, audit log included; receipts and export files are removed by the worker right after, and a goodbye email confirms it. The email can sign up again.
 - `/auth/password-reset` answers 202 whether or not the email has an account, so it cannot be used to find accounts. Rate limits: 20 per hour per IP and 5 per hour per email; resending the confirmation, 5 per hour per user.
+
+### Two-factor sign-in (TOTP)
+
+| Method | Route | Body | Response |
+|---|---|---|---|
+| GET | `/users/me/2fa` | | 200 `{enabled, recovery_codes_left}` |
+| POST | `/users/me/2fa/setup` | | 200 `{secret, otpauth_uri, qr_svg}`; 409 if already on or a demo account |
+| POST | `/users/me/2fa/enable` | `{code}` | 200 `{codes}`: 10 recovery codes, shown once |
+| POST | `/users/me/2fa/disable` | `{code}` | 204 |
+| POST | `/users/me/2fa/recovery-codes` | `{code}` | 200 `{codes}`: new codes, the old ones stop working |
+
+- `code` is a 6-digit code from the app or an unused recovery code (`xxxxx-xxxxx`, case and dash ignored). A wrong code is 401 `That code is not valid`. Each 6-digit code works once; codes from the 30 seconds before and after are accepted.
+- Setup changes nothing until `enable` confirms a code from the new secret.
 
 ## Labels
 

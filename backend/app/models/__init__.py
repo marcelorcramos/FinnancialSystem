@@ -9,7 +9,7 @@ from app.models.label import Label
 from app.models.limit import Alert, Limit
 from app.models.month import Income, Month
 from app.models.outbox import OutboxEvent, ProcessedEvent
-from app.models.user import RefreshToken, User, UserToken
+from app.models.user import RecoveryCode, RefreshToken, User, UserToken
 
 __all__ = [
     "Alert",
@@ -24,6 +24,7 @@ __all__ = [
     "Month",
     "OutboxEvent",
     "ProcessedEvent",
+    "RecoveryCode",
     "RefreshToken",
     "User",
     "UserToken",

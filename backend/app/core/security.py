@@ -11,6 +11,8 @@ from app.core.config import settings
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_TYPE = "access"  # noqa: S105  (token type, not a secret)
+TWO_FACTOR_TICKET_TYPE = "2fa"
+TWO_FACTOR_TICKET_SECONDS = 300
 
 _hasher = PasswordHasher()
 # Used when the email does not exist, so login takes the same time and does not leak accounts.
@@ -57,6 +59,33 @@ def decode_access_token(token: str) -> uuid.UUID | None:
             options={"require": ["sub", "exp", "type"]},
         )
         if payload["type"] != ACCESS_TOKEN_TYPE:
+            return None
+        return uuid.UUID(payload["sub"])
+    except (jwt.PyJWTError, ValueError):
+        return None
+
+
+def create_two_factor_ticket(user_id: uuid.UUID, now: datetime | None = None) -> str:
+    """Proof that the password (or Google) step passed; the code step must follow within 5 min."""
+    now = now or datetime.now(UTC)
+    payload = {
+        "sub": str(user_id),
+        "type": TWO_FACTOR_TICKET_TYPE,
+        "iat": now,
+        "exp": now + timedelta(seconds=TWO_FACTOR_TICKET_SECONDS),
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
+
+
+def decode_two_factor_ticket(ticket: str) -> uuid.UUID | None:
+    try:
+        payload = jwt.decode(
+            ticket,
+            settings.SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"require": ["sub", "exp", "type"]},
+        )
+        if payload["type"] != TWO_FACTOR_TICKET_TYPE:
             return None
         return uuid.UUID(payload["sub"])
     except (jwt.PyJWTError, ValueError):

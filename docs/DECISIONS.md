@@ -96,6 +96,12 @@ Icon names are Material Symbols for now; they will change with the frontend rede
 | Account deletion (GDPR) | The one exception to soft delete: `DELETE /users/me` (password required) erases the user row and everything that cascades from it, audit log included, in one transaction (entries first, because they hold RESTRICT keys to labels and incomes). After the commit the worker deletes the `users/<user_id>/` prefix in storage (retried until storage answers) and a goodbye email is sent. Nothing is kept to undo it. |
 | Password recovery | `POST /auth/password-reset` always answers 202 (no account discovery) and emails a 1-hour link. Tokens are random, stored as SHA-256 hashes in `user_tokens`, single use, and a new link spends the older ones of the same kind. Setting the new password ends every session and confirms the email. |
 
+## Google, two-factor and demo (2026-11-13)
+
+| Topic | Decision |
+|---|---|
+| Two-factor sign-in | Optional TOTP (pyotp), 6 digits every 30 s, one step of drift each way. The secret is encrypted with a key derived from `SECRET_KEY` (Fernet) and the last accepted step is stored, so a code works once. Turning it on shows a QR code (segno, SVG) and needs a code from the new secret; it then returns 10 single-use recovery codes, stored as SHA-256 hashes. Turning it off and new recovery codes need a code too. With 2FA on, the first step (password or Google) returns a 5-minute signed ticket instead of a session; `/auth/login/2fa` exchanges ticket and code for the session (10 tries per 5 minutes). The Swagger form refuses 2FA accounts. Demo accounts cannot turn it on. |
+
 ## Future ideas
 
 Ideas left for later live in [`docs/FUTURE_IMPLEMENTATIONS.md`](FUTURE_IMPLEMENTATIONS.md).

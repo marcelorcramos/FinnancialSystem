@@ -53,6 +53,12 @@ class UserRead(BaseModel):
     auto_new_month: bool = Field(
         description="Create each month automatically from the previous one (rent, salary...)"
     )
+    has_password: bool = Field(description="False for accounts created with Google only")
+    google_linked: bool
+    two_factor_enabled: bool
+    demo_expires_at: datetime | None = Field(
+        description="Set on demo accounts, which are deleted at this moment"
+    )
 
 
 class UserUpdate(BaseModel):
