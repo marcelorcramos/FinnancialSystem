@@ -45,7 +45,7 @@ describe('AuthStore', () => {
     expect(me.request.headers.get('Authorization')).toBe('Bearer access-1');
     me.flush(USER);
 
-    expect(await result).toEqual(USER);
+    expect(await result).toEqual({ user: USER });
     expect(store.isAuthenticated()).toBe(true);
     expect(store.user()).toEqual(USER);
   });
@@ -136,7 +136,7 @@ describe('AuthStore', () => {
   it('deletes the account with the password, clears the session and goes to sign in', async () => {
     await signIn();
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
-    const result = firstValueFrom(store.deleteAccount('Secret-1'));
+    const result = firstValueFrom(store.deleteAccount({ password: 'Secret-1' }));
     const request = http.expectOne(`${API}/users/me`);
     expect(request.request.method).toBe('DELETE');
     expect(request.request.body).toEqual({ password: 'Secret-1' });
@@ -145,6 +145,53 @@ describe('AuthStore', () => {
     await result;
     expect(store.isAuthenticated()).toBe(false);
     expect(navigate).toHaveBeenCalledWith('/auth/login');
+  });
+
+  it('stops at the two-factor step, then signs in with the code', async () => {
+    const result = firstValueFrom(store.login({ email: USER.email, password: 'secret123' }));
+    http
+      .expectOne(`${API}/auth/login`)
+      .flush({ two_factor_required: true, ticket: 'tk', expires_in: 300 });
+    expect(await result).toEqual({ ticket: 'tk' });
+    expect(store.isAuthenticated()).toBe(false);
+    expect(store.pendingTicket()).toBe('tk');
+
+    const done = firstValueFrom(store.completeTwoFactor('123456'));
+    const second = http.expectOne(`${API}/auth/login/2fa`);
+    expect(second.request.body).toEqual({ ticket: 'tk', code: '123456' });
+    expect(second.request.withCredentials).toBe(true);
+    second.flush(tokens('access-2fa'));
+    http.expectOne(`${API}/users/me`).flush({ ...USER, two_factor_enabled: true });
+    await done;
+    expect(store.accessToken()).toBe('access-2fa');
+    expect(store.pendingTicket()).toBeNull();
+  });
+
+  it('refuses the code step when no sign-in waits for it', async () => {
+    await expect(firstValueFrom(store.completeTwoFactor('123456'))).rejects.toThrow();
+  });
+
+  it('starts a demo account and signs into it', async () => {
+    const result = firstValueFrom(store.startDemo());
+    const demo = http.expectOne(`${API}/auth/demo`);
+    expect(demo.request.method).toBe('POST');
+    expect(demo.request.withCredentials).toBe(true);
+    demo.flush(tokens('demo-token'));
+    http.expectOne(`${API}/users/me`).flush({ ...USER, demo_expires_at: '2026-11-14T10:00:00Z' });
+    expect((await result).demo_expires_at).toBe('2026-11-14T10:00:00Z');
+    expect(store.isAuthenticated()).toBe(true);
+  });
+
+  it('asks for the code after a password change when 2FA is on', async () => {
+    await signIn();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    const result = firstValueFrom(store.changePassword('Old-pass-1!', 'New-pass-2!'));
+    http.expectOne(`${API}/users/me/password`).flush(null);
+    http
+      .expectOne(`${API}/auth/login`)
+      .flush({ two_factor_required: true, ticket: 'tk', expires_in: 300 });
+    expect(await result).toEqual({ ticket: 'tk' });
+    expect(navigate).toHaveBeenCalledWith('/auth/two-factor');
   });
 
   it('does not log in when the credentials are rejected', async () => {

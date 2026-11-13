@@ -7,6 +7,7 @@ import { ToastOutlet } from '../../shared/ui/toast-outlet';
 import { APP_NAME } from '../app-title-strategy';
 import { alertText, AlertsService } from '../alerts/alerts.service';
 import { AuthStore } from '../auth/auth-store';
+import { DemoBanner } from './demo-banner';
 import { NAV_ITEMS } from './nav-items';
 import { ThemeToggle } from './theme-toggle';
 import { VerifyEmailBanner } from './verify-email-banner';
@@ -22,6 +23,7 @@ import { VerifyEmailBanner } from './verify-email-banner';
     CdkMenu,
     CdkMenuItem,
     CdkMenuTrigger,
+    DemoBanner,
     Icon,
     RouterLink,
     RouterLinkActive,

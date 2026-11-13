@@ -14,9 +14,18 @@ import {
 
 import { AuthApi } from './auth-api';
 import { withCrossTabLock } from './cross-tab-lock';
-import { LoginRequest, ProfileUpdate, RegisterRequest, UserRead } from './auth.models';
+import {
+  LoginRequest,
+  ProfileUpdate,
+  RegisterRequest,
+  SignInResult,
+  TokenResponse,
+  TwoFactorRequired,
+  UserRead,
+} from './auth.models';
 
 export const LOGIN_PATH = '/auth/login';
+export const TWO_FACTOR_PATH = '/auth/two-factor';
 const REFRESH_LOCK = 'finnancial.auth.refresh';
 
 /**
@@ -41,21 +50,45 @@ export class AuthStore {
   private refreshInFlight: Observable<string> | null = null;
   private restoreAttempt: Observable<boolean> | null = null;
 
-  login(credentials: LoginRequest): Observable<UserRead> {
+  /** The ticket of a sign-in that waits for its two-factor code (password or Google). */
+  readonly pendingTicket = signal<string | null>(null);
+
+  /** Signs in, or stops at the two-factor step and keeps its ticket. */
+  login(credentials: LoginRequest): Observable<SignInResult> {
     return this.api.login(credentials).pipe(
-      tap((tokens) => {
-        this._accessToken.set(tokens.access_token);
-        this._sessionExpired.set(false);
+      switchMap((answer) => {
+        if ('two_factor_required' in answer) {
+          return of(this.waitForCode(answer));
+        }
+        return this.startSession(answer).pipe(map((user) => ({ user })));
       }),
-      switchMap(() => this.loadUser()),
     );
   }
 
-  /** Registers and signs in with the same credentials. */
+  /** The second step: the code from the authenticator app, or a recovery code. */
+  completeTwoFactor(code: string): Observable<UserRead> {
+    const ticket = this.pendingTicket();
+    if (!ticket) return throwError(() => new Error('No sign-in is waiting for a code'));
+    return this.api.loginTwoFactor(ticket, code).pipe(
+      tap(() => this.pendingTicket.set(null)),
+      switchMap((tokens) => this.startSession(tokens)),
+    );
+  }
+
+  /** A new demo account with sample data, signed in. */
+  startDemo(): Observable<UserRead> {
+    return this.api.demo().pipe(switchMap((tokens) => this.startSession(tokens)));
+  }
+
+  /** Registers and signs in with the same credentials (a new account has no 2FA). */
   register(data: RegisterRequest): Observable<UserRead> {
-    return this.api
-      .register(data)
-      .pipe(switchMap(() => this.login({ email: data.email, password: data.password })));
+    return this.api.register(data).pipe(
+      switchMap(() => this.login({ email: data.email, password: data.password })),
+      map((result) => {
+        if (!('user' in result)) throw new Error('A new account has no two-factor sign-in');
+        return result.user;
+      }),
+    );
   }
 
   /**
@@ -95,13 +128,13 @@ export class AuthStore {
     return this.restoreAttempt;
   }
 
-  logout(): Observable<void> {
+  logout(then: string = LOGIN_PATH): Observable<void> {
     return this.api.logout().pipe(
       catchError(() => of(undefined)),
       map(() => undefined),
       finalize(() => {
         this.clearSession();
-        void this.router.navigateByUrl(LOGIN_PATH);
+        void this.router.navigateByUrl(then);
       }),
     );
   }
@@ -114,12 +147,16 @@ export class AuthStore {
    * Changes the password. The API ends every session, so this one signs in
    * again with the new password and only the other devices are signed out.
    */
-  changePassword(currentPassword: string, newPassword: string): Observable<UserRead> {
+  changePassword(currentPassword: string, newPassword: string): Observable<SignInResult> {
     const email = this._user()?.email;
     if (!email) return throwError(() => new Error('Not signed in'));
-    return this.api
-      .changePassword(currentPassword, newPassword)
-      .pipe(switchMap(() => this.login({ email, password: newPassword })));
+    return this.api.changePassword(currentPassword, newPassword).pipe(
+      switchMap(() => this.login({ email, password: newPassword })),
+      tap((result) => {
+        // With 2FA on, signing back in needs a code: go and ask for it.
+        if ('ticket' in result) void this.router.navigateByUrl(TWO_FACTOR_PATH);
+      }),
+    );
   }
 
   logoutOthers(): Observable<void> {
@@ -134,13 +171,18 @@ export class AuthStore {
     );
   }
 
+  /** Fetches the profile again (after changes made elsewhere, like 2FA). */
+  reloadUser(): Observable<UserRead> {
+    return this.loadUser();
+  }
+
   resendVerification(): Observable<void> {
     return this.api.resendVerification();
   }
 
   /** Deletes the account for good and leaves for the sign-in page. */
-  deleteAccount(password: string): Observable<void> {
-    return this.api.deleteAccount(password).pipe(
+  deleteAccount(confirmation: { password: string } | { confirm_email: string }): Observable<void> {
+    return this.api.deleteAccount(confirmation).pipe(
       tap(() => {
         this.clearSession();
         void this.router.navigateByUrl(LOGIN_PATH);
@@ -155,6 +197,18 @@ export class AuthStore {
     void this.router.navigate([LOGIN_PATH], {
       queryParams: returnUrl && !returnUrl.startsWith('/auth') ? { returnUrl } : {},
     });
+  }
+
+  private waitForCode(answer: TwoFactorRequired): SignInResult {
+    this.clearSession();
+    this.pendingTicket.set(answer.ticket);
+    return { ticket: answer.ticket };
+  }
+
+  private startSession(tokens: TokenResponse): Observable<UserRead> {
+    this._accessToken.set(tokens.access_token);
+    this._sessionExpired.set(false);
+    return this.loadUser();
   }
 
   private loadUser(): Observable<UserRead> {

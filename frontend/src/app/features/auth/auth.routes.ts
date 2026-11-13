@@ -23,7 +23,7 @@ export default [
       { path: '', pathMatch: 'full', redirectTo: 'login' },
     ],
   },
-  // Opened from emailed links, signed in or not.
+  // Opened from emailed links and from the middle of a sign-in, signed in or not.
   {
     path: '',
     component: AuthLayout,
@@ -37,6 +37,16 @@ export default [
         path: 'verify-email',
         title: 'Confirm your email',
         loadComponent: () => import('./verify-email/verify-email-page'),
+      },
+      {
+        path: 'two-factor',
+        title: 'Two-factor sign-in',
+        loadComponent: () => import('./two-factor/two-factor-page'),
+      },
+      {
+        path: 'google',
+        title: 'Signing in',
+        loadComponent: () => import('./google/google-done-page'),
       },
     ],
   },

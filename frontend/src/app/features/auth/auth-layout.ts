@@ -1,10 +1,13 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
+import { apiErrorMessage } from '../../core/api/api-errors';
 import { APP_NAME } from '../../core/app-title-strategy';
+import { AuthStore } from '../../core/auth/auth-store';
 import { ThemeToggle } from '../../core/layout/theme-toggle';
 import { Icon } from '../../shared/ui/icon';
 import { ToastOutlet } from '../../shared/ui/toast-outlet';
+import { ToastService } from '../../shared/ui/toast.service';
 
 @Component({
   selector: 'app-auth-layout',
@@ -22,6 +25,21 @@ import { ToastOutlet } from '../../shared/ui/toast-outlet';
           Split your income across labels, move money between them and see where it went. You enter
           everything yourself: no bank connection, nothing hidden.
         </p>
+      </div>
+      <div class="try">
+        <button
+          type="button"
+          class="btn btn--primary"
+          [disabled]="startingDemo()"
+          (click)="tryDemo()"
+        >
+          @if (startingDemo()) {
+            <span class="spinner" aria-hidden="true"></span> Preparing your demo…
+          } @else {
+            Try it with sample data
+          }
+        </button>
+        <span class="try__hint">No sign-up: six months of example money, yours for 24 hours.</span>
       </div>
       <ul class="kinds" aria-label="What you track">
         <li class="kind kind--expense">
@@ -69,5 +87,22 @@ import { ToastOutlet } from '../../shared/ui/toast-outlet';
   styleUrl: './auth-layout.scss',
 })
 export class AuthLayout {
+  private readonly auth = inject(AuthStore);
+  private readonly router = inject(Router);
+  private readonly toasts = inject(ToastService);
+
   protected readonly appName = APP_NAME;
+  protected readonly startingDemo = signal(false);
+
+  /** A fresh demo account of its own, then straight into the app. */
+  protected tryDemo(): void {
+    this.startingDemo.set(true);
+    this.auth.startDemo().subscribe({
+      next: () => void this.router.navigateByUrl('/'),
+      error: (error: unknown) => {
+        this.startingDemo.set(false);
+        this.toasts.show(apiErrorMessage(error));
+      },
+    });
+  }
 }

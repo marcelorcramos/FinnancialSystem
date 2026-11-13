@@ -52,3 +52,6 @@ export type AttachmentRead = Schemas['AttachmentRead'];
 export type SignedUrl = Schemas['SignedUrl'];
 export type ExportRead = Schemas['ExportRead'];
 export type ReportExportCreate = Schemas['ReportExportCreate'];
+export type TwoFactorSetup = Schemas['TwoFactorSetup'];
+export type TwoFactorStatus = Schemas['TwoFactorStatus'];
+export type RecoveryCodes = Schemas['RecoveryCodes'];
