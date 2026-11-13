@@ -6,6 +6,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from app.api.deps import CurrentUser, JobsDep, RateLimiterDep, SessionDep, client_ip
 from app.core.config import settings
 from app.core.rate_limit import (
+    DEMO_PER_IP,
     LOGIN_PER_EMAIL,
     LOGIN_PER_IP,
     REFRESH_PER_IP,
@@ -26,7 +27,7 @@ from app.schemas.user import (
     UserCreate,
     UserRead,
 )
-from app.services import auth
+from app.services import auth, demo
 from app.services.auth import IssuedTokens, TwoFactorTicket
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -177,3 +178,15 @@ async def request_password_reset(
 async def reset_password(data: PasswordReset, session: SessionDep) -> None:
     """Set a new password with the token from the link; every session ends."""
     await auth.reset_password(session, data.token, data.new_password)
+
+
+@router.post("/demo", status_code=status.HTTP_201_CREATED)
+async def try_demo(
+    session: SessionDep, response: Response, request: Request, limiter: RateLimiterDep
+) -> AccessToken:
+    """A fresh demo account with six months of data, signed in; it is deleted after 24 hours."""
+    await limiter.hit(DEMO_PER_IP, client_ip(request))
+    user = await demo.create(session)
+    tokens = await auth.start_session(session, user)
+    assert not isinstance(tokens, TwoFactorTicket)  # demo accounts cannot use 2FA
+    return _respond_with_tokens(response, tokens)

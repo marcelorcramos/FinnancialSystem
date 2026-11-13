@@ -12,7 +12,7 @@ from sqlalchemy.pool import NullPool
 from app.core import mail
 from app.core.config import settings
 from app.core.storage import get_storage
-from app.services import exports, recurring
+from app.services import demo, exports, recurring
 from app.workers.celery_app import celery_app
 
 
@@ -71,3 +71,11 @@ def remove_expired_exports() -> int:
 def delete_user_files(user_id: str) -> int:
     """Remove every stored file of a deleted account (receipts and exports)."""
     return asyncio.run(get_storage().delete_prefix(f"users/{uuid.UUID(user_id)}/"))
+
+
+@celery_app.task(name="app.workers.tasks.remove_expired_demos")
+def remove_expired_demos() -> int:
+    """Delete demo accounts older than 24 hours (see services/demo.py)."""
+    return _run_with_session(
+        lambda session: demo.remove_expired(session, get_storage(), datetime.now(UTC))
+    )

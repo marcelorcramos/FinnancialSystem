@@ -42,6 +42,7 @@ The access token lasts 15 minutes and comes in the response body. The refresh to
 | POST | `/auth/register` | `{email, password, name}` | 201 `User` |
 | POST | `/auth/login` | `{email, password}` | 200 `Token` + cookie, or `TwoFactorRequired` when 2FA is on |
 | POST | `/auth/login/2fa` | `{ticket, code}` | 200 `Token` + cookie |
+| POST | `/auth/demo` | | 201 `Token` + cookie: a new demo account with six months of data |
 | GET | `/auth/providers` | | 200 `{google}`: whether Sign in with Google is set up |
 | GET | `/auth/google/login` | | 303 to Google; 404 when not set up |
 | GET | `/auth/google/callback` | `?code&state` (from Google) | 303 back to the app (see below) |
@@ -59,6 +60,7 @@ The access token lasts 15 minutes and comes in the response body. The refresh to
 
 - `Token` = `{access_token, token_type: "bearer", expires_in}` (seconds).
 - Google: the callback sets the refresh cookie and redirects to `{FRONTEND_URL}/auth/google`, where the app calls `/auth/refresh`; with 2FA on it redirects to `{FRONTEND_URL}/auth/two-factor#ticket=…` instead; on any problem, to `{FRONTEND_URL}/auth/login?error=google`. A Google identity signs into the account already linked to it, else the account with the same email (only when Google says the email is verified; the account is then linked and its email confirmed), else a new account without a password.
+- `/auth/demo` creates a separate account per call (`demo-…@demo.example.com`, no password, `demo_expires_at` 24 hours later), 10 per hour per IP. Demo accounts cannot set a password or turn on 2FA; they can delete themselves by typing their email.
 - `TwoFactorRequired` = `{two_factor_required: true, ticket, expires_in}`: no cookie yet; send the ticket (valid 5 minutes) and a 6-digit code from the authenticator app, or a recovery code, to `/auth/login/2fa`. 10 code attempts per 5 minutes per account.
 - `User` = `{id, email, name, avatar_url, currency, locale, timezone, email_verified_at, auto_new_month, has_password, google_linked, two_factor_enabled, demo_expires_at}`.
 - New passwords: at least 8 characters with a lowercase letter, an uppercase letter, a digit and a special character.

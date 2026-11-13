@@ -210,6 +210,8 @@ async def logout_others(session: AsyncSession, user: User, raw_token: str | None
 async def change_password(
     session: AsyncSession, user: User, current_password: str, new_password: str
 ) -> None:
+    if user.is_demo:
+        raise ConflictError("Demo accounts have no password")
     if not security.verify_password(current_password, user.password_hash):
         raise AuthenticationError("Current password is incorrect")
     user.password_hash = security.hash_password(new_password)
@@ -268,20 +270,25 @@ async def delete_account(
     The one exception to soft delete: nothing of the user is kept, audit log included.
     Accounts with a password confirm with it; Google-only and demo accounts type their email.
     """
-    if user.has_password and not user.is_demo:
+    if user.has_password:
         if not security.verify_password(password or "", user.password_hash):
             raise AuthenticationError("Password is incorrect")
     elif (confirm_email or "").strip().lower() != user.email:
         raise AuthenticationError("Type your email to confirm")
     user_id, email, name, is_demo = user.id, user.email, user.name, user.is_demo
-    # Entries first: they hold RESTRICT keys to labels and incomes; the rest cascades.
-    await session.execute(delete(Entry).where(Entry.user_id == user_id))
-    await session.execute(delete(User).where(User.id == user_id))
+    await erase_user(session, user_id)
     await session.commit()
     await jobs.enqueue(DELETE_USER_FILES, user_id=str(user_id))
     if not is_demo:
         await emails.send(jobs, emails.account_deleted(email, name))
     log.info("account.deleted", user_id=str(user_id))
+
+
+async def erase_user(session: AsyncSession, user_id: uuid.UUID) -> None:
+    """Every record of the user (not committed; their stored files are the caller's job)."""
+    # Entries first: they hold RESTRICT keys to labels and incomes; the rest cascades.
+    await session.execute(delete(Entry).where(Entry.user_id == user_id))
+    await session.execute(delete(User).where(User.id == user_id))
 
 
 async def _new_token(session: AsyncSession, user_id: uuid.UUID, purpose: TokenPurpose) -> str:
