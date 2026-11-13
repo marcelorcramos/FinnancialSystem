@@ -77,13 +77,13 @@ Color is never the only signal: amounts always carry an icon and text, charts ca
 
 ### Safe by default
 
-Each user sees only their own data, and tests try to break that on every endpoint. Amounts are exact decimals, never floating point. Nothing is hard-deleted, and every change is written to an audit log. Sessions use short-lived access tokens with rotating refresh tokens, and repeated sign-in attempts are slowed down.
+Each user sees only their own data, and tests try to break that on every endpoint. Amounts are exact decimals, never floating point. Entries, labels and months are deleted softly so they can come back, every change is written to an audit log, and deleting your account erases all of it for good. Sessions use short-lived access tokens with rotating refresh tokens, two-factor sign-in with an authenticator app is one switch away, and repeated sign-in attempts are slowed down.
 
 ## Status
 
-The core product works end to end: accounts, labels, months, entries, transfers, reports and the dashboard, covered by unit, integration and end-to-end tests. Behind it, summaries and reports are cached in Redis, every change is published as an event through RabbitMQ (transactional outbox, idempotent consumers), and Celery starts new months for those who opt in. Limits raise live alerts, goals track their pace, and the emergency fund follows your spending. Receipts are kept privately in S3-compatible storage, reports export as CSV or PDF, your whole account downloads as a ZIP or is deleted for good, and emails confirm addresses and recover passwords.
+The core product works end to end: accounts, labels, months, entries, transfers, reports and the dashboard, covered by unit, integration and end-to-end tests. Behind it, summaries and reports are cached in Redis, every change is published as an event through RabbitMQ (transactional outbox, idempotent consumers), and Celery starts new months for those who opt in. Limits raise live alerts, goals track their pace, and the emergency fund follows your spending. Receipts are kept privately in S3-compatible storage, reports export as CSV or PDF, your whole account downloads as a ZIP or is deleted for good, and emails confirm addresses and recover passwords. You can sign in with Google, protect the account with an authenticator app, or try a demo full of sample data without signing up.
 
-Next on the roadmap: Google sign-in with a demo mode, an AI chat over your reports, observability, and deployment to Kubernetes and Azure. The full plan is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+Next on the roadmap: an AI chat over your reports, observability, and deployment to Kubernetes and Azure. The full plan is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Run it
 
@@ -102,7 +102,7 @@ Then open the app at http://localhost:8080. The API and its interactive docs are
 | Backend tests (real PostgreSQL, Redis and RabbitMQ via testcontainers) | `cd backend && pytest --cov=app` |
 | Backend lint and types | `cd backend && ruff check . && ruff format --check . && mypy app` |
 | Frontend unit tests and lint | `cd frontend && npm run test:ci && npm run lint` |
-| End-to-end, against the running stack | `cd frontend && npx playwright test` |
+| End-to-end, against the running stack (started with `RATE_LIMIT_MULTIPLIER=10`) | `cd frontend && npx playwright test` |
 
 ## Project layout
 
