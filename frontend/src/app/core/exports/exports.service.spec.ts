@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
+import { FileOpener } from '../../shared/files/open-file';
 import { API } from '../auth/testing';
 import { ExportRead } from '../api/types';
 import { exportErrorMessage, ExportsService } from './exports.service';
@@ -30,16 +31,16 @@ describe('ExportsService', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    assign = vi.fn();
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: FileOpener, useValue: { go: assign } },
+      ],
     });
     service = TestBed.inject(ExportsService);
     http = TestBed.inject(HttpTestingController);
-    assign = vi.fn();
-    Object.defineProperty(window, 'location', {
-      value: { ...window.location, assign },
-      configurable: true,
-    });
   });
 
   afterEach(() => {

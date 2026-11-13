@@ -4,7 +4,7 @@ import { concatMap, finalize, from } from 'rxjs';
 
 import { apiErrorMessage } from '../../core/api/api-errors';
 import { AttachmentRead } from '../../core/api/types';
-import { download, fileSize, openInNewTab } from '../../shared/files/open-file';
+import { FileOpener, fileSize } from '../../shared/files/open-file';
 import { Icon } from '../../shared/ui/icon';
 import { ToastService } from '../../shared/ui/toast.service';
 import { RECEIPT_TYPES, ReceiptsApi, receiptProblem } from './receipts-api';
@@ -190,6 +190,7 @@ export interface ReceiptsDialogData {
 export class ReceiptsDialog {
   private readonly api = inject(ReceiptsApi);
   private readonly toasts = inject(ToastService);
+  private readonly files = inject(FileOpener);
   protected readonly ref = inject<DialogRef<void>>(DialogRef);
   protected readonly data = inject<ReceiptsDialogData>(DIALOG_DATA);
 
@@ -250,11 +251,15 @@ export class ReceiptsDialog {
   }
 
   protected view(receipt: AttachmentRead): void {
-    openInNewTab(this.api.url(receipt.id), (error) => this.error.set(apiErrorMessage(error)));
+    this.files.openInNewTab(this.api.url(receipt.id), (error) =>
+      this.error.set(apiErrorMessage(error)),
+    );
   }
 
   protected save(receipt: AttachmentRead): void {
-    download(this.api.url(receipt.id, true), (error) => this.error.set(apiErrorMessage(error)));
+    this.files.download(this.api.url(receipt.id, true), (error) =>
+      this.error.set(apiErrorMessage(error)),
+    );
   }
 
   protected remove(receipt: AttachmentRead): void {

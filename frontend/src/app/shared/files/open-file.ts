@@ -1,30 +1,36 @@
+import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 /**
- * Opens a stored file in a new tab. The tab opens at once, inside the click, so
- * pop-up blockers allow it; the short-lived signed link arrives a moment later.
+ * Opens stored files through their short-lived signed links. A service, so tests
+ * replace it instead of the browser's window and location.
  */
-export function openInNewTab(link: Observable<{ url: string }>, onError: (e: unknown) => void) {
-  const tab = window.open('', '_blank');
-  if (tab) tab.opener = null;
-  link.subscribe({
-    next: ({ url }) => {
-      if (tab) tab.location.href = url;
-      else window.location.assign(url);
-    },
-    error: (error: unknown) => {
-      tab?.close();
-      onError(error);
-    },
-  });
-}
+@Injectable({ providedIn: 'root' })
+export class FileOpener {
+  /** In a new tab, opened at once inside the click so pop-up blockers allow it. */
+  openInNewTab(link: Observable<{ url: string }>, onError: (e: unknown) => void): void {
+    const tab = window.open('', '_blank');
+    if (tab) tab.opener = null;
+    link.subscribe({
+      next: ({ url }) => {
+        if (tab) tab.location.href = url;
+        else this.go(url);
+      },
+      error: (error: unknown) => {
+        tab?.close();
+        onError(error);
+      },
+    });
+  }
 
-/** Downloads a stored file: its signed link answers with "attachment", so the page stays. */
-export function download(link: Observable<{ url: string }>, onError: (e: unknown) => void) {
-  link.subscribe({
-    next: ({ url }) => window.location.assign(url),
-    error: onError,
-  });
+  /** As a download: the link answers with "attachment", so the page stays. */
+  download(link: Observable<{ url: string }>, onError: (e: unknown) => void): void {
+    link.subscribe({ next: ({ url }) => this.go(url), error: onError });
+  }
+
+  go(url: string): void {
+    window.location.assign(url);
+  }
 }
 
 export function fileSize(bytes: number): string {

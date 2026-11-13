@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 
 import { AttachmentRead } from '../../core/api/types';
+import { FileOpener } from '../../shared/files/open-file';
 import { ReceiptsApi, receiptProblem } from './receipts-api';
 import { ReceiptsDialog, ReceiptsDialogData } from './receipts-dialog';
 
@@ -29,7 +30,17 @@ describe('receiptProblem', () => {
   });
 });
 
+/** The real opener, except that it records where it would go instead of navigating. */
+class TestOpener extends FileOpener {
+  readonly visited: string[] = [];
+  override go(url: string): void {
+    this.visited.push(url);
+  }
+}
+
 describe('ReceiptsDialog', () => {
+  afterEach(() => vi.restoreAllMocks());
+
   let fixture: ComponentFixture<ReceiptsDialog>;
   let el: HTMLElement;
   let api: Record<string, ReturnType<typeof vi.fn>>;
@@ -46,6 +57,7 @@ describe('ReceiptsDialog', () => {
       imports: [ReceiptsDialog],
       providers: [
         { provide: ReceiptsApi, useValue: api },
+        { provide: FileOpener, useClass: TestOpener },
         { provide: DialogRef, useValue: { close: vi.fn() } },
         {
           provide: DIALOG_DATA,
@@ -93,13 +105,9 @@ describe('ReceiptsDialog', () => {
 
   it('opens and downloads through signed links', async () => {
     await render();
-    const assign = vi.fn();
+    const assign = vi.spyOn(TestBed.inject(FileOpener), 'go');
     const tab = { opener: {}, location: { href: '' }, close: vi.fn() };
     vi.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
-    Object.defineProperty(window, 'location', {
-      value: { ...window.location, assign },
-      configurable: true,
-    });
 
     el.querySelector<HTMLButtonElement>('[aria-label="View groceries.pdf"]')!.click();
     expect(api['url']).toHaveBeenCalledWith('r1');
