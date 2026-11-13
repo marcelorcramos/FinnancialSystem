@@ -10,6 +10,10 @@ import { passwordRules } from '../../shared/forms/password-policy';
 import { Icon } from '../../shared/ui/icon';
 import { ToastService } from '../../shared/ui/toast.service';
 import { DeleteAccountDialog } from './delete-account-dialog';
+import { TwoFactorApi } from './two-factor-api';
+import { TwoFactorDialog, TwoFactorMode } from './two-factor-dialog';
+import { AuthApi } from '../../core/auth/auth-api';
+import { TwoFactorStatus } from '../../core/api/types';
 
 /** Every IANA time zone the browser knows, with the user's own first if it is missing. */
 function timeZones(current: string): string[] {
@@ -38,8 +42,11 @@ export default class AccountPage {
   private readonly toasts = inject(ToastService);
   private readonly exports = inject(ExportsService);
   private readonly dialog = inject(Dialog);
+  private readonly twoFactorApi = inject(TwoFactorApi);
+  private readonly authApi = inject(AuthApi);
 
   protected readonly user = this.auth.user;
+  protected readonly isDemo = computed(() => !!this.user()?.demo_expires_at);
   protected readonly initials = computed(() => initials(this.user()?.name ?? ''));
 
   // Profile
@@ -72,6 +79,10 @@ export default class AccountPage {
 
   // Sessions
   protected readonly signingOut = signal(false);
+
+  // Two-factor sign-in and the Google-only password link
+  protected readonly twoFactor = signal<TwoFactorStatus | null>(null);
+  protected readonly sendingPasswordLink = signal(false);
 
   // Email and data
   protected readonly resending = signal(false);
@@ -127,6 +138,49 @@ export default class AccountPage {
       },
       error: (error: unknown) => {
         this.signingOut.set(false);
+        this.toasts.show(apiErrorMessage(error));
+      },
+    });
+  }
+
+  constructor() {
+    this.loadTwoFactor();
+  }
+
+  private loadTwoFactor(): void {
+    this.twoFactorApi.status().subscribe({
+      next: (status) => this.twoFactor.set(status),
+      error: () => this.twoFactor.set(null),
+    });
+  }
+
+  protected openTwoFactor(mode: TwoFactorMode): void {
+    this.dialog
+      .open<boolean, TwoFactorMode>(TwoFactorDialog, {
+        data: mode,
+        ...dialogA11y('two-factor-dialog-title'),
+      })
+      .closed.subscribe((changed) => {
+        if (!changed) return;
+        this.loadTwoFactor();
+        this.auth.reloadUser().subscribe();
+        if (mode === 'turn-on') this.toasts.show('Two-factor sign-in is on');
+        if (mode === 'turn-off') this.toasts.show('Two-factor sign-in is off');
+      });
+  }
+
+  /** Google-only accounts add a password through the reset email, which proves the address. */
+  protected sendPasswordLink(): void {
+    const email = this.user()?.email;
+    if (!email) return;
+    this.sendingPasswordLink.set(true);
+    this.authApi.requestPasswordReset(email).subscribe({
+      next: () => {
+        this.sendingPasswordLink.set(false);
+        this.toasts.show(`We sent a link to ${email}`);
+      },
+      error: (error: unknown) => {
+        this.sendingPasswordLink.set(false);
         this.toasts.show(apiErrorMessage(error));
       },
     });
