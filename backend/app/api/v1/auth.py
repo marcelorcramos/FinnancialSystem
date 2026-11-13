@@ -37,16 +37,20 @@ REFRESH_COOKIE_PATH = "/api/v1/auth"
 RefreshCookie = Annotated[str | None, Cookie(alias=REFRESH_COOKIE)]
 
 
-def _respond_with_tokens(response: Response, tokens: IssuedTokens) -> AccessToken:
+def set_refresh_cookie(response: Response, refresh_token: str) -> None:
     response.set_cookie(
         REFRESH_COOKIE,
-        tokens.refresh_token,
+        refresh_token,
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600,
         path=REFRESH_COOKIE_PATH,
         httponly=True,
         secure=not settings.is_dev,
         samesite="lax",
     )
+
+
+def _respond_with_tokens(response: Response, tokens: IssuedTokens) -> AccessToken:
+    set_refresh_cookie(response, tokens.refresh_token)
     return AccessToken(access_token=tokens.access_token, expires_in=tokens.expires_in)
 
 

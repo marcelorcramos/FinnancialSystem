@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
 from app.core.config import settings
+from app.core.google import GoogleUser
 from app.core.jobs import DELETE_USER_FILES, JobQueue
 from app.domain.default_labels import DEFAULT_LABELS
 from app.domain.enums import AuditAction, TokenPurpose
@@ -50,10 +51,18 @@ class TwoFactorTicket:
 async def register(session: AsyncSession, data: UserCreate, jobs: JobQueue) -> User:
     if await users.get_active_by_email(session, data.email):
         raise ConflictError("This email is already registered")
-
-    user = User(
-        email=data.email, name=data.name, password_hash=security.hash_password(data.password)
+    user = await create_user(
+        session,
+        User(email=data.email, name=data.name, password_hash=security.hash_password(data.password)),
     )
+    token = await _new_token(session, user.id, TokenPurpose.VERIFY_EMAIL)
+    await session.commit()
+    await emails.send(jobs, emails.verification(user.email, user.name, token))
+    return user
+
+
+async def create_user(session: AsyncSession, user: User) -> User:
+    """Add a new user with their own copy of the default labels (not committed)."""
     session.add(user)
     try:
         await session.flush()
@@ -83,9 +92,37 @@ async def register(session: AsyncSession, data: UserCreate, jobs: JobQueue) -> U
             action=AuditAction.CREATE,
             after=audit.snapshot(label),
         )
-    token = await _new_token(session, user.id, TokenPurpose.VERIFY_EMAIL)
-    await session.commit()
-    await emails.send(jobs, emails.verification(user.email, user.name, token))
+    return user
+
+
+async def google_sign_in(session: AsyncSession, google_user: GoogleUser) -> User:
+    """The account for this Google identity: already linked, linked now by its verified
+    email, or created. Google only counts when it vouches for the email."""
+    if not google_user.email_verified:
+        raise AuthenticationError("Google did not confirm this email")
+    user = await users.get_active_by_google_id(session, google_user.sub)
+    if user is None:
+        user = await users.get_active_by_email(session, google_user.email)
+        if user is not None:
+            if user.google_id is not None or user.is_demo:
+                raise ConflictError("This email is linked to another Google account")
+            user.google_id = google_user.sub
+            user.email_verified_at = user.email_verified_at or datetime.now(UTC)
+            user.avatar_url = user.avatar_url or google_user.picture
+            log.info("google.linked", user_id=str(user.id))
+        else:
+            user = await create_user(
+                session,
+                User(
+                    email=google_user.email,
+                    name=google_user.name,
+                    google_id=google_user.sub,
+                    avatar_url=google_user.picture,
+                    email_verified_at=datetime.now(UTC),
+                ),
+            )
+            log.info("google.signed_up", user_id=str(user.id))
+    await session.flush()
     return user
 
 
@@ -218,20 +255,32 @@ async def reset_password(session: AsyncSession, raw_token: str, new_password: st
     await session.commit()
 
 
-async def delete_account(session: AsyncSession, user: User, password: str, jobs: JobQueue) -> None:
+async def delete_account(
+    session: AsyncSession,
+    user: User,
+    jobs: JobQueue,
+    *,
+    password: str | None,
+    confirm_email: str | None,
+) -> None:
     """Erase the account for good (GDPR): every record now, the stored files right after.
 
     The one exception to soft delete: nothing of the user is kept, audit log included.
+    Accounts with a password confirm with it; Google-only and demo accounts type their email.
     """
-    if not security.verify_password(password, user.password_hash):
-        raise AuthenticationError("Password is incorrect")
-    user_id, email, name = user.id, user.email, user.name
+    if user.has_password and not user.is_demo:
+        if not security.verify_password(password or "", user.password_hash):
+            raise AuthenticationError("Password is incorrect")
+    elif (confirm_email or "").strip().lower() != user.email:
+        raise AuthenticationError("Type your email to confirm")
+    user_id, email, name, is_demo = user.id, user.email, user.name, user.is_demo
     # Entries first: they hold RESTRICT keys to labels and incomes; the rest cascades.
     await session.execute(delete(Entry).where(Entry.user_id == user_id))
     await session.execute(delete(User).where(User.id == user_id))
     await session.commit()
     await jobs.enqueue(DELETE_USER_FILES, user_id=str(user_id))
-    await emails.send(jobs, emails.account_deleted(email, name))
+    if not is_demo:
+        await emails.send(jobs, emails.account_deleted(email, name))
     log.info("account.deleted", user_id=str(user_id))
 
 

@@ -92,6 +92,34 @@ def decode_two_factor_ticket(ticket: str) -> uuid.UUID | None:
         return None
 
 
+GOOGLE_STATE_TYPE = "google_state"
+GOOGLE_STATE_SECONDS = 600
+
+
+def encode_google_state(state: str, nonce: str, code_verifier: str) -> str:
+    """What the browser carries (in a cookie) to Google and back, signed so it cannot change."""
+    now = datetime.now(UTC)
+    payload = {
+        "type": GOOGLE_STATE_TYPE,
+        "state": state,
+        "nonce": nonce,
+        "verifier": code_verifier,
+        "iat": now,
+        "exp": now + timedelta(seconds=GOOGLE_STATE_SECONDS),
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
+
+
+def decode_google_state(value: str) -> dict[str, str] | None:
+    try:
+        payload = jwt.decode(value, settings.SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.PyJWTError:
+        return None
+    if payload.get("type") != GOOGLE_STATE_TYPE:
+        return None
+    return {k: str(payload[k]) for k in ("state", "nonce", "verifier") if k in payload}
+
+
 def generate_refresh_token() -> str:
     return secrets.token_urlsafe(48)
 

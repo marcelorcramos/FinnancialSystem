@@ -42,19 +42,23 @@ The access token lasts 15 minutes and comes in the response body. The refresh to
 | POST | `/auth/register` | `{email, password, name}` | 201 `User` |
 | POST | `/auth/login` | `{email, password}` | 200 `Token` + cookie, or `TwoFactorRequired` when 2FA is on |
 | POST | `/auth/login/2fa` | `{ticket, code}` | 200 `Token` + cookie |
+| GET | `/auth/providers` | | 200 `{google}`: whether Sign in with Google is set up |
+| GET | `/auth/google/login` | | 303 to Google; 404 when not set up |
+| GET | `/auth/google/callback` | `?code&state` (from Google) | 303 back to the app (see below) |
 | POST | `/auth/refresh` | cookie | 200 `Token` + new cookie |
 | POST | `/auth/logout` | cookie | 204, cookie cleared |
 | POST | `/auth/logout-others` | Bearer + cookie | 204, ends every other session; this one stays signed in |
 | GET | `/users/me` | | 200 `User` |
 | PATCH | `/users/me` | `{name?, currency?: "EUR", locale?, timezone?, auto_new_month?}` | 200 `User` |
 | POST | `/users/me/password` | `{current_password, new_password}` | 204, ends every session |
-| DELETE | `/users/me` | `{password}` | 204, deletes the account and all of its data for good; cookie cleared |
+| DELETE | `/users/me` | `{password}` or, without a password, `{confirm_email}` | 204, deletes the account and all of its data for good; cookie cleared |
 | POST | `/users/me/verification-email` | | 202, emails a new confirmation link; 409 if already confirmed |
 | POST | `/auth/verify-email` | `{token}` | 204, confirms the email (no sign-in needed) |
 | POST | `/auth/password-reset` | `{email}` | 202, emails a reset link if the email has an account |
 | POST | `/auth/password-reset/confirm` | `{token, new_password}` | 204, sets the password and ends every session |
 
 - `Token` = `{access_token, token_type: "bearer", expires_in}` (seconds).
+- Google: the callback sets the refresh cookie and redirects to `{FRONTEND_URL}/auth/google`, where the app calls `/auth/refresh`; with 2FA on it redirects to `{FRONTEND_URL}/auth/two-factor#ticket=…` instead; on any problem, to `{FRONTEND_URL}/auth/login?error=google`. A Google identity signs into the account already linked to it, else the account with the same email (only when Google says the email is verified; the account is then linked and its email confirmed), else a new account without a password.
 - `TwoFactorRequired` = `{two_factor_required: true, ticket, expires_in}`: no cookie yet; send the ticket (valid 5 minutes) and a 6-digit code from the authenticator app, or a recovery code, to `/auth/login/2fa`. 10 code attempts per 5 minutes per account.
 - `User` = `{id, email, name, avatar_url, currency, locale, timezone, email_verified_at, auto_new_month, has_password, google_linked, two_factor_enabled, demo_expires_at}`.
 - New passwords: at least 8 characters with a lowercase letter, an uppercase letter, a digit and a special character.

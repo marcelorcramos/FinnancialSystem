@@ -46,9 +46,12 @@ async def delete_me(
     limiter: RateLimiterDep,
     jobs: JobsDep,
 ) -> None:
-    """Delete the account and all of its data for good, after checking the password."""
+    """Delete the account and all of its data for good, after checking the password
+    (or, for accounts without one, the typed email)."""
     await limiter.hit(DELETE_PER_USER, str(user.id))
-    await auth.delete_account(session, user, data.password, jobs)
+    await auth.delete_account(
+        session, user, jobs, password=data.password, confirm_email=data.confirm_email
+    )
     response.delete_cookie(REFRESH_COOKIE, path=REFRESH_COOKIE_PATH)
 
 

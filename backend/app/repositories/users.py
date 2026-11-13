@@ -11,6 +11,11 @@ async def get_active_by_email(session: AsyncSession, email: str) -> User | None:
     return await session.scalar(stmt)
 
 
+async def get_active_by_google_id(session: AsyncSession, google_id: str) -> User | None:
+    stmt = select(User).where(User.google_id == google_id, User.deleted_at.is_(None))
+    return await session.scalar(stmt)
+
+
 async def get_active_by_id(session: AsyncSession, user_id: uuid.UUID) -> User | None:
     stmt = select(User).where(User.id == user_id, User.deleted_at.is_(None))
     return await session.scalar(stmt)
