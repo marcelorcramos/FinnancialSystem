@@ -5,6 +5,8 @@ import { defineConfig, devices } from '@playwright/test';
  * `docker compose -f deploy/docker-compose.yml up -d --build` and run
  * `npx playwright test` (the web container serves the app on :8080).
  * E2E_BASE_URL points the tests elsewhere, e.g. the dev server on :4200.
+ * Start the stack with RATE_LIMIT_MULTIPLIER=10: the tests sign in many times
+ * from one address at once, more than the real auth rate limits allow.
  */
 export default defineConfig({
   testDir: './e2e',
