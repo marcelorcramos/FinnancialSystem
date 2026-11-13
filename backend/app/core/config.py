@@ -17,8 +17,16 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
     CORS_ORIGINS: str = "http://localhost:4200"
+    # Scales every auth rate limit. 1 in real use; the end-to-end tests, which sign in
+    # many times from one address at once, raise it.
+    RATE_LIMIT_MULTIPLIER: int = Field(default=1, ge=1, le=1000)
     # Links in emails point here (verify email, reset password).
     FRONTEND_URL: str = "http://localhost:4200"
+
+    # Google sign-in (OpenID Connect). Off until both are set; see docs/GOOGLE_SIGN_IN.md.
+    GOOGLE_CLIENT_ID: str | None = None
+    GOOGLE_CLIENT_SECRET: str | None = None
+    GOOGLE_DISCOVERY_URL: str = "https://accounts.google.com/.well-known/openid-configuration"
 
     # Outgoing email (Mailpit in dev: http://localhost:8025).
     SMTP_HOST: str = "localhost"
@@ -42,6 +50,16 @@ class Settings(BaseSettings):
     @cached_property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+
+    @property
+    def google_enabled(self) -> bool:
+        return bool(self.GOOGLE_CLIENT_ID and self.GOOGLE_CLIENT_SECRET)
+
+    @property
+    def google_redirect_uri(self) -> str:
+        """Google returns to the app's own origin, which proxies /api, so the session
+        cookie is first-party (register this exact URI in Google Cloud)."""
+        return f"{self.FRONTEND_URL.rstrip('/')}/api/v1/auth/google/callback"
 
     @property
     def is_dev(self) -> bool:

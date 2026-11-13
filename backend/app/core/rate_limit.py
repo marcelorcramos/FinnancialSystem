@@ -11,6 +11,7 @@ from redis.asyncio import Redis
 from redis.exceptions import RedisError
 
 from app.core.cache import redis_client
+from app.core.config import settings
 from app.domain.errors import RateLimitedError
 
 log = structlog.get_logger(__name__)
@@ -31,6 +32,8 @@ RESET_PER_IP = Limit("reset-ip", 20, 3600)
 RESET_PER_EMAIL = Limit("reset-email", 5, 3600)
 VERIFY_PER_USER = Limit("verify-user", 5, 3600)
 DELETE_PER_USER = Limit("delete-user", 10, 3600)
+TWO_FACTOR_PER_USER = Limit("2fa-user", 10, 300)
+DEMO_PER_IP = Limit("demo-ip", 10, 3600)
 
 
 class RateLimiter:
@@ -53,7 +56,7 @@ class RateLimiter:
         except RedisError as error:
             log.warning("rate_limit.unavailable", error=str(error))
             return
-        if count > limit.requests:
+        if count > limit.requests * settings.RATE_LIMIT_MULTIPLIER:
             raise RateLimitedError(retry_after=max(int(ttl), 1))
 
 

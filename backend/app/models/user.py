@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, SoftDelete, Timestamps, UUIDPrimaryKey
@@ -41,6 +41,29 @@ class User(UUIDPrimaryKey, Timestamps, SoftDelete, Base):
         Boolean, default=False, server_default=text("false")
     )
     google_id: Mapped[str | None] = mapped_column(String(255))
+    # TOTP 2FA: the secret is encrypted (core/two_factor.py); enabled once a code was confirmed.
+    totp_secret: Mapped[str | None] = mapped_column(String(255))
+    totp_enabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Last 30-second step accepted, so a code cannot be used twice.
+    totp_last_step: Mapped[int | None] = mapped_column(Integer)
+    # Demo accounts ("Try it") are deleted after this moment; null for real accounts.
+    demo_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    @property
+    def has_password(self) -> bool:
+        return self.password_hash is not None
+
+    @property
+    def google_linked(self) -> bool:
+        return self.google_id is not None
+
+    @property
+    def two_factor_enabled(self) -> bool:
+        return self.totp_enabled_at is not None
+
+    @property
+    def is_demo(self) -> bool:
+        return self.demo_expires_at is not None
 
 
 class RefreshToken(UUIDPrimaryKey, Base):
@@ -72,6 +95,21 @@ class UserToken(UUIDPrimaryKey, Base):
     purpose: Mapped[TokenPurpose] = mapped_column(str_enum(TokenPurpose, "token_purpose"))
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)  # sha256 hex
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+
+
+class RecoveryCode(UUIDPrimaryKey, Base):
+    """One-time code that replaces a TOTP code when the phone is lost (stored hashed)."""
+
+    __tablename__ = "recovery_codes"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    code_hash: Mapped[str] = mapped_column(String(64))
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()")

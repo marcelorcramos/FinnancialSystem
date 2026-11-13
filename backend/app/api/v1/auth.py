@@ -6,14 +6,19 @@ from fastapi.security import OAuth2PasswordRequestForm
 from app.api.deps import CurrentUser, JobsDep, RateLimiterDep, SessionDep, client_ip
 from app.core.config import settings
 from app.core.rate_limit import (
+    DEMO_PER_IP,
     LOGIN_PER_EMAIL,
     LOGIN_PER_IP,
     REFRESH_PER_IP,
     REGISTER_PER_IP,
     RESET_PER_EMAIL,
     RESET_PER_IP,
+    TWO_FACTOR_PER_USER,
 )
+from app.core.security import decode_two_factor_ticket
+from app.domain.errors import AuthenticationError
 from app.schemas.auth import AccessToken
+from app.schemas.two_factor import TwoFactorLogin, TwoFactorRequired
 from app.schemas.user import (
     LoginRequest,
     PasswordReset,
@@ -22,8 +27,8 @@ from app.schemas.user import (
     UserCreate,
     UserRead,
 )
-from app.services import auth
-from app.services.auth import IssuedTokens
+from app.services import auth, demo
+from app.services.auth import IssuedTokens, TwoFactorTicket
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -33,16 +38,20 @@ REFRESH_COOKIE_PATH = "/api/v1/auth"
 RefreshCookie = Annotated[str | None, Cookie(alias=REFRESH_COOKIE)]
 
 
-def _respond_with_tokens(response: Response, tokens: IssuedTokens) -> AccessToken:
+def set_refresh_cookie(response: Response, refresh_token: str) -> None:
     response.set_cookie(
         REFRESH_COOKIE,
-        tokens.refresh_token,
+        refresh_token,
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600,
         path=REFRESH_COOKIE_PATH,
         httponly=True,
         secure=not settings.is_dev,
         samesite="lax",
     )
+
+
+def _respond_with_tokens(response: Response, tokens: IssuedTokens) -> AccessToken:
+    set_refresh_cookie(response, tokens.refresh_token)
     return AccessToken(access_token=tokens.access_token, expires_in=tokens.expires_in)
 
 
@@ -60,6 +69,14 @@ async def register(
     return UserRead.model_validate(user)
 
 
+def _respond_with_result(
+    response: Response, result: IssuedTokens | TwoFactorTicket
+) -> AccessToken | TwoFactorRequired:
+    if isinstance(result, TwoFactorTicket):
+        return TwoFactorRequired(ticket=result.ticket, expires_in=result.expires_in)
+    return _respond_with_tokens(response, result)
+
+
 @router.post("/login")
 async def login(
     data: LoginRequest,
@@ -67,10 +84,28 @@ async def login(
     response: Response,
     request: Request,
     limiter: RateLimiterDep,
-) -> AccessToken:
+) -> AccessToken | TwoFactorRequired:
+    """Tokens, or `two_factor_required` with a ticket when the account has 2FA on."""
     await limiter.hit(LOGIN_PER_IP, client_ip(request))
     await limiter.hit(LOGIN_PER_EMAIL, data.email)
-    tokens = await auth.login(session, data.email, data.password)
+    result = await auth.login(session, data.email, data.password)
+    return _respond_with_result(response, result)
+
+
+@router.post("/login/2fa")
+async def login_two_factor(
+    data: TwoFactorLogin,
+    session: SessionDep,
+    response: Response,
+    request: Request,
+    limiter: RateLimiterDep,
+) -> AccessToken:
+    """Second step: the ticket from /login and a code from the app (or a recovery code)."""
+    await limiter.hit(LOGIN_PER_IP, client_ip(request))
+    user_id = decode_two_factor_ticket(data.ticket)
+    if user_id is not None:
+        await limiter.hit(TWO_FACTOR_PER_USER, str(user_id))
+    tokens = await auth.complete_two_factor(session, data.ticket, data.code)
     return _respond_with_tokens(response, tokens)
 
 
@@ -84,8 +119,10 @@ async def token_for_docs(
     """Form login used by the Swagger Authorize button. The username is the email."""
     await limiter.hit(LOGIN_PER_IP, client_ip(request))
     await limiter.hit(LOGIN_PER_EMAIL, form.username.strip())
-    tokens = await auth.login(session, form.username.strip().lower(), form.password)
-    return AccessToken(access_token=tokens.access_token, expires_in=tokens.expires_in)
+    result = await auth.login(session, form.username.strip().lower(), form.password)
+    if isinstance(result, TwoFactorTicket):
+        raise AuthenticationError("Accounts with two-factor sign-in use the app to sign in")
+    return AccessToken(access_token=result.access_token, expires_in=result.expires_in)
 
 
 @router.post("/refresh")
@@ -141,3 +178,15 @@ async def request_password_reset(
 async def reset_password(data: PasswordReset, session: SessionDep) -> None:
     """Set a new password with the token from the link; every session ends."""
     await auth.reset_password(session, data.token, data.new_password)
+
+
+@router.post("/demo", status_code=status.HTTP_201_CREATED)
+async def try_demo(
+    session: SessionDep, response: Response, request: Request, limiter: RateLimiterDep
+) -> AccessToken:
+    """A fresh demo account with six months of data, signed in; it is deleted after 24 hours."""
+    await limiter.hit(DEMO_PER_IP, client_ip(request))
+    user = await demo.create(session)
+    tokens = await auth.start_session(session, user)
+    assert not isinstance(tokens, TwoFactorTicket)  # demo accounts cannot use 2FA
+    return _respond_with_tokens(response, tokens)

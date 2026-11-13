@@ -15,6 +15,11 @@ x-backend-env: &backend-env
   SMTP_PORT: "1025"
   # Links in emails open the Compose web app.
   FRONTEND_URL: http://localhost:8080
+  # 1 = the real auth rate limits; the e2e workflow raises it (many sign-ins from one IP).
+  RATE_LIMIT_MULTIPLIER: ${RATE_LIMIT_MULTIPLIER:-1}
+  # Empty until set in the shell: Sign in with Google stays off (docs/GOOGLE_SIGN_IN.md).
+  GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+  GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
   S3_ENDPOINT_URL: http://s3:8333
   # Signed links are opened by the browser, which reaches S3 on the published port.
   S3_PUBLIC_URL: http://localhost:8333

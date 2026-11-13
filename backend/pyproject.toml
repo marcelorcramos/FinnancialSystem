@@ -21,7 +21,7 @@ strict = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["testcontainers.*", "celery", "celery.*", "boto3", "botocore.*", "reportlab.*"]
+module = ["testcontainers.*", "celery", "celery.*", "boto3", "botocore.*", "reportlab.*", "authlib.*", "pyotp", "segno"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

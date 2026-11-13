@@ -91,3 +91,15 @@ async def test_password_reset_requests_are_limited_per_email(
         (await client.post("/api/v1/auth/password-reset", json=body)).status_code for _ in range(3)
     ]
     assert statuses == [202, 202, 429]
+
+
+async def test_the_multiplier_scales_every_limit(
+    client: AsyncClient, redis: Redis, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("app.api.v1.auth.RESET_PER_EMAIL", Limit("reset-email", 1, 3600))
+    monkeypatch.setattr("app.core.rate_limit.settings.RATE_LIMIT_MULTIPLIER", 3)
+    body = {"email": "scaled@example.com"}
+    statuses = [
+        (await client.post("/api/v1/auth/password-reset", json=body)).status_code for _ in range(4)
+    ]
+    assert statuses == [202, 202, 202, 429]

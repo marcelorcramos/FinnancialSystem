@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
 from app.core.config import settings
+from app.core.google import GoogleUser
 from app.core.jobs import DELETE_USER_FILES, JobQueue
 from app.domain.default_labels import DEFAULT_LABELS
 from app.domain.enums import AuditAction, TokenPurpose
@@ -19,7 +20,7 @@ from app.domain.errors import AuthenticationError, ConflictError, InvalidTokenEr
 from app.models import Entry, Label, RefreshToken, User, UserToken
 from app.repositories import refresh_tokens, user_tokens, users
 from app.schemas.user import UserCreate
-from app.services import audit, emails
+from app.services import audit, emails, two_factor
 
 log = structlog.get_logger(__name__)
 
@@ -39,13 +40,29 @@ class IssuedTokens:
     refresh_token: str
 
 
+@dataclass(frozen=True, slots=True)
+class TwoFactorTicket:
+    """The first step passed; a TOTP or recovery code must follow."""
+
+    ticket: str
+    expires_in: int = security.TWO_FACTOR_TICKET_SECONDS
+
+
 async def register(session: AsyncSession, data: UserCreate, jobs: JobQueue) -> User:
     if await users.get_active_by_email(session, data.email):
         raise ConflictError("This email is already registered")
-
-    user = User(
-        email=data.email, name=data.name, password_hash=security.hash_password(data.password)
+    user = await create_user(
+        session,
+        User(email=data.email, name=data.name, password_hash=security.hash_password(data.password)),
     )
+    token = await _new_token(session, user.id, TokenPurpose.VERIFY_EMAIL)
+    await session.commit()
+    await emails.send(jobs, emails.verification(user.email, user.name, token))
+    return user
+
+
+async def create_user(session: AsyncSession, user: User) -> User:
+    """Add a new user with their own copy of the default labels (not committed)."""
     session.add(user)
     try:
         await session.flush()
@@ -75,17 +92,64 @@ async def register(session: AsyncSession, data: UserCreate, jobs: JobQueue) -> U
             action=AuditAction.CREATE,
             after=audit.snapshot(label),
         )
-    token = await _new_token(session, user.id, TokenPurpose.VERIFY_EMAIL)
-    await session.commit()
-    await emails.send(jobs, emails.verification(user.email, user.name, token))
     return user
 
 
-async def login(session: AsyncSession, email: str, password: str) -> IssuedTokens:
+async def google_sign_in(session: AsyncSession, google_user: GoogleUser) -> User:
+    """The account for this Google identity: already linked, linked now by its verified
+    email, or created. Google only counts when it vouches for the email."""
+    if not google_user.email_verified:
+        raise AuthenticationError("Google did not confirm this email")
+    user = await users.get_active_by_google_id(session, google_user.sub)
+    if user is None:
+        user = await users.get_active_by_email(session, google_user.email)
+        if user is not None:
+            if user.google_id is not None or user.is_demo:
+                raise ConflictError("This email is linked to another Google account")
+            user.google_id = google_user.sub
+            user.email_verified_at = user.email_verified_at or datetime.now(UTC)
+            user.avatar_url = user.avatar_url or google_user.picture
+            log.info("google.linked", user_id=str(user.id))
+        else:
+            user = await create_user(
+                session,
+                User(
+                    email=google_user.email,
+                    name=google_user.name,
+                    google_id=google_user.sub,
+                    avatar_url=google_user.picture,
+                    email_verified_at=datetime.now(UTC),
+                ),
+            )
+            log.info("google.signed_up", user_id=str(user.id))
+    await session.flush()
+    return user
+
+
+async def login(session: AsyncSession, email: str, password: str) -> IssuedTokens | TwoFactorTicket:
     user = await users.get_active_by_email(session, email)
     if not security.verify_password(password, user.password_hash if user else None):
         raise AuthenticationError(INVALID_CREDENTIALS)
     assert user is not None
+    return await start_session(session, user)
+
+
+async def start_session(session: AsyncSession, user: User) -> IssuedTokens | TwoFactorTicket:
+    """After the first step (password or Google): a session, or the 2FA ticket."""
+    if user.two_factor_enabled:
+        return TwoFactorTicket(security.create_two_factor_ticket(user.id))
+    tokens, _ = await _issue(session, user.id, family_id=uuid.uuid4())
+    await session.commit()
+    return tokens
+
+
+async def complete_two_factor(session: AsyncSession, ticket: str, code: str) -> IssuedTokens:
+    user_id = security.decode_two_factor_ticket(ticket)
+    user = await users.get_active_by_id(session, user_id) if user_id else None
+    if user is None or not user.two_factor_enabled:
+        raise AuthenticationError("The sign-in expired. Start again.")
+    if not await two_factor.check(session, user, code):
+        raise AuthenticationError(two_factor.INVALID_CODE)
     tokens, _ = await _issue(session, user.id, family_id=uuid.uuid4())
     await session.commit()
     return tokens
@@ -146,6 +210,8 @@ async def logout_others(session: AsyncSession, user: User, raw_token: str | None
 async def change_password(
     session: AsyncSession, user: User, current_password: str, new_password: str
 ) -> None:
+    if user.is_demo:
+        raise ConflictError("Demo accounts have no password")
     if not security.verify_password(current_password, user.password_hash):
         raise AuthenticationError("Current password is incorrect")
     user.password_hash = security.hash_password(new_password)
@@ -191,21 +257,38 @@ async def reset_password(session: AsyncSession, raw_token: str, new_password: st
     await session.commit()
 
 
-async def delete_account(session: AsyncSession, user: User, password: str, jobs: JobQueue) -> None:
+async def delete_account(
+    session: AsyncSession,
+    user: User,
+    jobs: JobQueue,
+    *,
+    password: str | None,
+    confirm_email: str | None,
+) -> None:
     """Erase the account for good (GDPR): every record now, the stored files right after.
 
     The one exception to soft delete: nothing of the user is kept, audit log included.
+    Accounts with a password confirm with it; Google-only and demo accounts type their email.
     """
-    if not security.verify_password(password, user.password_hash):
-        raise AuthenticationError("Password is incorrect")
-    user_id, email, name = user.id, user.email, user.name
+    if user.has_password:
+        if not security.verify_password(password or "", user.password_hash):
+            raise AuthenticationError("Password is incorrect")
+    elif (confirm_email or "").strip().lower() != user.email:
+        raise AuthenticationError("Type your email to confirm")
+    user_id, email, name, is_demo = user.id, user.email, user.name, user.is_demo
+    await erase_user(session, user_id)
+    await session.commit()
+    await jobs.enqueue(DELETE_USER_FILES, user_id=str(user_id))
+    if not is_demo:
+        await emails.send(jobs, emails.account_deleted(email, name))
+    log.info("account.deleted", user_id=str(user_id))
+
+
+async def erase_user(session: AsyncSession, user_id: uuid.UUID) -> None:
+    """Every record of the user (not committed; their stored files are the caller's job)."""
     # Entries first: they hold RESTRICT keys to labels and incomes; the rest cascades.
     await session.execute(delete(Entry).where(Entry.user_id == user_id))
     await session.execute(delete(User).where(User.id == user_id))
-    await session.commit()
-    await jobs.enqueue(DELETE_USER_FILES, user_id=str(user_id))
-    await emails.send(jobs, emails.account_deleted(email, name))
-    log.info("account.deleted", user_id=str(user_id))
 
 
 async def _new_token(session: AsyncSession, user_id: uuid.UUID, purpose: TokenPurpose) -> str:
