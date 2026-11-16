@@ -73,3 +73,12 @@ test('try the demo without signing up', async ({ page }) => {
   await page.getByRole('button', { name: 'Create my own account' }).click();
   await expect(page).toHaveURL(/\/auth\/register$/);
 });
+
+/** Phase 11: without a Claude API key on the server, the assistant stays out of the way. */
+test('the assistant is hidden until the server has a key', async ({ page }) => {
+  await signUp(page);
+  await expect(page.getByRole('link', { name: 'Labels', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Assistant' })).toHaveCount(0);
+  await page.goto('/assistant');
+  await expect(page.getByText('The assistant is not set up')).toBeVisible();
+});
