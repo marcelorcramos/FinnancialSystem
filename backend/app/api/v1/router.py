@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     alerts,
+    assistant,
     attachments,
     auth,
     entries,
@@ -28,3 +29,4 @@ api_router.include_router(alerts.router)
 api_router.include_router(goals.router)
 api_router.include_router(attachments.router)
 api_router.include_router(exports.router)
+api_router.include_router(assistant.router)

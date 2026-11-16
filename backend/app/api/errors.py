@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 from app.domain.errors import (
+    AssistantUnavailableError,
     AuthenticationError,
     ConflictError,
     DomainError,
@@ -16,6 +17,7 @@ _STATUS: dict[type[DomainError], int] = {
     AuthenticationError: status.HTTP_401_UNAUTHORIZED,
     ValidationError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     RateLimitedError: status.HTTP_429_TOO_MANY_REQUESTS,
+    AssistantUnavailableError: status.HTTP_503_SERVICE_UNAVAILABLE,
 }
 
 

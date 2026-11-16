@@ -27,6 +27,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core import notifications
+from app.core.assistant_client import AssistantClient, get_assistant_client
 from app.core.cache import Cache, get_cache
 from app.core.config import settings
 from app.core.logging import configure_logging
@@ -34,7 +35,7 @@ from app.db.session import SessionLocal
 from app.events import topology
 from app.models import ProcessedEvent
 from app.repositories import users as users_repo
-from app.services import alerts, goals
+from app.services import alerts, goals, insights
 
 log = structlog.get_logger(__name__)
 
@@ -108,11 +109,24 @@ async def goals_handler(session: AsyncSession, event: Event) -> None:
         await goals.complete_reached(session, user)
 
 
+def insights_handler(client: AssistantClient | None) -> Handler:
+    """Write the insight of a month once it is closed (only with the assistant set up)."""
+
+    async def handle(session: AsyncSession, event: Event) -> None:
+        month_id = event.payload.get("month_id") or event.payload.get("entity_id")
+        if client is None or not month_id:
+            return
+        await insights.generate(session, client, event.user_id, uuid.UUID(month_id))
+
+    return handle
+
+
 def handlers(cache: Cache) -> dict[str, Handler]:
     return {
         "cache": cache_handler(cache),
         "limits": limits_handler(cache.redis),
         "goals": goals_handler,
+        "insights": insights_handler(get_assistant_client()),
     }
 
 

@@ -17,6 +17,8 @@ x-backend-env: &backend-env
   FRONTEND_URL: http://localhost:8080
   # 1 = the real auth rate limits; the e2e workflow raises it (many sign-ins from one IP).
   RATE_LIMIT_MULTIPLIER: ${RATE_LIMIT_MULTIPLIER:-1}
+  # Empty until set in the shell: the assistant and month insights stay off.
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
   # Empty until set in the shell: Sign in with Google stays off (docs/GOOGLE_SIGN_IN.md).
   GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
   GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
@@ -119,6 +121,11 @@ services:
   consumer-goals:
     <<: *backend-process
     command: ["python", "-m", "app.events.consumers", "goals"]
+
+  # Writes the reading of each closed month (only with ANTHROPIC_API_KEY set).
+  consumer-insights:
+    <<: *backend-process
+    command: ["python", "-m", "app.events.consumers", "insights"]
 
   worker:
     <<: *backend-process

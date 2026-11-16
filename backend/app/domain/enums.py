@@ -52,3 +52,9 @@ class ExportStatus(StrEnum):
     READY = "ready"
     FAILED = "failed"
     EXPIRED = "expired"  # the file was removed after its retention
+
+
+class AssistantMessageKind(StrEnum):
+    QUESTION = "question"  # what the user asked
+    ANSWER = "answer"  # the model's reply (possibly asking for tools)
+    TOOL_RESULTS = "tool_results"  # what our tools returned, sent back to the model

@@ -34,6 +34,7 @@ VERIFY_PER_USER = Limit("verify-user", 5, 3600)
 DELETE_PER_USER = Limit("delete-user", 10, 3600)
 TWO_FACTOR_PER_USER = Limit("2fa-user", 10, 300)
 DEMO_PER_IP = Limit("demo-ip", 10, 3600)
+ASSISTANT_PER_USER = Limit("assistant-user", 30, 3600)
 
 
 class RateLimiter:
