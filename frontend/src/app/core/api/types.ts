@@ -55,3 +55,7 @@ export type ReportExportCreate = Schemas['ReportExportCreate'];
 export type TwoFactorSetup = Schemas['TwoFactorSetup'];
 export type TwoFactorStatus = Schemas['TwoFactorStatus'];
 export type RecoveryCodes = Schemas['RecoveryCodes'];
+export type AssistantAnswer = Schemas['AssistantAnswer'];
+export type ConversationRead = Schemas['ConversationRead'];
+export type ChatMessage = Schemas['ChatMessage'];
+export type InsightRead = Schemas['InsightRead'];

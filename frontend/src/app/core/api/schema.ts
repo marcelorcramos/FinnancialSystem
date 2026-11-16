@@ -1255,6 +1255,107 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/assistant/status': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Assistant Status
+     * @description Whether the assistant is set up on this server (the app hides it otherwise).
+     */
+    get: operations['assistant_status_api_v1_assistant_status_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assistant/questions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Ask
+     * @description Ask about your money; the answer comes from your own reports.
+     */
+    post: operations['ask_api_v1_assistant_questions_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assistant/conversations': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Conversations
+     * @description The latest 30 conversations, most recent first.
+     */
+    get: operations['list_conversations_api_v1_assistant_conversations_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assistant/conversations/{conversation_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Conversation Messages
+     * @description The questions and answers of a conversation, in order.
+     */
+    get: operations['conversation_messages_api_v1_assistant_conversations__conversation_id__get'];
+    put?: never;
+    post?: never;
+    /** Delete Conversation */
+    delete: operations['delete_conversation_api_v1_assistant_conversations__conversation_id__delete'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/months/{month_id}/insight': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Month Insight
+     * @description The reading written when the month was closed; 404 until there is one.
+     */
+    get: operations['month_insight_api_v1_months__month_id__insight_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/health': {
     parameters: {
       query?: never;
@@ -1421,6 +1522,26 @@ export interface components {
       /** Note */
       note?: string | null;
     };
+    /** AssistantAnswer */
+    AssistantAnswer: {
+      conversation: components['schemas']['ConversationRead'];
+      answer: components['schemas']['ChatMessage'];
+    };
+    /** AssistantQuestion */
+    AssistantQuestion: {
+      /** Text */
+      text: string;
+      /**
+       * Conversation Id
+       * @description Continue this conversation; omit to start a new one
+       */
+      conversation_id?: string | null;
+    };
+    /** AssistantStatus */
+    AssistantStatus: {
+      /** Enabled */
+      enabled: boolean;
+    };
     /** AttachmentRead */
     AttachmentRead: {
       /**
@@ -1463,6 +1584,26 @@ export interface components {
       /** Entry Id */
       entry_id?: string | null;
     };
+    /** ChatMessage */
+    ChatMessage: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Kind
+       * @description "question" or "answer"
+       */
+      kind: string;
+      /** Text */
+      text: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+    };
     /** ColorSuggestions */
     ColorSuggestions: {
       /**
@@ -1470,6 +1611,26 @@ export interface components {
        * @description Colors not used by any of the user's labels
        */
       colors: string[];
+    };
+    /** ConversationRead */
+    ConversationRead: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Title */
+      title: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
     };
     /**
      * EntryListItem
@@ -1819,6 +1980,25 @@ export interface components {
       received_on?: string | null;
       /** Note */
       note?: string | null;
+    };
+    /** InsightRead */
+    InsightRead: {
+      /**
+       * Month Id
+       * Format: uuid
+       */
+      month_id: string;
+      /** Headline */
+      headline: string;
+      /** Highlights */
+      highlights: string[];
+      /** Suggestion */
+      suggestion: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
     };
     /** LabelCreate */
     LabelCreate: {
@@ -5165,6 +5345,170 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['SignedUrl'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  assistant_status_api_v1_assistant_status_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssistantStatus'];
+        };
+      };
+    };
+  };
+  ask_api_v1_assistant_questions_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssistantQuestion'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssistantAnswer'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  list_conversations_api_v1_assistant_conversations_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ConversationRead'][];
+        };
+      };
+    };
+  };
+  conversation_messages_api_v1_assistant_conversations__conversation_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        conversation_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ChatMessage'][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  delete_conversation_api_v1_assistant_conversations__conversation_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        conversation_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  month_insight_api_v1_months__month_id__insight_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        month_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['InsightRead'];
         };
       };
       /** @description Validation Error */

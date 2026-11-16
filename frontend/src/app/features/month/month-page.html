@@ -97,6 +97,24 @@
         </div>
       </section>
 
+      @if (insight(); as reading) {
+        <section class="panel insight" aria-labelledby="insight-title">
+          <h2 id="insight-title" class="insight__title">
+            <app-icon name="spark" [size]="18" />
+            {{ title() }} in short
+          </h2>
+          <p class="insight__headline">{{ reading.headline }}</p>
+          <ul class="insight__list">
+            @for (highlight of reading.highlights; track $index) {
+              <li>{{ highlight }}</li>
+            }
+          </ul>
+          @if (reading.suggestion) {
+            <p class="insight__suggestion"><strong>Next month:</strong> {{ reading.suggestion }}</p>
+          }
+        </section>
+      }
+
       <section class="row-2">
         <figure class="panel chart">
           <div class="chart__head">

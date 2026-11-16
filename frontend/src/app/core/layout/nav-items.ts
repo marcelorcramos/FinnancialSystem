@@ -14,3 +14,6 @@ export const NAV_ITEMS: NavItem[] = [
   { path: '/goals', label: 'Goals', icon: 'target' },
   { path: '/labels', label: 'Labels', icon: 'labels' },
 ];
+
+/** Shown only when the server has the assistant set up. */
+export const ASSISTANT_NAV_ITEM: NavItem = { path: '/assistant', label: 'Assistant', icon: 'chat' };

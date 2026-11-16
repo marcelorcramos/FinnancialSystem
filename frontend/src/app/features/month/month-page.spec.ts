@@ -1,11 +1,12 @@
 import { Dialog } from '@angular/cdk/dialog';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 
 import {
   AttachmentRead,
   EntryListItem,
+  InsightRead,
   LimitStatus,
   MonthRead,
   MonthSummary,
@@ -18,6 +19,7 @@ import { LimitsApi } from './limits-api';
 import { MonthsApi } from './months-api';
 import { PlanMonthDialog } from './plan-month-dialog';
 import { ReceiptsApi } from './receipts-api';
+import { AssistantService } from '../../core/assistant/assistant.service';
 import { ReceiptsDialog } from './receipts-dialog';
 
 const OCTOBER: MonthRead = { id: 'm10', year: 2026, month: 10, note: null, closed_at: null };
@@ -98,6 +100,9 @@ describe('MonthPage', () => {
   let limitsApi: { status: ReturnType<typeof vi.fn> };
   let limitsApiFailing = false;
   let receiptsApi: { list: ReturnType<typeof vi.fn> };
+  let insight: ReturnType<typeof vi.fn>;
+  let insightReply: Observable<InsightRead> | null = null;
+  afterEach(() => (insightReply = null));
 
   afterEach(() => (limitsApiFailing = false));
   let dialog: { open: ReturnType<typeof vi.fn>; openDialogs: unknown[] };
@@ -120,6 +125,7 @@ describe('MonthPage', () => {
       ),
     };
     receiptsApi = { list: vi.fn(() => of([] as AttachmentRead[])) };
+    insight = vi.fn(() => insightReply ?? throwError(() => new Error('none yet')));
     TestBed.configureTestingModule({
       imports: [MonthPage],
       providers: [
@@ -129,6 +135,7 @@ describe('MonthPage', () => {
         { provide: ReportsApi, useValue: { series: vi.fn(() => of(SERIES)) } },
         { provide: LimitsApi, useValue: limitsApi },
         { provide: ReceiptsApi, useValue: receiptsApi },
+        { provide: AssistantService, useValue: { insight } },
       ],
     });
     fixture = TestBed.createComponent(MonthPage);
@@ -390,6 +397,30 @@ describe('MonthPage', () => {
       ReceiptsDialog,
       expect.objectContaining({ data: expect.objectContaining({ entry: null }) }),
     );
+  });
+
+  it('shows the reading of a closed month', async () => {
+    const closed = { ...OCTOBER, closed_at: '2026-10-31T10:00:00Z' };
+    const find = vi.fn(() => of(closed));
+    insightReply = of({
+      month_id: 'm10',
+      headline: 'Food took most of October.',
+      highlights: ['You saved €288.00.'],
+      suggestion: 'Plan Food a little higher.',
+      created_at: '2026-10-31T10:01:00Z',
+    });
+    await render(find);
+    expect(insight).toHaveBeenCalledWith('m10');
+    expect(el.querySelector('.insight__headline')?.textContent).toBe('Food took most of October.');
+    expect(el.querySelector('.insight')?.textContent).toContain(
+      'Next month: Plan Food a little higher.',
+    );
+  });
+
+  it('asks for no reading while the month is open', async () => {
+    await render();
+    expect(insight).not.toHaveBeenCalled();
+    expect(el.querySelector('.insight')).toBeNull();
   });
 
   it('reports a failure to load', async () => {

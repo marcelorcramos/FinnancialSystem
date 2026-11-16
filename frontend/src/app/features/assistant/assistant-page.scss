@@ -1,0 +1,244 @@
+@use '../../shared/design-tokens/breakpoints' as bp;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+
+  h1 {
+    font-size: var(--text-2xl);
+    letter-spacing: -0.02em;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.muted {
+  color: var(--color-text-subtle);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list__item {
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-s);
+
+  &--active {
+    background: var(--color-surface-raised);
+  }
+}
+
+.list__open {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  overflow: hidden;
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-s);
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.list__empty {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-s);
+}
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: 60vh;
+}
+
+.chat__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.chat__title {
+  overflow: hidden;
+  font-size: var(--text-l);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat__list-toggle {
+  display: none;
+}
+
+.thread {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin: auto 0;
+  text-align: center;
+  color: var(--color-accent-text);
+
+  h3 {
+    color: var(--color-text);
+    font-size: var(--text-l);
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  max-width: 560px;
+}
+
+.chip {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  background: var(--color-bg-deep);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-s);
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--color-accent);
+  }
+}
+
+.message {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  max-width: 85%;
+
+  &--question {
+    align-self: flex-end;
+
+    .message__text {
+      background: var(--color-surface-raised);
+    }
+  }
+}
+
+.message__avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: #111417;
+}
+
+.message__text {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-m);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+// Only the text keeps its line breaks (lists in answers), not the template's spacing.
+.message__body {
+  white-space: pre-wrap;
+}
+
+.composer {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.composer__input {
+  flex: 1;
+  min-height: 52px;
+  resize: vertical;
+  font: inherit;
+}
+
+@include bp.phone {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .side {
+    display: none;
+
+    &--open {
+      display: flex;
+    }
+  }
+
+  .chat__list-toggle {
+    display: inline-flex;
+  }
+
+  .message {
+    max-width: 100%;
+  }
+}
