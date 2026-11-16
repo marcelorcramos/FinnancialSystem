@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any
 
-import httpx
+import httpx2 as httpx  # what Authlib and the Anthropic SDK use
 from authlib.common.security import generate_token
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 from joserfc import jwt

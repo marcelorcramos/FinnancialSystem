@@ -7,7 +7,7 @@
   </a>
 
   <nav class="nav" aria-label="Main">
-    @for (item of navItems; track item.path) {
+    @for (item of navItems(); track item.path) {
       <a
         class="nav__link"
         [routerLink]="item.path"

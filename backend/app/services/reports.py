@@ -37,8 +37,31 @@ async def summary(
     categories: CategoryFilter,
     today: date,
 ) -> ReportSummary:
+    return await _summary(session, user, period, months_in(period, today), categories, today)
+
+
+async def summary_between(
+    session: AsyncSession,
+    user: User,
+    *,
+    first: MonthKey,
+    last: MonthKey,
+    categories: CategoryFilter,
+    today: date,
+) -> ReportSummary:
+    """The same totals for any run of months (the assistant asks for "the last 2 months")."""
+    return await _summary(session, user, Period.ALL, months_between(first, last), categories, today)
+
+
+async def _summary(
+    session: AsyncSession,
+    user: User,
+    period: Period,
+    months: list[MonthKey] | None,
+    categories: CategoryFilter,
+    today: date,
+) -> ReportSummary:
     await ensure_own_labels(session, user, categories)
-    months = months_in(period, today)
 
     breakdowns: dict[uuid.UUID, LabelBreakdown] = {}
     for label_id, movement_type, amount in await reports_repo.totals_by_label_and_type(
@@ -80,8 +103,30 @@ async def series(
     today: date,
 ) -> ReportSeries:
     """Net total per label and month (line chart data). Months without money count as zero."""
+    return await _series(session, user, period, months_in(period, today), categories, today)
+
+
+async def series_between(
+    session: AsyncSession,
+    user: User,
+    *,
+    first: MonthKey,
+    last: MonthKey,
+    categories: CategoryFilter,
+    today: date,
+) -> ReportSeries:
+    return await _series(session, user, Period.ALL, months_between(first, last), categories, today)
+
+
+async def _series(
+    session: AsyncSession,
+    user: User,
+    period: Period,
+    window: list[MonthKey] | None,
+    categories: CategoryFilter,
+    today: date,
+) -> ReportSeries:
     await ensure_own_labels(session, user, categories)
-    window = months_in(period, today)
 
     breakdowns: dict[tuple[uuid.UUID, MonthKey], LabelBreakdown] = {}
     for label_id, month, movement_type, amount in await reports_repo.totals_by_label_month_and_type(

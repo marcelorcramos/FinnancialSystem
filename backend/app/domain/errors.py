@@ -45,3 +45,9 @@ class RateLimitedError(DomainError):
     def __init__(self, retry_after: int) -> None:
         super().__init__("Too many attempts. Try again later.")
         self.retry_after = retry_after
+
+
+class AssistantUnavailableError(DomainError):
+    """The assistant is off, or the model could not answer right now."""
+
+    code = "assistant_unavailable"

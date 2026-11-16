@@ -2,6 +2,7 @@
 pytest
 pytest-asyncio
 pytest-cov
+httpx==0.28.1  # FastAPI's test client
 testcontainers[postgres,rabbitmq,redis]
 ruff
 mypy

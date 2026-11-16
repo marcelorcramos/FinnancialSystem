@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str | None = None
     GOOGLE_DISCOVERY_URL: str = "https://accounts.google.com/.well-known/openid-configuration"
 
+    # The assistant (Claude API). Off until the key is set.
+    ANTHROPIC_API_KEY: str | None = None
+    ASSISTANT_MODEL: str = "claude-opus-5-5"
+    ASSISTANT_TIMEOUT_SECONDS: float = 60.0
+
     # Outgoing email (Mailpit in dev: http://localhost:8025).
     SMTP_HOST: str = "localhost"
     SMTP_PORT: int = 1025
@@ -50,6 +55,10 @@ class Settings(BaseSettings):
     @cached_property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+
+    @property
+    def assistant_enabled(self) -> bool:
+        return bool(self.ANTHROPIC_API_KEY)
 
     @property
     def google_enabled(self) -> bool:

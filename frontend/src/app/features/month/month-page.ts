@@ -16,10 +16,12 @@ import { apiErrorMessage } from '../../core/api/api-errors';
 import {
   AttachmentRead,
   EntryListItem,
+  InsightRead,
   LimitStatus,
   MonthRead,
   MonthSummary,
 } from '../../core/api/types';
+import { AssistantService } from '../../core/assistant/assistant.service';
 import { readPreference, writePreference } from '../../core/storage/preferences';
 import { Donut } from '../../shared/charts/donut';
 import { Evolution } from './evolution';
@@ -56,6 +58,7 @@ export default class MonthPage {
   private readonly api = inject(MonthsApi);
   private readonly limitsApi = inject(LimitsApi);
   private readonly receiptsApi = inject(ReceiptsApi);
+  private readonly assistant = inject(AssistantService);
   private readonly dialog = inject(Dialog);
   private readonly router = inject(Router);
   private readonly toasts = inject(ToastService);
@@ -70,6 +73,8 @@ export default class MonthPage {
   private readonly entries = signal<EntryListItem[]>([]);
   private readonly limits = signal<LimitStatus[]>([]);
   protected readonly receipts = signal<AttachmentRead[]>([]);
+  /** The reading written when the month closed (only with the assistant set up). */
+  protected readonly insight = signal<InsightRead | null>(null);
   /** Receipts per entry id. */
   protected readonly receiptCounts = computed(() => {
     const counts: Record<string, number> = {};
@@ -244,6 +249,15 @@ export default class MonthPage {
       .closed.subscribe(() => this.loadReceipts(sheet.id));
   }
 
+  private loadInsight(sheet: MonthRead): void {
+    this.insight.set(null);
+    if (!sheet.closed_at) return;
+    this.assistant
+      .insight(sheet.id)
+      .pipe(catchError(() => of(null)))
+      .subscribe((insight) => this.insight.set(insight));
+  }
+
   private loadReceipts(monthId: string): void {
     this.receiptsApi
       .list(monthId)
@@ -323,6 +337,7 @@ export default class MonthPage {
             this.entries.set(entries);
             this.limits.set(limits);
             this.receipts.set(receipts);
+            this.loadInsight(sheet);
             this.summary.set(summary);
             this.state.set('ready');
           },

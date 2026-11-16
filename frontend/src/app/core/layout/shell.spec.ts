@@ -5,6 +5,7 @@ import { of } from 'rxjs';
 
 import { AlertRead } from '../api/types';
 import { AlertsService } from '../alerts/alerts.service';
+import { AssistantService } from '../assistant/assistant.service';
 import { AuthStore } from '../auth/auth-store';
 import { USER } from '../auth/testing';
 import { Shell } from './shell';
@@ -22,8 +23,11 @@ describe('Shell', () => {
     markAllSeen: vi.fn(),
   };
 
+  const assistantEnabled = signal<boolean | null>(false);
+
   beforeEach(async () => {
     logout.mockClear();
+    assistantEnabled.set(false);
     TestBed.configureTestingModule({
       imports: [Shell],
       providers: [
@@ -33,6 +37,10 @@ describe('Shell', () => {
           useValue: { user: signal(USER), isAuthenticated: signal(true), logout },
         },
         { provide: AlertsService, useValue: alerts },
+        {
+          provide: AssistantService,
+          useValue: { enabled: assistantEnabled, checkStatus: vi.fn() },
+        },
       ],
     });
     fixture = TestBed.createComponent(Shell);
@@ -49,6 +57,13 @@ describe('Shell', () => {
       'Goals',
       'Labels',
     ]);
+  });
+
+  it('adds the assistant to the navigation when the server has it', async () => {
+    assistantEnabled.set(true);
+    await fixture.whenStable();
+    const links = [...el.querySelectorAll('nav[aria-label=Main] a')];
+    expect(links.at(-1)?.textContent?.trim()).toBe('Assistant');
   });
 
   it('shows the user initials on the account button', () => {

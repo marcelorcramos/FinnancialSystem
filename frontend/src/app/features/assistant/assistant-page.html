@@ -1,0 +1,136 @@
+<header class="head">
+  <h1>Assistant</h1>
+  <p class="muted">
+    Answers come from your own reports. The assistant reads; it can't change anything.
+  </p>
+</header>
+
+@if (enabled() === false) {
+  <section class="panel empty">
+    <app-icon name="chat" [size]="40" />
+    <h2>The assistant is not set up</h2>
+    <p class="muted">This server has no Claude API key, so questions can't be answered here yet.</p>
+  </section>
+} @else {
+  <div class="layout">
+    <aside class="side panel" [class.side--open]="showList()" aria-label="Conversations">
+      <button type="button" class="btn btn--primary btn--block" (click)="newConversation()">
+        <app-icon name="plus" [size]="18" />
+        New conversation
+      </button>
+      <ul class="list">
+        @for (conversation of conversations(); track conversation.id) {
+          <li class="list__item" [class.list__item--active]="conversation.id === activeId()">
+            <button
+              type="button"
+              class="list__open"
+              [attr.aria-current]="conversation.id === activeId() ? 'true' : null"
+              (click)="open(conversation)"
+            >
+              {{ conversation.title }}
+            </button>
+            <button
+              type="button"
+              class="btn btn--icon btn--quiet"
+              [attr.aria-label]="'Delete conversation: ' + conversation.title"
+              (click)="remove(conversation)"
+            >
+              <app-icon name="trash" [size]="16" />
+            </button>
+          </li>
+        } @empty {
+          <li class="muted list__empty">Your conversations will appear here.</li>
+        }
+      </ul>
+    </aside>
+
+    <section class="chat panel" aria-labelledby="chat-title">
+      <div class="chat__head">
+        <h2 id="chat-title" class="chat__title">{{ activeTitle() }}</h2>
+        <button
+          type="button"
+          class="btn btn--quiet chat__list-toggle"
+          [attr.aria-expanded]="showList()"
+          (click)="showList.set(!showList())"
+        >
+          Conversations
+        </button>
+      </div>
+
+      <div #thread class="thread" aria-live="polite" [attr.aria-busy]="pending() || loading()">
+        @if (loading()) {
+          <p class="muted" role="status">Loading…</p>
+        } @else if (!messages().length) {
+          <div class="welcome">
+            <app-icon name="spark" [size]="32" />
+            <h3>Ask about your money</h3>
+            <p class="muted">For example:</p>
+            <div class="suggestions">
+              @for (suggestion of suggestions; track suggestion) {
+                <button type="button" class="chip" (click)="useSuggestion(suggestion)">
+                  {{ suggestion }}
+                </button>
+              }
+            </div>
+          </div>
+        } @else {
+          @for (message of messages(); track message.id) {
+            <div class="message" [class.message--question]="message.kind === 'question'">
+              @if (message.kind === 'answer') {
+                <span class="message__avatar" aria-hidden="true"
+                  ><app-icon name="spark" [size]="16"
+                /></span>
+              }
+              <p class="message__text">
+                <span class="visually-hidden">{{
+                  message.kind === 'question' ? 'You:' : 'Assistant:'
+                }}</span>
+                <span class="message__body">{{ message.text }}</span>
+              </p>
+            </div>
+          }
+          @if (pending()) {
+            <div class="message" role="status">
+              <span class="message__avatar" aria-hidden="true"
+                ><app-icon name="spark" [size]="16"
+              /></span>
+              <p class="message__text muted">
+                <span class="spinner" aria-hidden="true"></span> Reading your reports…
+              </p>
+            </div>
+          }
+        }
+      </div>
+
+      @if (error(); as message) {
+        <div class="alert" role="alert">
+          <app-icon name="alert" [size]="18" />
+          <span>{{ message }}</span>
+        </div>
+      }
+
+      <form class="composer" (submit)="$event.preventDefault(); send()">
+        <label class="visually-hidden" for="assistant-question">Your question</label>
+        <textarea
+          #question
+          id="assistant-question"
+          class="field__input composer__input"
+          rows="2"
+          placeholder="Ask about your spending, savings, investments or goals"
+          [attr.maxlength]="maxLength"
+          [value]="draft()"
+          (input)="draft.set($any($event.target).value)"
+          (keydown)="onKeydown($event)"
+        ></textarea>
+        <button
+          type="submit"
+          class="btn btn--primary"
+          [disabled]="!canSend()"
+          aria-label="Send question"
+        >
+          <app-icon name="send" [size]="18" />
+        </button>
+      </form>
+    </section>
+  </div>
+}

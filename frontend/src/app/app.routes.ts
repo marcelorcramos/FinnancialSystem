@@ -50,6 +50,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/goals/goals-page'),
       },
       {
+        path: 'assistant',
+        title: 'Assistant',
+        loadComponent: () => import('./features/assistant/assistant-page'),
+      },
+      {
         path: 'labels',
         title: 'Labels',
         loadComponent: () => import('./features/labels/labels-page'),

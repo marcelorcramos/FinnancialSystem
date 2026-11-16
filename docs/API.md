@@ -318,6 +318,24 @@ Files built in the background by the Celery worker: a report's entries as CSV or
 - ZIP: `data.json` with the profile and every label, month, income, entry, limit, alert, goal and receipt record (deleted ones too), plus the receipt files under `receipts/`.
 - At most 3 exports can wait at once (409). Files are removed 7 days after they are ready (`status` becomes `expired`).
 
+## Assistant
+
+Questions about your own money, answered by Claude from your reports. Off until the server has `ANTHROPIC_API_KEY` set.
+
+| Method | Route | Body | Response |
+|---|---|---|---|
+| GET | `/assistant/status` | | 200 `{enabled}` |
+| POST | `/assistant/questions` | `{text, conversation_id?}` | 200 `{conversation, answer}`; 503 `assistant_unavailable` when off or the model cannot answer |
+| GET | `/assistant/conversations` | | 200 `Conversation[]`, latest 30, most recent first |
+| GET | `/assistant/conversations/{id}` | | 200 `ChatMessage[]`: the questions and answers, in order |
+| DELETE | `/assistant/conversations/{id}` | | 204 (soft delete) |
+| GET | `/months/{id}/insight` | | 200 `Insight`; 404 until the closed month has one |
+
+- `Conversation` = `{id, title, created_at, updated_at}` (the title is the first question). `ChatMessage` = `{id, kind: "question" | "answer", text, created_at}`. `Insight` = `{month_id, headline, highlights, suggestion, created_at}`.
+- The model only reads, through five tools that run as you: `list_labels`, `month_summary`, `totals` and `monthly_totals` (any run of up to 36 months, labels and kinds), and `goals`. It never sees SQL or anyone else's data.
+- `text` is 1–1000 characters; 30 questions per hour per user. A conversation holds up to 80 stored messages (tool steps count), then 409: start a new one.
+- When a month closes, a short reading (headline, two to four highlights, at most one suggestion) is written in the background; reopening hides it, closing again writes a new one.
+
 ## Limits
 
 A limit is a maximum for a label: a default for every month, or one for a single month that replaces the default. Limits only warn, never block a write.

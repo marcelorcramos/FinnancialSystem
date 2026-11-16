@@ -21,6 +21,7 @@ BINDINGS: dict[str, tuple[str, ...]] = {
     "cache": ("entry.*", "income.*", "month.*", "label.*"),
     "limits": ("entry.*", "limit.*"),
     "goals": ("entry.*", "goal.*"),
+    "insights": ("month.*",),
 }
 
 

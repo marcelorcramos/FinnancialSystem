@@ -8,7 +8,8 @@ import { APP_NAME } from '../app-title-strategy';
 import { alertText, AlertsService } from '../alerts/alerts.service';
 import { AuthStore } from '../auth/auth-store';
 import { DemoBanner } from './demo-banner';
-import { NAV_ITEMS } from './nav-items';
+import { AssistantService } from '../assistant/assistant.service';
+import { ASSISTANT_NAV_ITEM, NAV_ITEMS } from './nav-items';
 import { ThemeToggle } from './theme-toggle';
 import { VerifyEmailBanner } from './verify-email-banner';
 
@@ -44,7 +45,10 @@ export class Shell {
     const count = this.alerts.unseen();
     return count ? `Alerts, ${count} new` : 'Alerts';
   });
-  protected readonly navItems = NAV_ITEMS;
+  private readonly assistant = inject(AssistantService);
+  protected readonly navItems = computed(() =>
+    this.assistant.enabled() ? [...NAV_ITEMS, ASSISTANT_NAV_ITEM] : NAV_ITEMS,
+  );
   protected readonly appName = APP_NAME;
   protected readonly initials = computed(() =>
     (this.auth.user()?.name ?? '')
@@ -58,6 +62,7 @@ export class Shell {
   constructor() {
     // Alerts stream only while signed in.
     effect(() => (this.auth.isAuthenticated() ? this.alerts.start() : this.alerts.stop()));
+    this.assistant.checkStatus();
   }
 
   protected monthPath(year: number, month: number): string {
