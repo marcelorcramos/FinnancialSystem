@@ -6,7 +6,8 @@ The contract the frontend builds on. The interactive version, always in sync wit
 
 | Topic | Rule |
 |---|---|
-| Base path | `/api/v1` (only `GET /health` lives outside it) |
+| Base path | `/api/v1` (only `GET /health` and `GET /metrics`, the Prometheus scrape, live outside it; nginx proxies neither) |
+| Request id | Every response carries `X-Request-ID`: the caller's value when it is 1–64 characters of `A-Z a-z 0-9 . _ -` (nginx sends one), otherwise a new one. Log lines and traces carry the same id (`docs/OBSERVABILITY.md`) |
 | Auth | `Authorization: Bearer <access_token>` on every route except `/auth/*` and `/health` |
 | IDs | UUID strings |
 | Money | **Decimal strings** with 2 decimal places, both ways: send `"212.50"`, receive `"212.50"`. Never parse into a float. Input must be positive (allocations accept `"0"` to remove), at most 2 decimal places and fit `NUMERIC(14,2)` |
