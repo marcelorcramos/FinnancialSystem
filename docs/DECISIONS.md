@@ -115,6 +115,24 @@ Icon names are Material Symbols for now; they will change with the frontend rede
 | Label suggestions | The optional deliverable is left out: entries are picked from a short label list, so typing help adds little. |
 | httpx2 | The Anthropic SDK and Authlib both moved to `httpx2`, so the Google client uses it too (the deprecation noted in Phase 10 is gone). `httpx` stays only for FastAPI's test client. |
 
+## Observability (2026-11-17)
+
+| Topic | Decision |
+|---|---|
+| Free and local only | Every tool runs in Docker on this machine and is free and open source: Prometheus, Grafana, Loki, Tempo, Grafana Alloy and GlitchTip. It is a second Compose file (`deploy/docker-compose.observability.yml`) on top of the main one, so the plain stack and CI stay as they were. How to use it: `docs/OBSERVABILITY.md`. |
+| Errors: GlitchTip instead of Sentry | Sentry's hosted service would send data out and its self-hosted version is heavy. GlitchTip is open source, speaks the Sentry protocol (the app uses the official `sentry-sdk`) and runs in one container with its own PostgreSQL. A setup step creates the project with a fixed DSN, so there is no manual step. Request bodies are never sent. |
+| Application Insights dropped | It was the Azure part of the plan; publishing is suspended (below). |
+| Metrics | `prometheus-client`. The API serves `/metrics` (not proxied by nginx); the relay, consumers and worker serve theirs on port 9100. The Celery worker uses multiprocess mode, because its pool processes are forks. Labels are bounded: route templates, never raw paths or ids. RabbitMQ's built-in exporter gives queue depth and consumers. |
+| Logs | structlog writes JSON when `LOG_FORMAT=json` (the observability file sets it; the console format stays the default in dev). Every line of a request carries its `request_id` (from nginx's `X-Request-ID`, else a new one, returned in the response header) and the current `trace_id`. Alloy reads the containers' output through the Docker socket and pushes it to Loki; `request_id` and `trace_id` are structured metadata, not labels, so there is no stream per request. Celery no longer redirects stdout, so its JSON lines are not wrapped. |
+| Traces | OpenTelemetry SDK, OTLP over HTTP to Alloy, then Tempo. FastAPI 0.162 traces requests natively once a provider is set, so `opentelemetry-instrumentation-fastapi` is not used. SQLAlchemy (its instrumentation still declares < 2.1, so the version check is skipped and a test checks the spans), Redis and Celery are instrumented. The outbox carries the trace across processes: `outbox_events.trace_context` (migration 0011) stores the request's `traceparent`, the relay puts it in the message headers and the consumer continues it. Off until `OTEL_EXPORTER_OTLP_ENDPOINT` is set. |
+| Alerts | Five Prometheus rules (server errors, slow API, dead letters, outbox backlog, a process down), visible in Prometheus and Grafana, sent nowhere: there is no on-call. |
+| Splunk | Optional Compose profile `splunk`: Splunk with its Free license and a second Alloy that sends the container logs to its HTTP Event Collector. Kept apart, so the main stack never depends on it. Its image is amd64 only, so it runs emulated on Apple Silicon, where it reported healthy but its HTTP Event Collector never answered: it stays **experimental** (not verified end to end), and the Grafana stack is the supported path. Chosen on 2026-11-17 for learning, on top of the Grafana stack. |
+| Left out | PostgreSQL and Redis exporters, Tempo's metrics generator (service graph), and frontend errors in GlitchTip. They are in `docs/FUTURE_IMPLEMENTATIONS.md`. |
+
+## Publishing (2026-11-17)
+
+The project stays personal and is not published. Paid hosting (Azure) was declined, and so were the free options (an Oracle Cloud "Always Free" VM, a mix of free tiers, a home server behind a tunnel). Phase 14 (Azure, Terraform and CD) is suspended. Phase 13 (local Kubernetes) is optional, and from Phase 15 only what helps a local app remains: the security review, accessibility and performance checks, and the README.
+
 ## Future ideas
 
 Ideas left for later live in [`docs/FUTURE_IMPLEMENTATIONS.md`](FUTURE_IMPLEMENTATIONS.md).
@@ -158,7 +176,7 @@ Screens agreed in the mockups:
 - SQLAlchemy 2.0 async with `asyncpg`.
 - Integration tests with testcontainers (real PostgreSQL); Docker must be running.
 - Frontend: Angular (latest stable), standalone components, Signals, zoneless, new control flow, own components on Angular CDK (no Angular Material), charts as own SVG components (donut, line) instead of ECharts.
-- Dev file storage: SeaweedFS (S3-compatible) instead of MinIO, because MinIO Docker images are no longer public. The code speaks S3, so production can still use Azure Blob (through an S3 gateway or its own SDK, decided in Phase 14).
+- Dev file storage: SeaweedFS (S3-compatible) instead of MinIO, because MinIO Docker images are no longer public. The code speaks S3, so another S3-compatible store can replace it later (production storage was to be decided in Phase 14, now suspended).
 - CI split by area: `.github/workflows/backend.yml` and `frontend.yml`.
 - Node 24 for the frontend (Angular 22 needs Node ≥ 22.22).
 

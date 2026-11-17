@@ -16,6 +16,9 @@ celery_app.conf.update(
     task_ignore_result=True,
     # Remote control uses transient non-exclusive queues, which RabbitMQ 4 refuses.
     worker_enable_remote_control=False,
+    # Our structlog lines go straight to stdout (JSON for Loki), not through Celery's
+    # logger, which would wrap each one in a second, plain-text line.
+    worker_redirect_stdouts=False,
     timezone="UTC",
     beat_schedule={
         # Hourly, so each user's month starts at midnight in their own time zone.
@@ -33,3 +36,6 @@ celery_app.conf.update(
         },
     },
 )
+
+# Connects the worker's metrics, traces and error reporting (signal handlers).
+from app.workers import observability  # noqa: E402, F401

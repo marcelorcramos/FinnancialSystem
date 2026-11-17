@@ -1,0 +1,203 @@
+# Observability (Phase 12), added on top of the main stack:
+#
+#   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.observability.yml up -d
+#
+# Grafana     http://localhost:3000  dashboards, logs (Loki) and traces (Tempo) (admin / finnancial_dev)
+# Prometheus  http://localhost:9090  metrics and alert rules
+# GlitchTip   http://localhost:8001  errors (admin@example.com / finnancial_dev)
+#
+# Optional Splunk, experimental (amd64 image, emulated on Apple Silicon; needs ~4 GB of
+# memory; its log intake was not verified there, see docs/OBSERVABILITY.md):
+#   add `--profile splunk`, then http://localhost:8002 (Free license: no login).
+#
+# Everything is free and open source except Splunk, which runs with its Free license.
+# The ports only listen on this machine. See docs/OBSERVABILITY.md.
+
+x-observed: &observed
+  # Loki parses the backend's JSON lines; console output stays the default without this file.
+  LOG_FORMAT: json
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
+  # Fixed by glitchtip/bootstrap.py (project 1).
+  SENTRY_DSN: http://1544e73c96e745158f5fb5b06511cd19@glitchtip:8000/1
+
+x-healthcheck: &healthcheck
+  interval: 5s
+  timeout: 5s
+  retries: 30
+
+services:
+  # --- The app's processes: same services, with telemetry switched on ----------
+
+  api:
+    environment: *observed
+  relay:
+    environment: *observed
+  consumer-cache:
+    environment: *observed
+  consumer-limits:
+    environment: *observed
+  consumer-goals:
+    environment: *observed
+  consumer-insights:
+    environment: *observed
+  worker:
+    environment: *observed
+  beat:
+    environment: *observed
+
+  # --- Metrics -----------------------------------------------------------------
+
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+    ports: ["127.0.0.1:9090:9090"]
+    volumes:
+      - ./observability/prometheus:/etc/prometheus:ro
+      - prometheusdata:/prometheus
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9090/-/ready"]
+
+  # --- Logs and traces ---------------------------------------------------------
+
+  loki:
+    image: grafana/loki:3.7.9
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    volumes:
+      - ./observability/loki:/etc/loki:ro
+      - lokidata:/loki
+
+  tempo:
+    image: grafana/tempo:3.1.1
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./observability/tempo:/etc/tempo:ro
+      - tempodata:/var/tempo
+
+  # Receives the app's traces (OTLP) and reads every container's logs.
+  alloy:
+    image: grafana/alloy:v1.21.3
+    command: ["run", "--server.http.listen-addr=0.0.0.0:12345", "/etc/alloy/config.alloy"]
+    volumes:
+      - ./observability/alloy:/etc/alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on: [loki, tempo]
+
+  grafana:
+    image: grafana/grafana:13.2.5
+    environment:
+      # Dashboards open without a login; Explore (searching logs and traces) needs the
+      # admin login. Local only: the password is not a secret.
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: finnancial_dev
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/api.json
+    ports: ["127.0.0.1:3000:3000"]
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafanadata:/var/lib/grafana
+    depends_on: [prometheus, loki, tempo]
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+
+  # --- Errors: GlitchTip (open source, speaks the Sentry protocol) --------------
+
+  glitchtip-db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: glitchtip
+      POSTGRES_PASSWORD: glitchtip_dev
+      POSTGRES_DB: glitchtip
+    volumes: [glitchtipdata:/var/lib/postgresql/data]
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "pg_isready -U glitchtip -d glitchtip"]
+
+  glitchtip:
+    image: glitchtip/glitchtip:6.2.6
+    # Web and worker in one process; runs the migrations when it starts.
+    command: ["./bin/run-all-in-one.sh"]
+    environment: &glitchtip-env
+      DATABASE_URL: postgres://glitchtip:glitchtip_dev@glitchtip-db:5432/glitchtip
+      VALKEY_URL: ""  # no Valkey: GlitchTip queues its work in PostgreSQL
+      SECRET_KEY: glitchtip-dev-secret-key-change-me-0123456789
+      GLITCHTIP_DOMAIN: http://localhost:8001
+      DEFAULT_FROM_EMAIL: glitchtip@example.com
+      EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
+      ENABLE_USER_REGISTRATION: "false"
+      ENABLE_ORGANIZATION_CREATION: "false"
+      GLITCHTIP_MAX_EVENT_LIFE_DAYS: "30"
+    ports: ["127.0.0.1:8001:8000"]
+    depends_on:
+      glitchtip-db: { condition: service_healthy }
+    healthcheck:
+      <<: *healthcheck
+      retries: 60
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/_health/')"]
+
+  # Creates the admin, the project and the fixed DSN the app uses, then exits.
+  glitchtip-setup:
+    image: glitchtip/glitchtip:6.2.6
+    command: ["sh", "-c", "./manage.py shell < /bootstrap.py"]
+    environment:
+      <<: *glitchtip-env
+      GLITCHTIP_ADMIN_EMAIL: admin@example.com
+      GLITCHTIP_ADMIN_PASSWORD: finnancial_dev
+      GLITCHTIP_PUBLIC_KEY: 1544e73c-96e7-4515-8f5f-b5b06511cd19
+    volumes:
+      - ./observability/glitchtip/bootstrap.py:/bootstrap.py:ro
+    depends_on:
+      glitchtip: { condition: service_healthy }
+    restart: "no"
+
+  # --- Optional, experimental: Splunk (profile "splunk") ------------------------
+
+  splunk:
+    profiles: [splunk]
+    image: splunk/splunk:10.2.9
+    platform: linux/amd64
+    environment:
+      SPLUNK_START_ARGS: --accept-license
+      SPLUNK_GENERAL_TERMS: --accept-sgt-current-at-splunk-com
+      SPLUNK_LICENSE_URI: Free
+      SPLUNK_PASSWORD: finnancial_dev
+      SPLUNK_HEC_TOKEN: &splunk-token 6f2b9c1e-4d3a-4b8e-9f70-2a5c8d1e0b34
+    ports: ["127.0.0.1:8002:8000"]
+    volumes: [splunkdata:/opt/splunk/var]
+    # Emulated, the first start takes about 10 minutes (later ones are quicker).
+    healthcheck:
+      test: ["CMD-SHELL", "/sbin/checkstate.sh || exit 1"]
+      interval: 30s
+      timeout: 30s
+      start_period: 15m
+      retries: 5
+
+  # A second Alloy that sends the same container logs to Splunk's HTTP Event Collector.
+  # It starts right away and keeps retrying until Splunk is up (nothing is lost meanwhile:
+  # it reads the logs Docker keeps).
+  alloy-splunk:
+    profiles: [splunk]
+    image: grafana/alloy:v1.21.3
+    command: ["run", "--feature.community-components.enabled", "/etc/alloy/splunk.alloy"]
+    environment:
+      SPLUNK_HEC_TOKEN: *splunk-token
+    volumes:
+      - ./observability/alloy:/etc/alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on: [splunk]
+    restart: unless-stopped
+
+volumes:
+  prometheusdata:
+  lokidata:
+  tempodata:
+  grafanadata:
+  glitchtipdata:
+  splunkdata:

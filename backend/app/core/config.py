@@ -1,4 +1,5 @@
 from functools import cached_property
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -7,6 +8,17 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     ENVIRONMENT: str = "dev"
     LOG_LEVEL: str = "INFO"
+    # "console" (readable) or "json" (one object per line, for Loki). Empty: console in
+    # dev and test, json elsewhere.
+    LOG_FORMAT: Literal["", "console", "json"] = ""
+
+    # Observability (Phase 12). Every part is off until its setting is given.
+    # Background processes serve their Prometheus metrics on this port.
+    METRICS_PORT: int = 9100
+    # Traces go to this OpenTelemetry collector (OTLP over HTTP), e.g. http://alloy:4318.
+    OTEL_EXPORTER_OTLP_ENDPOINT: str | None = None
+    # Errors go to GlitchTip (Sentry-compatible): the project's DSN.
+    SENTRY_DSN: str | None = None
 
     DATABASE_URL: str = "postgresql+asyncpg://finance:finance_dev@localhost:5544/finance"
     REDIS_URL: str = "redis://localhost:6379/0"
@@ -73,6 +85,10 @@ class Settings(BaseSettings):
     @property
     def is_dev(self) -> bool:
         return self.ENVIRONMENT in {"dev", "test"}
+
+    @property
+    def json_logs(self) -> bool:
+        return self.LOG_FORMAT == "json" or (not self.LOG_FORMAT and not self.is_dev)
 
 
 settings = Settings()

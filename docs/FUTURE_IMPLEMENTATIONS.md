@@ -26,3 +26,11 @@ When an idea moves into scope, record the decision in `DECISIONS.md` and remove 
 | Email verification | Accounts work without it for now; planned with password recovery (Phase 9). |
 | Admin panel | No admin routes exist yet. |
 | Multiple currencies | EUR only for now; the `currency` field is already on the user. |
+
+## Observability
+
+| Idea | Notes |
+|---|---|
+| PostgreSQL and Redis exporters | `postgres_exporter` and `redis_exporter` in the observability Compose file, with a database panel (connections, slow queries, cache hit rate). |
+| Service graph | Tempo's metrics generator writes span metrics to Prometheus, and Grafana draws the map of who calls whom. |
+| Frontend errors | `@sentry/angular` sending browser errors to GlitchTip (a second project and DSN). |

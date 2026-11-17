@@ -1,0 +1,44 @@
+// Optional (Compose profile "splunk"): the same container logs, sent to Splunk's
+// HTTP Event Collector. A second Alloy, so the main one never depends on Splunk.
+
+discovery.docker "compose" {
+  host = "unix:///var/run/docker.sock"
+  filter {
+    name   = "label"
+    values = ["com.docker.compose.project=finnancial"]
+  }
+}
+
+discovery.relabel "compose" {
+  targets = discovery.docker.compose.targets
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+}
+
+loki.source.docker "compose" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.relabel.compose.output
+  relabel_rules = discovery.relabel.compose.rules
+  forward_to    = [otelcol.receiver.loki.splunk.receiver]
+}
+
+otelcol.receiver.loki "splunk" {
+  output {
+    logs = [otelcol.exporter.splunkhec.splunk.input]
+  }
+}
+
+otelcol.exporter.splunkhec "splunk" {
+  splunk {
+    token       = sys.env("SPLUNK_HEC_TOKEN")
+    index       = "main"
+    sourcetype  = "_json"
+    source      = "finnancial"
+  }
+  client {
+    endpoint                 = "https://splunk:8088/services/collector"
+    insecure_skip_verify     = true  // Splunk's self-signed certificate, local only
+  }
+}

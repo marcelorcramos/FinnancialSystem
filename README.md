@@ -83,7 +83,9 @@ Each user sees only their own data, and tests try to break that on every endpoin
 
 The core product works end to end: accounts, labels, months, entries, transfers, reports and the dashboard, covered by unit, integration and end-to-end tests. Behind it, summaries and reports are cached in Redis, every change is published as an event through RabbitMQ (transactional outbox, idempotent consumers), and Celery starts new months for those who opt in. Limits raise live alerts, goals track their pace, and the emergency fund follows your spending. Receipts are kept privately in S3-compatible storage, reports export as CSV or PDF, your whole account downloads as a ZIP or is deleted for good, and emails confirm addresses and recover passwords. You can sign in with Google, protect the account with an authenticator app, or try a demo full of sample data without signing up. An assistant answers questions about your money from your own reports, and every closed month gets a short reading.
 
-Next on the roadmap: observability, and deployment to Kubernetes and Azure. The full plan is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+Every process is observable: Prometheus metrics with Grafana dashboards, JSON logs in Loki, traces in Tempo that follow a request through the outbox to the consumers and background tasks, and errors in GlitchTip, all local and free (plus an experimental Splunk profile).
+
+It is a personal project and is not published. The full plan is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and what changed along the way in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
 ## Run it
 
@@ -94,6 +96,12 @@ docker compose -f deploy/docker-compose.yml up --build
 ```
 
 Then open the app at http://localhost:8080. The API and its interactive docs are at http://localhost:8000/docs.
+
+With metrics, logs, traces and errors (Grafana at http://localhost:3000, see [`docs/OBSERVABILITY.md`](docs/OBSERVABILITY.md)):
+
+```sh
+docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.observability.yml up --build
+```
 
 ## Tests
 
@@ -109,7 +117,7 @@ Then open the app at http://localhost:8080. The API and its interactive docs are
 ```
 backend/    FastAPI API: domain rules, services, repositories, migrations, tests
 frontend/   Angular app and Playwright end-to-end tests
-deploy/     Docker Compose stack
+deploy/     Docker Compose stack, and the observability stack on top of it
 docs/       Architecture, decisions, API contract
 ```
 
@@ -118,6 +126,7 @@ docs/       Architecture, decisions, API contract
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): product, domain rules and the implementation phases.
 - [`docs/DECISIONS.md`](docs/DECISIONS.md): decisions made along the way; they win over the architecture document.
 - [`docs/API.md`](docs/API.md): the API contract.
+- [`docs/OBSERVABILITY.md`](docs/OBSERVABILITY.md): metrics, logs, traces and errors.
 - [`docs/QUERY_PLANS.md`](docs/QUERY_PLANS.md): how the report queries were validated with `EXPLAIN`.
 - [`docs/FUTURE_IMPLEMENTATIONS.md`](docs/FUTURE_IMPLEMENTATIONS.md): ideas left for later.
 

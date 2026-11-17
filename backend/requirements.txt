@@ -23,3 +23,10 @@ httpx2==2.16.0
 joserfc==1.7.7
 pyotp==2.10.0
 segno==1.6.6
+prometheus-client==0.26.0
+sentry-sdk==2.75.0
+opentelemetry-sdk==1.45.2
+opentelemetry-exporter-otlp-proto-http==1.45.2
+opentelemetry-instrumentation-sqlalchemy==0.66b2
+opentelemetry-instrumentation-redis==0.66b2
+opentelemetry-instrumentation-celery==0.66b2
