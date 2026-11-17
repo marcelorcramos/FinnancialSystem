@@ -1,0 +1,38 @@
+# Shown in Prometheus (http://localhost:9090/alerts) and Grafana. Nothing is sent anywhere:
+# this is a personal setup with no on-call.
+groups:
+  - name: finnancial
+    rules:
+      - alert: ApiErrors
+        expr: sum(rate(http_requests_total{status=~"5.."}[5m])) > 0
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: The API answered with server errors in the last 5 minutes.
+
+      - alert: ApiSlow
+        expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{route!="/api/v1/alerts/stream"}[5m]))) > 1
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: 95% of API requests take longer than 1 second.
+
+      - alert: DeadLetters
+        expr: max(rabbitmq_detailed_queue_messages_ready{queue="finance.events.dead"}) > 0
+        labels: { severity: warning }
+        annotations:
+          summary: Some events failed every attempt and wait in the dead-letter queue.
+
+      - alert: OutboxBacklog
+        expr: max(outbox_events_pending) > 100
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: Events are piling up in the outbox (is the relay or RabbitMQ down?).
+
+      - alert: ProcessDown
+        expr: up == 0
+        for: 1m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.job }} ({{ $labels.instance }}) does not answer the scrape."

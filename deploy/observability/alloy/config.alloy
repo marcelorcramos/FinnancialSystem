@@ -1,0 +1,92 @@
+// Grafana Alloy: the one agent between the app and the observability stack.
+//   - traces: the app sends OTLP here; they go on to Tempo
+//   - logs: every container of the "finnancial" Compose project, read through the
+//     Docker socket, parsed (the backend writes JSON) and pushed to Loki
+
+// --- Traces ------------------------------------------------------------------
+
+otelcol.receiver.otlp "app" {
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+  output {
+    traces = [otelcol.processor.batch.app.input]
+  }
+}
+
+otelcol.processor.batch "app" {
+  output {
+    traces = [otelcol.exporter.otlp.tempo.input]
+  }
+}
+
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = "tempo:4317"
+    tls {
+      insecure = true
+    }
+  }
+}
+
+// --- Logs --------------------------------------------------------------------
+
+discovery.docker "compose" {
+  host = "unix:///var/run/docker.sock"
+  filter {
+    name   = "label"
+    values = ["com.docker.compose.project=finnancial"]
+  }
+}
+
+// One stream per Compose service: {service="api"}, {service="worker"}, ...
+discovery.relabel "compose" {
+  targets = discovery.docker.compose.targets
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+}
+
+loki.source.docker "compose" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.relabel.compose.output
+  relabel_rules = discovery.relabel.compose.rules
+  forward_to    = [loki.process.app.receiver]
+}
+
+loki.process "app" {
+  // Backend lines are JSON (LOG_FORMAT=json): the level becomes a label (few values);
+  // request_id and trace_id become structured metadata, searchable without
+  // creating one stream per request.
+  stage.match {
+    selector = "{service=~\"api|relay|worker|beat|consumer-.+\"}"
+
+    stage.json {
+      expressions = {
+        level      = "level",
+        request_id = "request_id",
+        trace_id   = "trace_id",
+        event_id   = "event_id",
+        timestamp  = "timestamp",
+      }
+    }
+    stage.timestamp {
+      source = "timestamp"
+      format = "RFC3339Nano"
+    }
+    stage.labels {
+      values = { level = "" }
+    }
+    stage.structured_metadata {
+      values = { request_id = "", trace_id = "", event_id = "" }
+    }
+  }
+  forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

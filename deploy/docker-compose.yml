@@ -129,18 +129,20 @@ services:
 
   worker:
     <<: *backend-process
+    environment:
+      <<: *backend-env
+      # The pool processes share their Prometheus samples here (app/core/metrics.py);
+      # emptied at every start.
+      PROMETHEUS_MULTIPROC_DIR: /tmp/prometheus
     # Mingle, gossip and event heartbeats talk through transient queues, which RabbitMQ 4
     # refuses (remote control is off in celery_app.py for the same reason).
     command:
-      - celery
-      - -A
-      - app.workers.celery_app
-      - worker
-      - --loglevel=INFO
-      - --concurrency=2
-      - --without-mingle
-      - --without-gossip
-      - --without-heartbeat
+      - sh
+      - -c
+      - >-
+        rm -rf "$$PROMETHEUS_MULTIPROC_DIR" && mkdir -p "$$PROMETHEUS_MULTIPROC_DIR" &&
+        exec celery -A app.workers.celery_app worker --loglevel=INFO --concurrency=2
+        --without-mingle --without-gossip --without-heartbeat
 
   beat:
     <<: *backend-process
