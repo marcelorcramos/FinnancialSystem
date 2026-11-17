@@ -27,6 +27,9 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        # A fresh id per request (never the client's): the API returns it in X-Request-ID
+        # and puts it on every log line, so an error can be found in the logs.
+        proxy_set_header X-Request-ID $request_id;
     }
 
     # Hashed bundles never change.
