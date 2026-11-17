@@ -27,6 +27,8 @@ class OutboxEvent(UUIDPrimaryKey, Base):
 
     type: Mapped[str] = mapped_column(String(100))
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    # The trace of the request that wrote it (traceparent headers), or None without tracing.
+    trace_context: Mapped[dict[str, str] | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()")
     )

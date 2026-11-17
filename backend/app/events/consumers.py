@@ -14,6 +14,7 @@ event is never affected.
 import asyncio
 import json
 import sys
+import time
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -22,11 +23,12 @@ from typing import Any
 import aio_pika
 import structlog
 from aio_pika.abc import AbstractExchange, AbstractIncomingMessage
+from opentelemetry.trace import SpanKind, Status, StatusCode
 from redis.asyncio import Redis
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core import notifications
+from app.core import metrics, notifications, telemetry
 from app.core.assistant_client import AssistantClient, get_assistant_client
 from app.core.cache import Cache, get_cache
 from app.core.config import settings
@@ -153,9 +155,10 @@ async def handle_once(session: AsyncSession, consumer: str, event: Event, handle
     if after_commit is not None:
         try:
             await after_commit()
-        except Exception:
+        except Exception as error:
             # The work is saved and marked processed; a failed side effect is logged only.
             log.exception("event.after_commit_failed", consumer=consumer, type=event.type)
+            telemetry.report_exception(error)
     return True
 
 
@@ -164,14 +167,15 @@ ATTEMPTS_HEADER = "x-attempts"
 
 async def _retry_or_dead_letter(
     message: AbstractIncomingMessage, consumer: str, retry_exchange: AbstractExchange
-) -> None:
+) -> str:
+    """Send the message back to the queue, or to the dead-letter queue; returns which."""
     headers: dict[str, Any] = dict(message.headers or {})
     previous = headers.get(ATTEMPTS_HEADER)
     attempts = (previous if isinstance(previous, int) else 0) + 1
     if attempts >= topology.MAX_ATTEMPTS:
         log.error("event.dead_lettered", consumer=consumer, message_id=message.message_id)
         await message.reject(requeue=False)
-        return
+        return "dead_lettered"
     # Publish a copy with the new count, then drop the original. A crash in between
     # only means one extra delivery, which the idempotency check absorbs.
     await retry_exchange.publish(
@@ -186,6 +190,7 @@ async def _retry_or_dead_letter(
         routing_key=consumer,
     )
     await message.ack()
+    return "retried"
 
 
 async def process_message(
@@ -205,20 +210,41 @@ async def process_message(
     except (ValueError, KeyError, TypeError):
         log.error("event.malformed", consumer=consumer, message_id=message.message_id)
         await message.reject(requeue=False)  # straight to the dead-letter queue
+        metrics.EVENTS.labels(consumer, "malformed").inc()
         return
-    try:
-        async with sessions() as session:
-            ran = await handle_once(session, consumer, event, handler)
-    except Exception:
-        log.exception("event.failed", consumer=consumer, type=event.type, id=str(event.id))
-        await _retry_or_dead_letter(message, consumer, retry_exchange)
-        return
-    log.info("event.handled" if ran else "event.duplicate", consumer=consumer, type=event.type)
-    await message.ack()
+    start = time.perf_counter()
+    # The trace started by the request that wrote the event goes on here.
+    with (
+        structlog.contextvars.bound_contextvars(event_id=str(event.id)),
+        telemetry.tracer.start_as_current_span(
+            f"{event.type} process",
+            context=telemetry.context_from(message.headers),
+            kind=SpanKind.CONSUMER,
+            attributes={"messaging.system": "rabbitmq", "messaging.consumer.group.name": consumer},
+        ) as span,
+    ):
+        try:
+            async with sessions() as session:
+                ran = await handle_once(session, consumer, event, handler)
+        except Exception as error:
+            log.exception("event.failed", consumer=consumer, type=event.type)
+            span.record_exception(error)
+            span.set_status(Status(StatusCode.ERROR))
+            telemetry.report_exception(error)
+            outcome = await _retry_or_dead_letter(message, consumer, retry_exchange)
+        else:
+            outcome = "handled" if ran else "duplicate"
+            log.info(f"event.{outcome}", consumer=consumer, type=event.type)
+            await message.ack()
+    metrics.EVENTS.labels(consumer, outcome).inc()
+    metrics.EVENT_DURATION.labels(consumer).observe(time.perf_counter() - start)
 
 
 async def run(consumer: str) -> None:
     configure_logging()
+    telemetry.setup_error_reporting(f"consumer-{consumer}")
+    telemetry.setup_tracing(f"consumer-{consumer}")
+    metrics.serve(settings.METRICS_PORT)
     handler = handlers(get_cache())[consumer]
     connection = await aio_pika.connect_robust(settings.RABBITMQ_URL)
     async with connection:

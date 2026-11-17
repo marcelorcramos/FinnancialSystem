@@ -4,6 +4,7 @@ from typing import Any
 from sqlalchemy import inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.telemetry import current_carrier
 from app.db.base import Base
 from app.domain.enums import AuditAction
 from app.models import AuditLog, OutboxEvent
@@ -55,6 +56,7 @@ def record(
                 "action": action.value,
                 "month_id": str(month_id) if month_id else None,
             },
+            trace_context=current_carrier(),
         )
     )
 

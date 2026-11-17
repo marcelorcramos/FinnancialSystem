@@ -6,7 +6,8 @@ import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext import asyncio as sa_asyncio
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.pool import NullPool
 
 from app.core import mail
@@ -18,7 +19,8 @@ from app.workers.celery_app import celery_app
 
 def _run_with_session[T](work: Callable[[AsyncSession], Awaitable[T]]) -> T:
     async def main() -> T:
-        engine = create_async_engine(settings.DATABASE_URL, poolclass=NullPool)
+        # Through the module, so the tracing instrumentation (which wraps it) sees it.
+        engine = sa_asyncio.create_async_engine(settings.DATABASE_URL, poolclass=NullPool)
         try:
             async with async_sessionmaker(engine, expire_on_commit=False)() as session:
                 return await work(session)
